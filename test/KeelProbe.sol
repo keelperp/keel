@@ -33,6 +33,26 @@ contract KeelProbe {
         external
         returns (Result memory r)
     {
+        return _run(baseIn, leverageX18, isLong, collateralIsBtc, loops, collateralIsBtc ? WBNB : address(0));
+    }
+
+    /// @notice Same block, same state, two routing configs — the only honest A/B.
+    function ab(uint256 baseIn, uint256 leverageX18, bool isLong, bool collateralIsBtc, uint8 loops)
+        external
+        returns (Result memory direct, Result memory hopped)
+    {
+        direct = _run(baseIn, leverageX18, isLong, collateralIsBtc, loops, address(0));
+        hopped = _run(baseIn, leverageX18, isLong, collateralIsBtc, loops, WBNB);
+    }
+
+    function _run(
+        uint256 baseIn,
+        uint256 leverageX18,
+        bool isLong,
+        bool collateralIsBtc,
+        uint8 loops,
+        address hop
+    ) internal returns (Result memory r) {
         address coll = collateralIsBtc ? BTCB : WBNB;
         address vColl = collateralIsBtc ? vBTC : vBNB;
 
@@ -50,7 +70,8 @@ contract KeelProbe {
                 isLong_: isLong,
                 bandBps_: 500,
                 maxLoops_: loops,
-                collateralIsNative: !collateralIsBtc
+                collateralIsNative: !collateralIsBtc,
+                swapHop: hop
             })
         );
 

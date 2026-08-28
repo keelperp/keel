@@ -22,6 +22,10 @@ import {
 contract LevVault is ERC20 {
     uint256 internal constant WAD = 1e18;
     uint256 internal constant BPS = 10_000;
+    /// @dev Venus computes vTokens as `amount * 1e18 / exchangeRate` and reverts with
+    ///      "redeemTokens zero" when that rounds to nothing. Anything under this is dust
+    ///      and is left in place rather than sent into a revert.
+    uint256 internal constant DUST = 1e10;
 
     /// @dev Unit of account for deposits and redemptions (USDT).
     IERC20Min public immutable base;
@@ -50,6 +54,7 @@ contract LevVault is ERC20 {
     bool internal immutable supplyIsNative;
     bool internal immutable borrowIsNative;
     IWNative internal immutable wnative;
+    address internal immutable swapHop;
 
     event Minted(address indexed to, uint256 baseIn, uint256 shares);
     event Redeemed(address indexed to, uint256 shares, uint256 baseOut);
@@ -73,6 +78,10 @@ contract LevVault is ERC20 {
         uint256 bandBps_;
         uint8 maxLoops_;
         bool collateralIsNative;
+        /// @dev Intermediate hop for base<->collateral swaps, or address(0) for a direct pair.
+        ///      PancakeSwap V2's USDT/BTCB pool is only ~$700k deep: an 18,000 USDT leg costs
+        ///      5.90% direct but 2.19% routed through WBNB. Measured, not assumed.
+        address swapHop;
     }
 
     constructor(Config memory c) ERC20(c.name, c.symbol) {
@@ -109,6 +118,8 @@ contract LevVault is ERC20 {
             borrowIsNative = c.collateralIsNative;
         }
         wnative = c.collateralIsNative ? IWNative(c.collateral_) : IWNative(address(0));
+        require(c.swapHop != c.base_ && c.swapHop != c.collateral_, "hop collides");
+        swapHop = c.swapHop;
 
         address[] memory mk = new address[](1);
         mk[0] = address(vSupply);
@@ -247,7 +258,7 @@ contract LevVault is ERC20 {
 
     /// @dev Supply `amt` of the supply asset. Unwraps first on the native market.
     function _venusSupply(uint256 amt) internal {
-        if (amt == 0) return;
+        if (amt < DUST) return;
         if (supplyIsNative) {
             wnative.withdraw(amt);
             IVBNB(address(vSupply)).mint{value: amt}();
@@ -258,13 +269,13 @@ contract LevVault is ERC20 {
 
     /// @dev Withdraw `amt` of the supply asset, re-wrapping on the native market.
     function _venusRedeem(uint256 amt) internal {
-        if (amt == 0) return;
+        if (amt < DUST) return;
         require(vSupply.redeemUnderlying(amt) == 0, "venus redeem");
         if (supplyIsNative) wnative.deposit{value: amt}();
     }
 
     function _venusRepay(uint256 amt) internal {
-        if (amt == 0) return;
+        if (amt < DUST) return;
         if (borrowIsNative) {
             wnative.withdraw(amt);
             IVBNB(address(vBorrow)).repayBorrow{value: amt}();
@@ -281,14 +292,35 @@ contract LevVault is ERC20 {
     /// @dev Native BNB arrives here from `redeemUnderlying` / `borrow` on the BNB market.
     receive() external payable {}
 
+    /// @dev getAmountsOut that yields 0 instead of reverting when a pair does not exist.
+    function _quiet(address[] memory path, uint256 amountIn) internal view returns (uint256) {
+        try router.getAmountsOut(amountIn, path) returns (uint256[] memory a) {
+            return a[a.length - 1];
+        } catch {
+            return 0;
+        }
+    }
+
     function _swap(address from, address to, uint256 amountIn) internal returns (uint256 out) {
         if (amountIn == 0) return 0;
+        // Pick the better of direct and hopped, on chain, every time. Slippage is
+        // size-dependent: PancakeSwap V2's USDT/BTCB pool is ~$700k deep, so a small
+        // leg is cheaper direct while a large one is cheaper through WBNB. Quoting
+        // both costs gas and removes the guess.
         address[] memory path = new address[](2);
         path[0] = from;
         path[1] = to;
-        uint256[] memory amounts = router.swapExactTokensForTokens(
-            amountIn, 0, path, address(this), block.timestamp
-        );
+        if (swapHop != address(0) && from != swapHop && to != swapHop) {
+            address[] memory viaHop = new address[](3);
+            viaHop[0] = from;
+            viaHop[1] = swapHop;
+            viaHop[2] = to;
+            uint256 direct = _quiet(path, amountIn);
+            uint256 hopped = _quiet(viaHop, amountIn);
+            if (hopped > direct) path = viaHop;
+        }
+        uint256[] memory amounts =
+            router.swapExactTokensForTokens(amountIn, 0, path, address(this), block.timestamp);
         out = amounts[amounts.length - 1];
     }
 
@@ -297,8 +329,9 @@ contract LevVault is ERC20 {
         // move any idle base into the supply leg first
         uint256 idle = base.balanceOf(address(this));
         if (idle > 0) {
-            uint256 toSupply =
-                address(supplyAsset) == address(base) ? idle : _swap(address(base), address(collateral), idle);
+            uint256 toSupply = address(supplyAsset) == address(base)
+                ? idle
+                : _swap(address(base), address(collateral), idle);
             _venusSupply(toSupply);
         }
 
@@ -367,7 +400,7 @@ contract LevVault is ERC20 {
             uint256 rest = s2 - supplyTarget;
             uint256 cap = _maxRedeemable();
             if (rest > cap) rest = cap;
-            if (rest > 0) {
+            if (rest >= DUST) {
                 _venusRedeem(rest);
                 if (address(supplyAsset) != address(base)) {
                     _swap(address(supplyAsset), address(base), rest);
