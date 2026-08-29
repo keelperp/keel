@@ -119,8 +119,8 @@ launch → lever → curve trade → sell → graduate → seed pool → burn LP
 | unsold supply burned | 126,050,420.17 |
 | LP held by `LPLock` | 2,224,859.55 |
 | transfer guard lifted | **YES** |
-| creator fee (40%) | 80.00 USDT |
-| protocol fee (60%) | 120.00 USDT |
+| creator fee (60%) | 120.00 USDT |
+| protocol fee (40%) | 80.00 USDT |
 
 ## Two measurement traps this repo already walked into
 
@@ -169,7 +169,7 @@ bottleneck it looked like when the router was on V2.
 src/LevVault.sol      the engine: ERC-20 shares over a Venus position the contract owns
 src/Bonding.sol       constant-product curve whose reserve asset is a LevVault share
 src/LaunchToken.sol   one launch's ERC-20; transfers confined to the curve until graduation
-src/FeeVault.sol      1% trading fee, 40% creator / 60% protocol, creator fees never expire
+src/FeeVault.sol      1% trading fee, 60% creator / 40% protocol, creator fees never expire
 src/LPLock.sol        holds graduated LP; no withdrawal function exists
 src/ERC20.sol         minimal standard ERC-20 — no tax, no blacklist, no owner
 test/KeelProbe.sol    engine lifecycle + same-block routing A/B

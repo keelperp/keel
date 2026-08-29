@@ -5,7 +5,9 @@ import {IERC20Min} from "./interfaces/IVenus.sol";
 
 /// @notice Accrues trading fees in the base asset. Creator fees never expire.
 contract FeeVault {
-    uint256 public constant CREATOR_SHARE_BPS = 4000;
+    /// @notice The creator's cut. Deliberately the larger half: every comparable launchpad
+    ///         pays the creator 40% and keeps 60%. Inverting that is the offer.
+    uint256 public constant CREATOR_SHARE_BPS = 6000;
     uint256 internal constant BPS = 10_000;
 
     IERC20Min public immutable base;
