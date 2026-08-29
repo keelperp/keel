@@ -57,3 +57,20 @@ interface IWNative {
     function deposit() external payable;
     function withdraw(uint256) external;
 }
+
+/// @notice PancakeSwap V3 SwapRouter. Selector 0x414bf389 — the deadline-bearing variant,
+///         confirmed against the deployed router's dispatch table, not assumed.
+interface IV3Router {
+    struct ExactInputSingleParams {
+        address tokenIn;
+        address tokenOut;
+        uint24 fee;
+        address recipient;
+        uint256 deadline;
+        uint256 amountIn;
+        uint256 amountOutMinimum;
+        uint160 sqrtPriceLimitX96;
+    }
+
+    function exactInputSingle(ExactInputSingleParams calldata) external payable returns (uint256);
+}

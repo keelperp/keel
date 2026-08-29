@@ -16,6 +16,7 @@ contract KeelProbe {
     address constant vBNB = 0xA07c5b74C9B40447a954e1466938b865b6BBea36;
     address constant COMPTROLLER = 0xfD36E2c2a6789Db23113685031d7F16329158384;
     address constant ROUTER = 0x10ED43C718714eb63d5aA57B78B54704E256024E;
+    address constant V3_ROUTER = 0x1b81D678ffb9C0263b24A97847620C99d213eB14;
 
     struct Result {
         uint256 shares;
@@ -34,6 +35,60 @@ contract KeelProbe {
         returns (Result memory r)
     {
         return _run(baseIn, leverageX18, isLong, collateralIsBtc, loops, collateralIsBtc ? WBNB : address(0));
+    }
+
+    struct Bounty {
+        uint256 levAfterMint;
+        uint256 bountyBpsQuoted;
+        uint256 sharesBefore;
+        uint256 bountyPaid;
+        uint256 levAfterRebalance;
+        uint8 neededRebalance;
+        uint8 secondCallRefused;
+        string refusalReason;
+    }
+
+    /// @notice A vault told to reach 3x but given one loop lands short — a natural drift,
+    ///         no price move needed. Then rebalance() must pay for the work and, once back
+    ///         in band, refuse the next caller.
+    function rebalanceBounty() external returns (Bounty memory b) {
+        LevVault v = new LevVault(
+            LevVault.Config({
+                name: "Keel BTC 3L",
+                symbol: "kBTC3L",
+                base_: USDT,
+                collateral_: BTCB,
+                vBase: vUSDT,
+                vCollateral: vBTC,
+                comptroller: COMPTROLLER,
+                router: ROUTER,
+                targetLeverage_: 3e18,
+                isLong_: true,
+                bandBps_: 500,
+                maxLoops_: 1,
+                collateralIsNative: false,
+                swapHop: WBNB,
+                v3Router: V3_ROUTER,
+                v3Fee: 500
+            })
+        );
+        IERC20Min(USDT).approve(address(v), type(uint256).max);
+        v.mint(1000e18, 0, address(this));
+
+        b.levAfterMint = v.currentLeverage();
+        b.neededRebalance = v.needsRebalance() ? 1 : 0;
+        b.bountyBpsQuoted = v.bountyBps(b.levAfterMint);
+        b.sharesBefore = v.totalSupply();
+        b.bountyPaid = v.rebalance();
+        b.levAfterRebalance = v.currentLeverage();
+
+        try v.rebalance() returns (uint256) {
+            b.secondCallRefused = 0;
+            b.refusalReason = "ACCEPTED - COOLDOWN OPEN";
+        } catch Error(string memory reason) {
+            b.secondCallRefused = 1;
+            b.refusalReason = reason;
+        }
     }
 
     /// @notice Same block, same state, two routing configs — the only honest A/B.
@@ -71,7 +126,9 @@ contract KeelProbe {
                 bandBps_: 500,
                 maxLoops_: loops,
                 collateralIsNative: !collateralIsBtc,
-                swapHop: hop
+                swapHop: hop,
+                v3Router: V3_ROUTER,
+                v3Fee: collateralIsBtc ? uint24(500) : uint24(500)
             })
         );
 

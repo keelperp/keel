@@ -15,6 +15,7 @@ contract KeelE2E {
     address constant vBTC = 0x882C173bC7Ff3b7786CA16dfeD3DFFfb9Ee7847B;
     address constant COMPTROLLER = 0xfD36E2c2a6789Db23113685031d7F16329158384;
     address constant ROUTER = 0x10ED43C718714eb63d5aA57B78B54704E256024E;
+    address constant V3_ROUTER = 0x1b81D678ffb9C0263b24A97847620C99d213eB14;
     address constant FACTORY = 0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73;
     address constant DEAD = 0x000000000000000000000000000000000000dEaD;
 
@@ -55,7 +56,9 @@ contract KeelE2E {
                 bandBps_: 500,
                 maxLoops_: 5,
                 collateralIsNative: false,
-                swapHop: 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c
+                swapHop: 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c,
+                v3Router: V3_ROUTER,
+                v3Fee: 500
             })
         );
         require(rogue.targetLeverage() > 0, "rogue looks real");
@@ -88,7 +91,9 @@ contract KeelE2E {
                         bandBps_: 500,
                         maxLoops_: 5,
                         collateralIsNative: false,
-                        swapHop: 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c
+                        swapHop: 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c,
+                        v3Router: V3_ROUTER,
+                        v3Fee: 500
                     })
                 ))
         );

@@ -9,7 +9,8 @@ import {
     IPancakeRouter,
     IERC20Min,
     IVBNB,
-    IWNative
+    IWNative,
+    IV3Router
 } from "./interfaces/IVenus.sol";
 
 /// @title LevVault — an on-chain leveraged position, held by the contract itself.
@@ -26,6 +27,13 @@ contract LevVault is ERC20 {
     ///      "redeemTokens zero" when that rounds to nothing. Anything under this is dust
     ///      and is left in place rather than sent into a revert.
     uint256 internal constant DUST = 1e10;
+    /// @dev Rebalancing is the one job a keeper used to do. With no keeper, it has to be
+    ///      worth someone's gas — otherwise `rebalance()` is permissionless and never called,
+    ///      and drift ends in a Venus liquidation. Paid in freshly minted shares, so it is
+    ///      funded by dilution and can never fail for want of liquidity.
+    uint256 internal constant BOUNTY_MIN_BPS = 5;
+    uint256 internal constant BOUNTY_MAX_BPS = 30;
+    uint256 internal constant REBALANCE_COOLDOWN = 1 hours;
 
     /// @dev Unit of account for deposits and redemptions (USDT).
     IERC20Min public immutable base;
@@ -41,6 +49,7 @@ contract LevVault is ERC20 {
     /// @dev 1e18-scaled, e.g. 3e18 for 3x.
     uint256 public immutable targetLeverage;
     bool public immutable isLong;
+    uint256 public lastRebalanceAt;
     /// @dev Rebalance band in bps around targetLeverage; outside it `rebalance()` acts.
     uint256 public immutable bandBps;
     uint8 public immutable maxLoops;
@@ -55,10 +64,12 @@ contract LevVault is ERC20 {
     bool internal immutable borrowIsNative;
     IWNative internal immutable wnative;
     address internal immutable swapHop;
+    IV3Router internal immutable v3Router;
+    uint24 internal immutable v3Fee;
 
     event Minted(address indexed to, uint256 baseIn, uint256 shares);
     event Redeemed(address indexed to, uint256 shares, uint256 baseOut);
-    event Rebalanced(uint256 leverageBefore, uint256 leverageAfter);
+    event Rebalanced(uint256 leverageBefore, uint256 leverageAfter, address indexed caller, uint256 bounty);
 
     /// @param base_ unit of account for deposits and redemptions (USDT)
     /// @param collateral_ the asset the position is exposed to (BTCB, WBNB, ...)
@@ -82,6 +93,12 @@ contract LevVault is ERC20 {
         ///      PancakeSwap V2's USDT/BTCB pool is only ~$700k deep: an 18,000 USDT leg costs
         ///      5.90% direct but 2.19% routed through WBNB. Measured, not assumed.
         address swapHop;
+        /// @dev PancakeSwap V3 router, or address(0) to stay on V2.
+        address v3Router;
+        /// @dev V3 pool fee tier for base<->collateral. 0 means use V2.
+        ///      Measured: V2's USDT/BTCB pool is ~$700k and costs 12.25% on a 40,000 leg;
+        ///      V3's 0.05% pool holds $16.2M and costs 0.43% on the same leg.
+        uint24 v3Fee;
     }
 
     constructor(Config memory c) ERC20(c.name, c.symbol) {
@@ -120,6 +137,13 @@ contract LevVault is ERC20 {
         wnative = c.collateralIsNative ? IWNative(c.collateral_) : IWNative(address(0));
         require(c.swapHop != c.base_ && c.swapHop != c.collateral_, "hop collides");
         swapHop = c.swapHop;
+        v3Router = IV3Router(c.v3Router);
+        v3Fee = c.v3Fee;
+        require(c.v3Fee == 0 || c.v3Router != address(0), "v3 router missing");
+        if (c.v3Router != address(0)) {
+            IERC20Min(c.base_).approve(c.v3Router, type(uint256).max);
+            IERC20Min(c.collateral_).approve(c.v3Router, type(uint256).max);
+        }
 
         address[] memory mk = new address[](1);
         mk[0] = address(vSupply);
@@ -235,17 +259,39 @@ contract LevVault is ERC20 {
         emit Redeemed(to, shares, baseOut);
     }
 
-    /// @notice Permissionless. Anyone may push leverage back inside the band.
-    function rebalance() external {
+    /// @notice Permissionless, and paid. Anyone may push leverage back inside the band
+    ///         and is minted a bounty scaled to how far out it had drifted.
+    function rebalance() external returns (uint256 bounty) {
         _accrue();
         uint256 before = currentLeverage();
         require(needsRebalance(), "in band");
+        require(block.timestamp >= lastRebalanceAt + REBALANCE_COOLDOWN, "cooldown");
+        lastRebalanceAt = block.timestamp;
+
+        bounty = totalSupply * _bountyBps(before) / BPS;
         if (before > targetLeverage) {
             _unwindToTarget();
         } else {
             _lever();
         }
-        emit Rebalanced(before, currentLeverage());
+        if (bounty > 0) _mint(msg.sender, bounty);
+        emit Rebalanced(before, currentLeverage(), msg.sender, bounty);
+    }
+
+    /// @notice Bounty in bps of supply for rebalancing at leverage `lev`. View so a caller
+    ///         can price the job before spending gas on it.
+    function bountyBps(uint256 lev) external view returns (uint256) {
+        return _bountyBps(lev);
+    }
+
+    function _bountyBps(uint256 lev) internal view returns (uint256) {
+        if (lev == 0) return 0;
+        uint256 drift = lev > targetLeverage ? lev - targetLeverage : targetLeverage - lev;
+        uint256 driftBps = drift * BPS / targetLeverage;
+        uint256 bps = driftBps / 50;
+        if (bps < BOUNTY_MIN_BPS) bps = BOUNTY_MIN_BPS;
+        if (bps > BOUNTY_MAX_BPS) bps = BOUNTY_MAX_BPS;
+        return bps;
     }
 
     /// @dev Venus stores interest lazily; poke both markets so every `*Stored` read is fresh.
@@ -303,7 +349,22 @@ contract LevVault is ERC20 {
 
     function _swap(address from, address to, uint256 amountIn) internal returns (uint256 out) {
         if (amountIn == 0) return 0;
-        // Pick the better of direct and hopped, on chain, every time. Slippage is
+        if (v3Fee != 0) {
+            return v3Router.exactInputSingle(
+                IV3Router.ExactInputSingleParams({
+                    tokenIn: from,
+                    tokenOut: to,
+                    fee: v3Fee,
+                    recipient: address(this),
+                    deadline: block.timestamp,
+                    amountIn: amountIn,
+                    amountOutMinimum: 0,
+                    sqrtPriceLimitX96: 0
+                })
+            );
+        }
+
+        // V2 fallback. Pick the better of direct and hopped, on chain, every time. Slippage is
         // size-dependent: PancakeSwap V2's USDT/BTCB pool is ~$700k deep, so a small
         // leg is cheaper direct while a large one is cheaper through WBNB. Quoting
         // both costs gas and removes the guess.

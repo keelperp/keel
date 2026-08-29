@@ -35,11 +35,31 @@ state override, run against mainnet as it stands.
 
 | case | leverage | supply $ | debt $ | NAV $ (from 1,000 in) |
 |---|---:|---:|---:|---:|
-| BTC 2x long | 2.00 | 1,977.62 | 989.49 | 988.20 |
-| BTC 3x long | 3.00 | 2,942.92 | 1,962.20 | 980.79 |
-| BTC 5x long | 4.74 | 4,575.10 | 3,609.32 | 965.86 |
-| BTC 2x short | 2.00 | 2,971.89 | 1,981.48 | 990.49 |
-| BNB 3x long | 3.00 | 2,981.82 | 1,987.96 | 993.94 |
+| BTC 2x long | 2.00 | 1,999.40 | 999.72 | 999.70 |
+| BTC 3x long | 3.00 | 2,998.52 | 1,999.02 | 999.52 |
+| BTC 5x long | 4.72 | 4,713.18 | 3,714.04 | 999.15 |
+| BTC 2x short | 2.00 | 2,994.72 | 1,996.52 | 998.22 |
+| BNB 3x long | 3.00 | 2,997.60 | 1,998.41 | 999.21 |
+
+Building the position costs **0.05%**. It cost 2–3.5% until the router moved to
+PancakeSwap V3 — see "Routing" below.
+
+### Rebalance bounty — `tools/bounty.py`
+
+With no keeper, `rebalance()` has to be worth someone's gas. A vault told to reach 3x but
+given one loop lands short, which is a drift with no price move required:
+
+| | |
+|---|---:|
+| leverage after mint (`maxLoops=1`) | 1.792x (target 3.000x) |
+| `needsRebalance()` | YES |
+| bounty quoted | 30 bps |
+| bounty minted to caller | 3.0000 shares = **30 bps of supply** |
+| leverage after rebalance | 2.428x |
+| second call in the same hour | refused, `"cooldown"` |
+
+Paid in freshly minted shares, so it is funded by dilution and can never fail for want of
+liquidity. 5–30 bps, scaled to drift, one hour apart.
 
 5x lands at 4.74 rather than 5.00: Venus's 80% collateral factor puts 5x at the limit of an
 infinite loop, and `maxLoops` is finite by design.
@@ -51,7 +71,7 @@ launch → lever → curve trade → sell → graduate → seed pool → burn LP
 | | seed 20,000 |
 |---|---:|
 | tokens to creator | 623,949,579.83 |
-| backing after seed | 17,872.05 USDT |
+| backing after seed | 19,755.50 USDT |
 | vault leverage | 3.04x |
 | graduation eligible | **YES** |
 | unsold supply burned | 126,050,420.17 |
@@ -78,18 +98,28 @@ Round-trip retention preferred `direct` in every row. NAV — priced by the Venu
 the pool we just moved — prefers `hop`, by more and more as size grows. NAV is the one that is
 not measuring our own footprint.
 
-**Routing is size-dependent, so the contract quotes both every time.** PancakeSwap V2's
-USDT/BTCB pool holds only ~$700k: an 18,000 USDT leg costs 5.90% direct and 2.19% through
-WBNB, while a 1,000 USDT leg is cheaper direct because the extra hop's 0.25% outweighs the
-slippage saved. `_swap` calls `getAmountsOut` on both paths and takes the better one. No
-oracle, no admin, no guess.
+## Routing
 
-## Known costs
+PancakeSwap **V2's** USDT/BTCB pool holds ~$700k. **V3's 0.05% pool holds $16.2M** — 23x
+deeper at a fifth of the fee. Measured against the Venus oracle price:
 
-Building 3x on a 13,000 USDT seed lands 11,974 of backing — 7.9%, of which 1% is the trading
-fee and the rest is Pancake V2 slippage on ~38,600 USDT of swap volume. Routing through V3's
-deeper pools, or a flash-loan build that opens the position in one leg, is the next
-optimisation. It is a real cost today and is reported as one.
+| leg | V2 slippage | V3 slippage |
+|---:|---:|---:|
+| 1,000 USDT | 1.04% | 0.39% |
+| 5,000 USDT | 2.19% | 0.39% |
+| 18,000 USDT | 5.92% | 0.40% |
+| 40,000 USDT | 12.25% | **0.43%** |
+
+Concentrated liquidity barely moves with size, so the vault routes through V3
+(`exactInputSingle`, selector `0x414bf389` — read off the deployed router's dispatch table,
+not assumed). A V2 path with an optional WBNB hop remains as fallback for pairs with no V3
+pool, and it quotes both legs and takes the better one.
+
+Effect on the full product: a 20,000 seed used to land 17,900 of backing. It now lands
+**19,755 — a 1.22% cost, of which 1% is the trading fee itself**.
+
+A flash-loan build would save roughly 0.45% more in swap fees. It is no longer the
+bottleneck it looked like when the router was on V2.
 
 ## Layout
 
@@ -107,9 +137,32 @@ tools/ab.py           same-block routing A/B
 tools/e2e.py          full product against live state
 ```
 
+## Operator interface
+
+Three commands, per the house standard. Implementation is `tools/go.mjs`, zero npm
+dependencies — every chain call shells out to `cast`.
+
+```bash
+CONFIRM=KEEL ./deploy    # factory + curve + the opening vault set
+CONFIRM=LOCK ./lock      # +1 day onto the standing protocol-fee lock
+             ./exit      # immediate. no dry run, no confirm word
+```
+
+There is no POL here to lock — launch LP is burnt into `LPLock` forever. The one thing the
+protocol *can* take is its fee share, so that is what `./lock` binds, under the same rules:
+off by default, custody only, one call adds a day onto whatever stands, no unlock, 30-day
+ceiling.
+
+`scripts/rehearse-ops.sh` runs all three against a local fork — the same executables, not a
+simulation of them. It caught two things a build could not:
+
+- `swapHop: WBNB` on the BNB vault collided with its own collateral and reverted `hop collides`
+- `./exit` **aborted entirely** when the fee lock refused the sweep. `die()` is `process.exit`,
+  so the `try/catch` around it caught nothing. Skipping a leg is allowed; skipping the rest of
+  the command is not. It now reports the refusal and still names every balance.
+
 ## Not done yet
 
-- Three-command ops (`./deploy`, `./lock`, `./exit`) per the house standard
-- Flash-loan position build to cut the slippage above
+- Flash-loan position build (~0.45% more)
 - Frontend
 - No audit. Repeated adversarial self-review is not an audit.

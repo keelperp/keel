@@ -16,8 +16,16 @@ contract FeeVault {
     mapping(address => uint256) public claimable;
     uint256 public protocolAccrued;
 
+    /// @dev There is no POL here to lock — launch LP is burnt into LPLock forever. The one
+    ///      thing the protocol *can* take is its fee share, so that is what a lock binds.
+    ///      Same rules as the house LP-lock standard: off by default, custody only, one call
+    ///      adds a day onto whatever is already standing, no unlock, hard ceiling.
+    uint256 public constant MAX_LOCK_HORIZON = 30 days;
+    uint256 public feeUnlockTime;
+
     event Accrued(address indexed token, address indexed creator, uint256 creatorCut, uint256 protocolCut);
     event Claimed(address indexed creator, uint256 amount);
+    event FeesLocked(uint256 unlockTime);
 
     constructor(address _base, address _bonding, address _custody) {
         require(_custody != address(0), "custody zero");
@@ -44,8 +52,25 @@ contract FeeVault {
         emit Claimed(msg.sender, amount);
     }
 
+    /// @notice Adds one day onto the standing lock. Never shortens it, and cannot be undone.
+    ///         An expired lock is not an allowance — the next call starts from today.
+    function lockFees() external returns (uint256) {
+        require(msg.sender == custody, "only custody");
+        uint256 base_ = block.timestamp > feeUnlockTime ? block.timestamp : feeUnlockTime;
+        uint256 next = base_ + 1 days;
+        require(next <= block.timestamp + MAX_LOCK_HORIZON, "over horizon");
+        feeUnlockTime = next;
+        emit FeesLocked(next);
+        return next;
+    }
+
+    function feesAreLocked() external view returns (bool) {
+        return block.timestamp < feeUnlockTime;
+    }
+
     function sweepProtocol(address to) external returns (uint256 amount) {
         require(msg.sender == custody, "only custody");
+        require(block.timestamp >= feeUnlockTime, "fees locked");
         require(to != address(0) && to != address(this), "bad recipient");
         amount = protocolAccrued;
         protocolAccrued = 0;
