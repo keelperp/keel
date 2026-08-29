@@ -19,7 +19,7 @@
 | `buyTaxRate` | `200` (2%) | 决 |
 | `sellTaxRate` | `200` (2%) | 决 |
 | `taxDuration` | `3153600000` (100 年,即永久) | 决 · 税一停,金库就只剩一个不再长大的存量仓位 |
-| `antiFarmerDuration` | **建议 259200(3 天)** | 待确认 · 见下节调查 |
+| `antiFarmerDuration` | **259200** (3 天) | 决 · 跟随 Flap 官方币;语义未明,取最短暴露。见下节 |
 
 ## 税的四路分配（必须加起来 = 10000）
 
@@ -72,8 +72,37 @@
 Flap 官方币 `state()` 为 3(已迁移)——该机制可能只在迁移后生效,所以在 BAUD 上测不出效果。
 **这是推测,不是结论。**
 
-**建议取 3 天**,跟随 Flap 官方币:一个作用不明、且发出去不可改的参数,暴露时间越短风险越小。
-**发币前应向 Flap 确认其确切语义**,或在测试网上跑完整迁移后实测。
+**已定为 3 天**,跟随 Flap 官方币:一个作用不明、且发出去不可改的参数,暴露时间越短风险越小。
+**发币前仍应向 Flap 确认其确切语义**,或在测试网上跑完整迁移后实测——3 天是在不确定下的
+稳妥选择,不是"已经搞清楚了"。
+
+## 全部参数一览(可直接照填)
+
+```
+name                 Keel
+symbol               KEEL
+totalSupply          1_000_000_000e18        (Flap 固定)
+tokenVersion         TOKEN_TAXED_V3   (6)
+quoteToken           address(0)              原生 BNB
+dividendToken        address(0)              = quote,到分红合约是 WBNB
+commissionReceiver   address(0)
+dexThresh            FOUR_FIFTHS      (1)    80%
+migratorType         V2_MIGRATOR      (1)
+buyTaxRate           200                     2%
+sellTaxRate          200                     2%
+taxDuration          3_153_600_000           100 年
+antiFarmerDuration   259_200                 3 天
+mktBps               8000                    -> 金库,建 3x BNB 多头
+dividendBps          2000                    -> 直接分红
+deflationBps         0
+lpBps                0                       (四路和 = 10000)
+minimumShareBalance  10_000e18               低于此持仓无分红份额
+vaultFactory         <部署后填>
+vaultData            abi.encode(部署者钱包)   收 40% 收益份额
+quoteAmt             <待定:你的首笔买入>
+salt                 <挖 7777 后缀,从高偏移开始>
+meta                 <待定:图标与描述>
+```
 
 ## 发出去就改不了的四件事
 
