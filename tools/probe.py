@@ -36,19 +36,19 @@ def call(base_in, lev, is_long, is_btc, loops):
 
 if __name__ == "__main__":
     E = 10**18
-    print(f"{'case':<26}{'lev':>7}{'supply$':>11}{'debt$':>11}{'NAV$':>10}{'out/in':>9}   note")
+    print(f"{'case':<26}{'lev':>7}{'supply$':>11}{'debt$':>11}{'NAV$':>10}{'health':>8}   note")
     cases = [
         ("BTC 2x long",  2*E, True,  True,  3),
-        ("BTC 3x long",  3*E, True,  True,  5),
-        ("BTC 5x long",  5*E, True,  True,  12),
-        ("BTC 2x short", 2*E, False, True,  5),
-        ("BNB 3x long",  3*E, True,  False, 5),
+        ("BTC 3x long",  3*E, True,  True,  3),
+        ("BTC 2x short", 2*E, False, True,  3),
+        ("BNB 3x long",  3*E, True,  False, 3),
     ]
     for label, lev, lng, btc, loops in cases:
         r, err = call(1000*E, lev, lng, btc, loops)
         if err:
             print(f"{label:<26}   REVERT: {err}")
         else:
+            h = (r['supplyUsd']*0.8/r['borrowUsd']) if r['borrowUsd'] else 0
             print(f"{label:<26}{r['leverage']/E:>7.2f}{r['supplyUsd']/E:>11,.2f}"
-                  f"{r['borrowUsd']/E:>11,.2f}{r['totalAssets']/E:>10,.2f}"
-                  f"{r['roundTripBps']/100:>8.2f}%")
+                  f"{r['borrowUsd']/E:>11,.2f}{r['totalAssets']/E:>10,.2f}{h:>8.3f}"
+                  f"   liq at -{(1-1/h)*100:.1f}%" if h else "")

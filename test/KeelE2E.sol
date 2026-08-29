@@ -16,6 +16,7 @@ contract KeelE2E {
     address constant COMPTROLLER = 0xfD36E2c2a6789Db23113685031d7F16329158384;
     address constant ROUTER = 0x10ED43C718714eb63d5aA57B78B54704E256024E;
     address constant V3_ROUTER = 0x1b81D678ffb9C0263b24A97847620C99d213eB14;
+    address constant V3_FACTORY = 0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865;
     address constant FACTORY = 0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73;
     address constant DEAD = 0x000000000000000000000000000000000000dEaD;
 
@@ -37,7 +38,7 @@ contract KeelE2E {
     /// @notice The gate proven red: a vault the factory never created must be refused.
     /// @return refused 1 when launch reverted with "unknown vault", 0 when it went through
     function rogueVault() external returns (uint8 refused, string memory got) {
-        VaultFactory f = new VaultFactory(address(this));
+        VaultFactory f = new VaultFactory(address(this), keccak256(type(LevVault).creationCode));
         Bonding b = new Bonding(USDT, FACTORY, ROUTER, address(this), address(f));
 
         // built directly, never listed by the factory
@@ -58,7 +59,10 @@ contract KeelE2E {
                 collateralIsNative: false,
                 swapHop: 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c,
                 v3Router: V3_ROUTER,
-                v3Fee: 500
+                v3Fee: 500,
+                minHealthBps: 12_000,
+                v3Factory: V3_FACTORY,
+                flashFee: 100
             })
         );
         require(rogue.targetLeverage() > 0, "rogue looks real");
@@ -74,9 +78,10 @@ contract KeelE2E {
     }
 
     function run(uint256 seed, uint256 sellBps) external returns (Out memory o) {
-        VaultFactory f = new VaultFactory(address(this));
+        VaultFactory f = new VaultFactory(address(this), keccak256(type(LevVault).creationCode));
         LevVault v = LevVault(
             payable(f.create(
+                    type(LevVault).creationCode,
                     LevVault.Config({
                         name: "Keel BTC 3L",
                         symbol: "kBTC3L",
@@ -93,7 +98,10 @@ contract KeelE2E {
                         collateralIsNative: false,
                         swapHop: 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c,
                         v3Router: V3_ROUTER,
-                        v3Fee: 500
+                        v3Fee: 500,
+                        minHealthBps: 12_000,
+                        v3Factory: V3_FACTORY,
+                        flashFee: 100
                     })
                 ))
         );

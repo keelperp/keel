@@ -74,3 +74,14 @@ interface IV3Router {
 
     function exactInputSingle(ExactInputSingleParams calldata) external payable returns (uint256);
 }
+
+/// @notice PancakeSwap V3 pool, for the flash-build path.
+interface IV3Pool {
+    function flash(address recipient, uint256 amount0, uint256 amount1, bytes calldata data) external;
+    function token0() external view returns (address);
+    function token1() external view returns (address);
+}
+
+interface IV3Factory {
+    function getPool(address, address, uint24) external view returns (address);
+}

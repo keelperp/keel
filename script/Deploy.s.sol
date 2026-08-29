@@ -20,6 +20,7 @@ contract Deploy is Script {
     address constant COMPTROLLER = 0xfD36E2c2a6789Db23113685031d7F16329158384;
     address constant V2_ROUTER = 0x10ED43C718714eb63d5aA57B78B54704E256024E;
     address constant V3_ROUTER = 0x1b81D678ffb9C0263b24A97847620C99d213eB14;
+    address constant V3_FACTORY = 0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865;
     address constant PANCAKE_FACTORY = 0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73;
 
     function run() external {
@@ -27,15 +28,27 @@ contract Deploy is Script {
         require(custody != address(0), "KEEL_CUSTODY unset");
 
         vm.startBroadcast();
-        VaultFactory factory = new VaultFactory(msg.sender);
+        VaultFactory factory = new VaultFactory(msg.sender, keccak256(type(LevVault).creationCode));
         Bonding bonding = new Bonding(USDT, PANCAKE_FACTORY, V2_ROUTER, custody, address(factory));
 
         address[5] memory vaults;
-        vaults[0] = factory.create(_cfg("Keel BTC 2L", "kBTC2L", BTCB, vBTC, 2e18, true, false, 3));
-        vaults[1] = factory.create(_cfg("Keel BTC 3L", "kBTC3L", BTCB, vBTC, 3e18, true, false, 5));
-        vaults[2] = factory.create(_cfg("Keel BTC 5L", "kBTC5L", BTCB, vBTC, 5e18, true, false, 12));
-        vaults[3] = factory.create(_cfg("Keel BTC 2S", "kBTC2S", BTCB, vBTC, 2e18, false, false, 5));
-        vaults[4] = factory.create(_cfg("Keel BNB 3L", "kBNB3L", WBNB, vBNB, 3e18, true, true, 5));
+        vaults[0] = factory.create(
+            type(LevVault).creationCode, _cfg("Keel BTC 2L", "kBTC2L", BTCB, vBTC, 2e18, true, false, 3)
+        );
+        vaults[1] = factory.create(
+            type(LevVault).creationCode, _cfg("Keel BTC 3L", "kBTC3L", BTCB, vBTC, 3e18, true, false, 5)
+        );
+        // No 5x. At Venus's 80% CF, 5x IS health 1.00 — the liquidation point itself.
+        // 3x is the most a 1.20 health floor can hold; see the constructor check.
+        vaults[2] = factory.create(
+            type(LevVault).creationCode, _cfg("Keel BNB 2L", "kBNB2L", WBNB, vBNB, 2e18, true, true, 3)
+        );
+        vaults[3] = factory.create(
+            type(LevVault).creationCode, _cfg("Keel BTC 2S", "kBTC2S", BTCB, vBTC, 2e18, false, false, 5)
+        );
+        vaults[4] = factory.create(
+            type(LevVault).creationCode, _cfg("Keel BNB 3L", "kBNB3L", WBNB, vBNB, 3e18, true, true, 5)
+        );
         vm.stopBroadcast();
 
         console2.log("VaultFactory", address(factory));
@@ -74,7 +87,10 @@ contract Deploy is Script {
             // WBNB cannot be its own intermediate hop; the direct pair is the deep one anyway.
             swapHop: collateral == WBNB ? address(0) : WBNB,
             v3Router: V3_ROUTER,
-            v3Fee: 500
+            v3Fee: 500,
+            minHealthBps: 12_000,
+            v3Factory: V3_FACTORY,
+            flashFee: 100
         });
     }
 }

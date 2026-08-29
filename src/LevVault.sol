@@ -10,7 +10,9 @@ import {
     IERC20Min,
     IVBNB,
     IWNative,
-    IV3Router
+    IV3Router,
+    IV3Pool,
+    IV3Factory
 } from "./interfaces/IVenus.sol";
 
 /// @title LevVault — an on-chain leveraged position, held by the contract itself.
@@ -33,6 +35,12 @@ contract LevVault is ERC20 {
     ///      funded by dilution and can never fail for want of liquidity.
     uint256 internal constant BOUNTY_MIN_BPS = 5;
     uint256 internal constant BOUNTY_MAX_BPS = 30;
+    /// @dev When health is this low the position is minutes from a Venus liquidation.
+    ///      The hourly cooldown that protects against bleed becomes the thing that
+    ///      stops anyone saving it, so below this line the cooldown is waived and the
+    ///      bounty jumps — the loss being avoided dwarfs the dilution.
+    uint256 internal constant URGENT_HEALTH_BPS = 11_000;
+    uint256 internal constant BOUNTY_URGENT_BPS = 100;
     uint256 internal constant REBALANCE_COOLDOWN = 1 hours;
 
     /// @dev Unit of account for deposits and redemptions (USDT).
@@ -50,6 +58,12 @@ contract LevVault is ERC20 {
     uint256 public immutable targetLeverage;
     bool public immutable isLong;
     uint256 public lastRebalanceAt;
+    uint256 public immutable minHealthBps;
+    /// @dev The V3 pool whose flash callback we accept. Immutable, and the only address
+    ///      allowed to call back — a flash callback open to anyone is a free call into
+    ///      this contract's Venus position.
+    address public immutable flashPool;
+    bool internal immutable flashBaseIsToken0;
     /// @dev Rebalance band in bps around targetLeverage; outside it `rebalance()` acts.
     uint256 public immutable bandBps;
     uint8 public immutable maxLoops;
@@ -99,10 +113,25 @@ contract LevVault is ERC20 {
         ///      Measured: V2's USDT/BTCB pool is ~$700k and costs 12.25% on a 40,000 leg;
         ///      V3's 0.05% pool holds $16.2M and costs 0.43% on the same leg.
         uint24 v3Fee;
+        /// @dev Floor on (collateral value x CF) / debt, in bps. 12000 = liquidated only
+        ///      by a 16.7% move against the position. This is the real cap on leverage:
+        ///      at Venus's 80% collateral factor, 5x IS the liquidation point, not a
+        ///      risky approach to it. The constructor refuses a target it cannot hold.
+        uint256 minHealthBps;
+        /// @dev PancakeSwap V3 factory, used once to resolve the pool that funds the
+        ///      flash build. address(0) keeps the vault on the loop path.
+        address v3Factory;
+        /// @dev Fee tier of the flash pool. MUST differ from v3Fee: a V3 pool is locked
+        ///      for the duration of its own flash callback, so borrowing and swapping in
+        ///      the same pool reverts "LOK". Flash fee is charged on the loan, not on a
+        ///      trade, so the thin 0.01% pool is both cheaper and out of the swap's way.
+        uint24 flashFee;
     }
 
     constructor(Config memory c) ERC20(c.name, c.symbol) {
         require(c.targetLeverage_ > WAD && c.targetLeverage_ <= 5 * WAD, "lev range");
+        require(c.minHealthBps >= 10_500 && c.minHealthBps <= 30_000, "health range");
+        minHealthBps = c.minHealthBps;
         require(c.bandBps_ > 0 && c.bandBps_ <= 5000, "band range");
         require(c.maxLoops_ > 0 && c.maxLoops_ <= 20, "loops range");
         require(c.base_ != c.collateral_, "same asset");
@@ -149,6 +178,23 @@ contract LevVault is ERC20 {
         mk[0] = address(vSupply);
         comptroller.enterMarkets(mk);
 
+        // A target the collateral factor cannot support is not "aggressive", it is a
+        // product that liquidates on arrival. Refuse it here rather than ship it.
+        //   cf * lev >= health * (lev - 1)   ->   lev <= health / (health - cf)
+        (, uint256 cf0,) = IComptroller(c.comptroller).markets(address(vSupply));
+        uint256 cfBps = cf0 / 1e14;
+        require(c.minHealthBps > cfBps, "health below CF");
+        uint256 maxLev = c.minHealthBps * WAD / (c.minHealthBps - cfBps);
+        require(c.targetLeverage_ <= maxLev, "leverage exceeds health floor");
+
+        require(c.flashFee == 0 || c.flashFee != c.v3Fee, "flash pool is swap pool");
+        address pool;
+        if (c.v3Factory != address(0) && c.flashFee != 0) {
+            pool = IV3Factory(c.v3Factory).getPool(c.base_, c.collateral_, c.flashFee);
+        }
+        flashPool = pool;
+        flashBaseIsToken0 = pool != address(0) && IV3Pool(pool).token0() == c.base_;
+
         IERC20Min(c.base_).approve(c.router, type(uint256).max);
         IERC20Min(c.collateral_).approve(c.router, type(uint256).max);
         if (!supplyIsNative) supplyAsset.approve(address(vSupply), type(uint256).max);
@@ -192,6 +238,20 @@ contract LevVault is ERC20 {
         uint256 navUsd = s - b;
         uint256 exposureUsd = isLong ? s : b;
         return exposureUsd * WAD / navUsd;
+    }
+
+    /// @notice (collateral value x CF) / debt, in bps. 10000 is the Venus liquidation
+    ///         point exactly; anything at or under it is already liquidatable.
+    function healthBps() public view returns (uint256) {
+        (uint256 s, uint256 b) = positionUsd();
+        if (b == 0) return type(uint256).max;
+        return s * collateralFactor() / WAD * BPS / b;
+    }
+
+    /// @notice Seconds that must pass between rebalances. Zero when the position is
+    ///         close enough to liquidation that waiting is the larger risk.
+    function rebalanceCooldown() public view returns (uint256) {
+        return healthBps() < URGENT_HEALTH_BPS ? 0 : REBALANCE_COOLDOWN;
     }
 
     function collateralFactor() public view returns (uint256 cf) {
@@ -265,7 +325,7 @@ contract LevVault is ERC20 {
         _accrue();
         uint256 before = currentLeverage();
         require(needsRebalance(), "in band");
-        require(block.timestamp >= lastRebalanceAt + REBALANCE_COOLDOWN, "cooldown");
+        require(block.timestamp >= lastRebalanceAt + rebalanceCooldown(), "cooldown");
         lastRebalanceAt = block.timestamp;
 
         bounty = totalSupply * _bountyBps(before) / BPS;
@@ -286,6 +346,7 @@ contract LevVault is ERC20 {
 
     function _bountyBps(uint256 lev) internal view returns (uint256) {
         if (lev == 0) return 0;
+        if (healthBps() < URGENT_HEALTH_BPS) return BOUNTY_URGENT_BPS;
         uint256 drift = lev > targetLeverage ? lev - targetLeverage : targetLeverage - lev;
         uint256 driftBps = drift * BPS / targetLeverage;
         uint256 bps = driftBps / 50;
@@ -385,8 +446,79 @@ contract LevVault is ERC20 {
         out = amounts[amounts.length - 1];
     }
 
+    /// @dev Debt valued in base units, for sizing the flash.
+    function _debtInBase() internal view returns (uint256) {
+        uint256 d = vBorrow.borrowBalanceStored(address(this));
+        if (d == 0) return 0;
+        IVenusOracle o = _oracle();
+        return d * o.getUnderlyingPrice(address(vBorrow)) / o.getUnderlyingPrice(address(vBase));
+    }
+
+    /// @dev Reach target leverage in one pass. Venus refuses a borrow that its *current*
+    ///     collateral cannot cover, which is why the loop path converges geometrically
+    ///     at cf/h and needs ~18 swaps for 3x. A flash loan supplies first and borrows
+    ///     second, so the whole position is built with a single swap.
+    function _leverFlash() internal {
+        uint256 idle = base.balanceOf(address(this));
+        if (idle < DUST) return;
+        uint256 navBase = totalAssets();
+        if (navBase == 0) return;
+        // Long exposure is the supply leg, short exposure is the borrow leg, so the
+        // debt each targets is different: L-1 times NAV for a long, L times for a short.
+        uint256 targetDebt = isLong ? navBase * (targetLeverage - WAD) / WAD : navBase * targetLeverage / WAD;
+
+        // The health floor is a harder cap than the leverage target, and at cf 0.80 /
+        // health 1.20 a 3x long sits exactly ON it: debt = nav*cf/(h-cf) = 2*nav. Any
+        // slippage then lands under the floor. Take 1% off so the build clears it.
+        uint256 cfBps2 = collateralFactor() / 1e14;
+        if (minHealthBps > cfBps2) {
+            // A short pays a second swap inside the callback (collateral -> base to
+            // repay the flash), so its build lands further from the modelled debt and
+            // needs the wider margin. Measured, not guessed: 99% clears for a long and
+            // does not for a short.
+            uint256 debtCap = navBase * cfBps2 / (minHealthBps - cfBps2) * (isLong ? 99 : 96) / 100;
+            if (targetDebt > debtCap) targetDebt = debtCap;
+        }
+        uint256 curDebt = _debtInBase();
+        if (targetDebt <= curDebt) return;
+        uint256 f = targetDebt - curDebt;
+        if (f < DUST) return;
+        (uint256 a0, uint256 a1) = flashBaseIsToken0 ? (f, uint256(0)) : (uint256(0), f);
+        IV3Pool(flashPool).flash(address(this), a0, a1, abi.encode(idle, f));
+    }
+
+    /// @notice PancakeSwap V3 flash callback. Only the one pool resolved at construction
+    ///         may call it — an open callback is a free call into this vault's position.
+    function pancakeV3FlashCallback(uint256 fee0, uint256 fee1, bytes calldata data) external {
+        require(msg.sender == flashPool, "not pool");
+        (uint256 idle, uint256 f) = abi.decode(data, (uint256, uint256));
+        uint256 owed = f + (flashBaseIsToken0 ? fee0 : fee1);
+
+        if (isLong) {
+            _venusSupply(_swap(address(base), address(collateral), idle + f));
+            _venusBorrow(owed);
+        } else {
+            _venusSupply(idle + f);
+            IVenusOracle o = _oracle();
+            uint256 need =
+                owed * o.getUnderlyingPrice(address(vBase)) / o.getUnderlyingPrice(address(vBorrow));
+            // Cover the swap's cost, no more: every excess unit borrowed is debt that
+            // lands under the health floor. V3's measured slippage here is ~0.39%.
+            need = need * 1005 / 1000;
+            _venusBorrow(need);
+            _swap(address(collateral), address(base), need);
+        }
+        require(base.transfer(flashPool, owed), "flash repay");
+        // A build that lands under the floor must revert, not quietly ship a thinner
+        // buffer than the vault advertises.
+        require(healthBps() >= minHealthBps, "flash breached health floor");
+    }
+
     /// @dev Borrow-and-supply until leverage reaches target or Venus capacity runs out.
     function _lever() internal {
+        if (flashPool != address(0) && base.balanceOf(address(this)) >= DUST) {
+            _leverFlash();
+        }
         // move any idle base into the supply leg first
         uint256 idle = base.balanceOf(address(this));
         if (idle > 0) {
@@ -409,9 +541,13 @@ contract LevVault is ERC20 {
             if (s >= targetSupplyUsd) break;
 
             uint256 need = targetSupplyUsd - s;
-            uint256 limit = s * cf / WAD;
-            if (limit <= b) break;
-            uint256 capacity = (limit - b) * 99 / 100;
+            // Venus checks collateral at the instant of the borrow, before the proceeds
+            // become collateral, so the one-shot headroom (s*cf - h*b)/(h - cf) is a
+            // borrow it rejects with "math error". Only the sliver is available per pass,
+            // and passes converge geometrically at cf/h. Hence the flash path below.
+            uint256 maxDebt = s * cf / WAD * BPS / minHealthBps;
+            if (maxDebt <= b) break;
+            uint256 capacity = (maxDebt - b) * 99 / 100;
             uint256 takeUsd = need < capacity ? need : capacity;
             uint256 amt = takeUsd * WAD / pxBorrow;
             if (amt == 0) break;

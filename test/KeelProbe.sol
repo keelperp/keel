@@ -17,6 +17,7 @@ contract KeelProbe {
     address constant COMPTROLLER = 0xfD36E2c2a6789Db23113685031d7F16329158384;
     address constant ROUTER = 0x10ED43C718714eb63d5aA57B78B54704E256024E;
     address constant V3_ROUTER = 0x1b81D678ffb9C0263b24A97847620C99d213eB14;
+    address constant V3_FACTORY = 0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865;
 
     struct Result {
         uint256 shares;
@@ -69,7 +70,12 @@ contract KeelProbe {
                 collateralIsNative: false,
                 swapHop: WBNB,
                 v3Router: V3_ROUTER,
-                v3Fee: 500
+                v3Fee: 500,
+                minHealthBps: 12_000,
+                // No flash factory: this vault must use the slow loop path, so one loop
+                // leaves it short of target — a drift with no price move required.
+                v3Factory: address(0),
+                flashFee: 0
             })
         );
         IERC20Min(USDT).approve(address(v), type(uint256).max);
@@ -128,7 +134,10 @@ contract KeelProbe {
                 collateralIsNative: !collateralIsBtc,
                 swapHop: hop,
                 v3Router: V3_ROUTER,
-                v3Fee: collateralIsBtc ? uint24(500) : uint24(500)
+                v3Fee: collateralIsBtc ? uint24(500) : uint24(500),
+                minHealthBps: 12_000,
+                v3Factory: V3_FACTORY,
+                flashFee: 100
             })
         );
 

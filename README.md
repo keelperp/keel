@@ -33,16 +33,55 @@ state override, run against mainnet as it stands.
 
 ### Engine — `tools/probe.py`
 
-| case | leverage | supply $ | debt $ | NAV $ (from 1,000 in) |
-|---|---:|---:|---:|---:|
-| BTC 2x long | 2.00 | 1,999.40 | 999.72 | 999.70 |
-| BTC 3x long | 3.00 | 2,998.52 | 1,999.02 | 999.52 |
-| BTC 5x long | 4.72 | 4,713.18 | 3,714.04 | 999.15 |
-| BTC 2x short | 2.00 | 2,994.72 | 1,996.52 | 998.22 |
-| BNB 3x long | 3.00 | 2,997.60 | 1,998.41 | 999.21 |
+| case | leverage | supply $ | debt $ | NAV $ (from 1,000 in) | health | liquidated by |
+|---|---:|---:|---:|---:|---:|---:|
+| BTC 2x long | 2.00 | 1,999.52 | 1,000.09 | 999.44 | 1.599 | −37.5% |
+| BTC 3x long | 2.99 | 2,991.81 | 1,992.74 | 999.08 | 1.201 | −16.7% |
+| BTC 2x short | 1.98 | 2,974.59 | 1,976.39 | 998.21 | 1.204 | −16.9% |
+| BNB 3x long | 2.99 | 2,991.23 | 1,992.40 | 998.83 | 1.201 | −16.7% |
 
-Building the position costs **0.05%**. It cost 2–3.5% until the router moved to
-PancakeSwap V3 — see "Routing" below.
+Building the position costs **0.06–0.18%**, in three passes, via the flash path.
+
+## There is no 5x, and there cannot be
+
+Venus's collateral factor on these markets is 80%. Health is `supply × CF / debt`, and Venus
+liquidates at 1.00. Run leverage against it:
+
+| target | health | price move that liquidates |
+|---:|---:|---:|
+| 2.00x | 1.600 | −37.50% |
+| 3.00x | 1.200 | −16.67% |
+| 4.00x | 1.067 | −6.25% |
+| **5.00x** | **1.000** | **0.00%** |
+
+**5x is not a risky approach to the liquidation point — at CF 80% it IS the liquidation
+point.** An earlier build shipped it and measured 4.72x at health 1.015: a 1.5% move in BTC
+would have taken the whole position. It is gone. The vault now takes a `minHealthBps` floor
+(12000 = liquidated only by a 16.7% move), the constructor **refuses a target the collateral
+factor cannot hold**, and `_lever` caps debt by the floor rather than by Venus's own limit.
+
+At CF 80% the floor is the real cap on the product:
+
+| health floor | max leverage |
+|---:|---:|
+| 1.10 | 3.67x |
+| 1.20 | **3.00x** |
+| 1.30 | 2.60x |
+
+### Flash build — why it is required, not an optimisation
+
+Venus checks collateral **at the instant of the borrow**, before the proceeds become
+collateral. So the one-shot borrow that the algebra allows — `(s·cf − h·b)/(h − cf)` — is
+rejected outright with `math error`, and the loop can only take the sliver its *current*
+collateral supports. Those passes converge geometrically at `cf/h = 0.667`: **18 swaps to
+reach 3x**, at 0.30% in fees.
+
+A flash loan reverses the order — supply first, borrow second — and builds the whole position
+with one swap. Cost drops to 0.089% and the loop cap falls from 18 to 3.
+
+The flash pool must be a **different fee tier from the swap pool**: a V3 pool is locked for the
+duration of its own flash callback, so borrowing and swapping in the same pool reverts `LOK`.
+Flash runs on the 0.01% tier, swaps on the deep 0.05% tier.
 
 ### Rebalance bounty — `tools/bounty.py`
 
@@ -51,15 +90,18 @@ given one loop lands short, which is a drift with no price move required:
 
 | | |
 |---|---:|
-| leverage after mint (`maxLoops=1`) | 1.792x (target 3.000x) |
+| leverage after mint (`maxLoops=1`, flash disabled) | 1.660x (target 3.000x) |
 | `needsRebalance()` | YES |
 | bounty quoted | 30 bps |
 | bounty minted to caller | 3.0000 shares = **30 bps of supply** |
-| leverage after rebalance | 2.428x |
+| leverage after rebalance | 2.102x |
 | second call in the same hour | refused, `"cooldown"` |
 
 Paid in freshly minted shares, so it is funded by dilution and can never fail for want of
-liquidity. 5–30 bps, scaled to drift, one hour apart.
+liquidity. 5–30 bps scaled to drift, one hour apart — **except** below health 1.10, where the
+cooldown is waived and the bounty jumps to 100 bps. An hourly cooldown that protects against
+bleed is also the thing that stops anyone saving a position in a fast move; below that line
+the loss being avoided dwarfs the dilution.
 
 5x lands at 4.74 rather than 5.00: Venus's 80% collateral factor puts 5x at the limit of an
 infinite loop, and `maxLoops` is finite by design.
@@ -71,7 +113,7 @@ launch → lever → curve trade → sell → graduate → seed pool → burn LP
 | | seed 20,000 |
 |---|---:|
 | tokens to creator | 623,949,579.83 |
-| backing after seed | 19,755.50 USDT |
+| backing after seed | 19,746.72 USDT |
 | vault leverage | 3.04x |
 | graduation eligible | **YES** |
 | unsold supply burned | 126,050,420.17 |
@@ -161,8 +203,15 @@ simulation of them. It caught two things a build could not:
   so the `try/catch` around it caught nothing. Skipping a leg is allowed; skipping the rest of
   the command is not. It now reports the refusal and still names every balance.
 
+## The factory does not embed the vault
+
+`VaultFactory` reached **23,921 bytes** with `new LevVault(...)` inlined — 655 short of
+EIP-170, with every future line in the vault pushing it closer, and a limit that only shows up
+on a real deploy. It now takes the creation code as calldata and checks it against a
+`vaultCodeHash` fixed at construction: **1,949 bytes**, and provenance is if anything tighter —
+only the one build whose hash was recorded can ever be deployed.
+
 ## Not done yet
 
-- Flash-loan position build (~0.45% more)
-- Frontend
+- Frontend (waits on real addresses — a UI wired to nothing is not a deliverable)
 - No audit. Repeated adversarial self-review is not an audit.
