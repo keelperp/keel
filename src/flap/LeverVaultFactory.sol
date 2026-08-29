@@ -61,7 +61,11 @@ contract LeverVaultFactory is VaultFactoryBaseV2 {
     ///      - a non-WBNB dividend token makes `harvest()` revert forever, so the treasury
     ///        grows and no holder can ever be paid out of it;
     ///      - zero tax, or a zero vault share, means the vault is created and never funded;
-    ///      - zero `dividendBps` strands every gain the same way a wrong dividend token does.
+    ///      - zero `dividendBps` is refused conservatively: `minimumShareBalance` is only
+    ///        "required when dividendBps > 0", which suggests the dividend contract may not
+    ///        be initialised at all without it — and `harvest()` has nowhere to deposit into
+    ///        if it is absent. This has not been verified against a live zero-dividend token,
+    ///        so the guard errs toward refusing a launch rather than stranding one.
     function _validateBeforeLaunch(IVaultFactoryValidationV2.LaunchValidationDataV1 memory data)
         internal
         pure

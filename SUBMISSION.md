@@ -81,6 +81,12 @@ marker、runtime provenance、递归文件哈希与 `qa/e2e-report.json`),**手�
 - [ ] 确认 `v2.2` 是提交基线(skill 内置 prelude 为 v2.1,与根目录不一致)
 - [ ] 部署后由持有 `VAULT_ADMIN_ROLE` 的账户注册 factory
 
+## 发币参数
+
+已定与待定逐项列在 `LAUNCH.md`。要点:2% 买卖税、**税的 80% 进金库建仓 / 20% 直接分红**、
+税期 100 年(永久)、分红门槛 10,000 枚、原生 BNB 计价、`TOKEN_TAXED_V3`。
+**代币名称与符号尚未确定。**
+
 ## 我方待办(拿到裁定后)
 
 - [ ] 冻结 commit,重跑全部测试与 size gate
