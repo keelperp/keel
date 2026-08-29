@@ -85,6 +85,7 @@ contract FlapProbe {
         uint256 totalHarvested;
         uint256 navAfterHarvest;
         uint256 healthAfter;
+        uint256 toProject;
         uint256 noGainGuard; // 1 when a second harvest correctly refuses
     }
 
@@ -107,6 +108,7 @@ contract FlapProbe {
 
         h.harvestBounty = v.harvest();
         h.totalHarvested = v.totalHarvested();
+        h.toProject = v.totalToProject();
         h.navAfterHarvest = v.nav();
         h.healthAfter = v.healthBps();
 

@@ -80,6 +80,9 @@ contract LeverVault is VaultBaseV2 {
     uint256 public constant HARVEST_BOUNTY_BPS = 50;
     uint256 public constant REBALANCE_BOUNTY_BPS = 30;
     uint256 public constant MIN_DEPLOY = 0.01 ether;
+    /// @notice Of every harvest, after the caller's bounty: 40% to the project, 60% to
+    ///         holders. Constant — nobody can move it, including the project.
+    uint256 public constant PROJECT_SHARE_BPS = 4000;
     uint256 public constant MIN_HARVEST = 0.02 ether;
 
     // ------------------------------------------------------- storage (append-only)
@@ -90,9 +93,8 @@ contract LeverVault is VaultBaseV2 {
 
     /// @notice The Flap tax token this vault was created for.
     address public token;
-    /// @notice Recorded at initialize for off-chain attribution. This vault deliberately
-    ///         routes no value here: every wei either enters the position, is paid to a
-    ///         caller as a fixed bounty, or reaches holders as a dividend.
+    /// @notice Receives PROJECT_SHARE_BPS of every harvest. Set once at initialize and
+    ///         never movable — there is no setter, by design.
     address public project;
     /// @notice Lifetime BNB received from the tax processor.
     uint256 public totalReceived;
@@ -105,6 +107,8 @@ contract LeverVault is VaultBaseV2 {
     /// @notice Cost basis of the live position, in BNB, for measuring gain.
     uint256 public costBasis;
     uint256 public lastRebalanceAt;
+    /// @notice Lifetime BNB paid to the project out of harvests.
+    uint256 public totalToProject;
 
     bool private _entered;
 
@@ -112,7 +116,7 @@ contract LeverVault is VaultBaseV2 {
 
     event Received(address indexed from, uint256 amount);
     event Deployed(address indexed caller, uint256 amount, uint256 bounty, uint256 leverage);
-    event Harvested(address indexed caller, uint256 toHolders, uint256 bounty);
+    event Harvested(address indexed caller, uint256 toHolders, uint256 toProject, uint256 bounty);
     event Rebalanced(address indexed caller, uint256 leverageBefore, uint256 leverageAfter, uint256 bounty);
 
     // Rule 004: the UI renders revert strings verbatim and cannot decode custom error
@@ -270,15 +274,23 @@ contract LeverVault is VaultBaseV2 {
         require(freed > 0, unicode"LeverVault: unwind freed nothing / 减仓没有释放出资金");
 
         bounty = freed * HARVEST_BOUNTY_BPS / BPS;
-        uint256 toHolders = freed - bounty;
+        uint256 net = freed - bounty;
+        uint256 toProject = net * PROJECT_SHARE_BPS / BPS;
+        uint256 toHolders = net - toProject;
 
         // costBasis is deliberately untouched: _shrinkBy took only the gain, so what is
         // left in the position is still exactly what was paid for it.
         totalHarvested += toHolders;
+        totalToProject += toProject;
 
         IWNative(WBNB).deposit{value: toHolders}();
         IERC20Min(WBNB).approve(div, toHolders);
         IDividend(div).deposit(toHolders);
+
+        if (toProject > 0) {
+            (bool sent,) = project.call{value: toProject}("");
+            require(sent, unicode"LeverVault: project transfer failed / 项目方转账失败");
+        }
 
         require(
             healthBps() >= MIN_HEALTH_BPS,
@@ -287,7 +299,7 @@ contract LeverVault is VaultBaseV2 {
 
         (bool ok,) = msg.sender.call{value: bounty}("");
         require(ok, unicode"LeverVault: bounty transfer failed / 赏金转账失败");
-        emit Harvested(msg.sender, toHolders, bounty);
+        emit Harvested(msg.sender, toHolders, toProject, bounty);
     }
 
     /// @notice Push leverage back inside the band. Permissionless and paid.
@@ -523,7 +535,8 @@ contract LeverVault is VaultBaseV2 {
         m[3].isWriteMethod = true;
 
         m[4].name = "harvest";
-        m[4].description = "Send the position's gain to holders as dividends. Anyone may call; pays 0.5%.";
+        m[4].description =
+            "Distribute the position's gain: 60% to holders as WBNB dividends, 40% to the project. Anyone may call; pays 0.5% to the caller.";
         m[4].outputs = _one("bounty", "uint256", "BNB paid to the caller");
         m[4].isWriteMethod = true;
 
