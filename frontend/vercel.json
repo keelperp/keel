@@ -1,0 +1,3 @@
+{
+  "rewrites": [{ "source": "/((?!deployments/).*)", "destination": "/index.html" }]
+}

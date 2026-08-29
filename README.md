@@ -211,7 +211,25 @@ on a real deploy. It now takes the creation code as calldata and checks it again
 `vaultCodeHash` fixed at construction: **1,949 bytes**, and provenance is if anything tighter —
 only the one build whose hash was recorded can ever be deployed.
 
+## Frontend
+
+`frontend/` — Vite + viem, no framework. `npm run build` is green and typecheck is real
+(`tsc --noEmit`, not `tsc -b`, which exits 0 without checking anything when a project has no
+references — it caught a `string` where viem needs a literal function name).
+
+Three rules it is built to:
+
+- **ABIs are generated** from forge artefacts by `scripts/gen-abi.mjs`, never hand-copied. A
+  hand-written slice drifts silently the moment a signature changes.
+- **Empty renders empty.** With no deployment manifest the page says *Not deployed* and shows
+  nothing. There is no fixture fallback anywhere — a demo fixture becomes the only content the
+  day real data is missing.
+- **A value that has not loaded is not zero.** Every read is `Maybe<T>` and renders `—` when
+  null. Rounding "unknown" down to 0 on a page where people commit money is how you overcharge.
+
+It is not deployed, because there are no addresses to wire it to. `vercel.json` carries the SPA
+rewrite so deep links survive a hard refresh in production — `vite preview` hides that failure.
+
 ## Not done yet
 
-- Frontend (waits on real addresses — a UI wired to nothing is not a deliverable)
 - No audit. Repeated adversarial self-review is not an audit.

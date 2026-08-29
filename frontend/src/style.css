@@ -1,0 +1,44 @@
+:root {
+  --paper: #F6F4EF; --sunk: #EDEAE2; --card: #FFFDF9;
+  --ink: #11181F; --soft: #3A4652; --slate: #6B7683;
+  --rule: #DCD7CB; --copper: #A85D2E; --sea: #1F5F5B; --rust: #8C3A2B;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0E141A; --sunk: #131B22; --card: #172029;
+    --ink: #EAE6DE; --soft: #B6BEC7; --slate: #8A96A3;
+    --rule: #26313B; --copper: #D9884F; --sea: #6FBFAE; --rust: #D9765F;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font: 16px/1.6 ui-sans-serif, system-ui, sans-serif;
+  padding: 0 20px 80px;
+}
+.wrap { max-width: 940px; margin: 0 auto; }
+.mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+nav { display: flex; gap: 20px; align-items: center; padding: 22px 0; border-bottom: 1px solid var(--rule); }
+nav a { color: var(--slate); text-decoration: none; font-size: 14px; }
+nav a.on, nav a:hover { color: var(--copper); }
+nav .sp { flex: 1; }
+button {
+  font: inherit; font-size: 14px; padding: 8px 14px; border-radius: 3px;
+  border: 1px solid var(--copper); background: transparent; color: var(--copper); cursor: pointer;
+}
+button:hover { background: var(--copper); color: var(--paper); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+h1 { font-size: 30px; letter-spacing: -.02em; margin: 34px 0 8px; }
+h2 { font-size: 20px; margin: 30px 0 12px; }
+.sub { color: var(--soft); max-width: 62ch; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; margin-top: 22px; }
+.card { border: 1px solid var(--rule); background: var(--card); border-radius: 3px; padding: 18px; }
+.card h3 { margin: 0 0 12px; font-size: 17px; }
+.row { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; }
+.row dt { color: var(--slate); }
+.row dd { margin: 0; font-family: ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+.empty { border: 1px dashed var(--rule); border-radius: 3px; padding: 34px; text-align: center; color: var(--slate); margin-top: 22px; }
+.pill { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; padding: 3px 8px; border-radius: 2px; border: 1px solid currentColor; }
+.pill.ok { color: var(--sea); } .pill.warn { color: var(--rust); }
+code { font-family: ui-monospace, Menlo, monospace; font-size: 13px; background: var(--sunk); padding: 1px 5px; border-radius: 2px; }
+a { color: var(--copper); }
