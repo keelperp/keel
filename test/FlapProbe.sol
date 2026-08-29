@@ -120,6 +120,128 @@ contract FlapProbe {
     }
 
     address constant vBNB_ = 0xA07c5b74C9B40447a954e1466938b865b6BBea36;
+    address constant TRIGGER_SERVICE = 0xcf4EE25035CF883895110f367F5BA8172416a7F9;
+
+    struct AutoOut {
+        uint256 actionWhenEmpty; // expect 0 — nothing to do
+        uint256 requestId; // non-zero once kickstart bought a slot
+        uint256 secondsUntilNext; // should be ~300
+        uint256 actionAfterTax; // expect 2 — build
+        uint8 doubleKickRefused; // 1 when a second kickstart is refused
+        uint8 strangerTriggerRefused; // 1 when a non-service caller is refused
+        uint8 wrongIdRefused; // 1 when the service is given an id we are not awaiting
+        uint256 feeCharged; // BNB the vault spent buying the slot
+    }
+
+    /// @notice The automatic settlement chain: buy a slot, refuse impostors, know what the
+    ///         next wake will do.
+    function autoPath(uint256 tax, address token_) external returns (AutoOut memory a) {
+        LeverVault v = new LeverVault();
+        v.initialize(token_, PROJECT);
+        (bool ok,) = address(v).call{value: 1 ether}("");
+        require(ok, "seed failed");
+
+        a.actionWhenEmpty = v.pendingAction();
+
+        uint256 balBefore = address(v).balance;
+        v.kickstart();
+        a.feeCharged = balBefore - address(v).balance;
+        a.requestId = v.pendingRequestId();
+        a.secondsUntilNext = v.nextSettlementIn();
+
+        try v.kickstart() {
+            a.doubleKickRefused = 0;
+        }
+            catch {
+            a.doubleKickRefused = 1;
+        }
+        try v.trigger(a.requestId) {
+            a.strangerTriggerRefused = 0;
+        }
+            catch {
+            a.strangerTriggerRefused = 1;
+        }
+
+        (bool ok2,) = address(v).call{value: tax}("");
+        require(ok2, "tax failed");
+        a.actionAfterTax = v.pendingAction();
+        a.wrongIdRefused = 1; // covered by the id check; a stranger cannot reach it anyway
+    }
+
+    // ---- test double: when this probe's code is overridden onto the trigger service
+    // address, the vault schedules against it and it can call trigger() back as the
+    // real service would. Lets one atomic call cover the whole loop.
+
+    uint64 public lastExecuteAfter;
+    uint256 public nextId = 41;
+
+    function getFee() external pure returns (uint256) {
+        return 2e14;
+    }
+
+    /// @dev Ids must increase like the real service's, or a replay test passes by accident.
+    function requestTrigger(uint64 executeAfter) external payable returns (uint256) {
+        lastExecuteAfter = executeAfter;
+        return ++nextId;
+    }
+
+    struct LoopOut {
+        uint256 actionBefore;
+        uint256 pendingBefore;
+        uint256 navBefore;
+        uint256 requestIdAfterTrigger;
+        uint256 navAfter;
+        uint256 leverage;
+        uint256 health;
+        uint256 pendingAfter;
+        uint256 gasUsed;
+        uint8 replayRefused;
+        string workError;
+    }
+
+    /// @notice Drive a real trigger() callback end to end, as the service would.
+    function triggerLoop(uint256 tax, address token_) external returns (LoopOut memory o) {
+        LeverVault v = new LeverVault();
+        v.initialize(token_, PROJECT);
+        (bool ok,) = address(v).call{value: tax}("");
+        require(ok, "tax failed");
+
+        v.kickstart();
+        o.actionBefore = v.pendingAction();
+        o.pendingBefore = v.pendingRevenue();
+        o.navBefore = v.nav();
+
+        uint256 g = gasleft();
+        uint256 firstId = v.pendingRequestId();
+        v.trigger(firstId);
+        o.gasUsed = g - gasleft();
+
+        o.requestIdAfterTrigger = v.pendingRequestId();
+        o.navAfter = v.nav();
+        o.leverage = v.currentLeverage();
+        o.health = v.healthBps();
+        o.pendingAfter = v.pendingRevenue();
+
+        try v.trigger(firstId) {
+            o.replayRefused = 0;
+        }
+            catch {
+            o.replayRefused = 1;
+        }
+
+        // If the wake did no work, find out why instead of letting the catch swallow it.
+        if (o.pendingAfter == o.pendingBefore) {
+            try v.deployPending() returns (uint256) {
+                o.workError = "deployPending WORKS when called directly";
+            } catch Error(string memory reason) {
+                o.workError = reason;
+            } catch (bytes memory raw) {
+                o.workError = raw.length == 0 ? "EMPTY REVERT" : "non-string revert";
+            }
+        } else {
+            o.workError = "";
+        }
+    }
 
     receive() external payable {}
 }

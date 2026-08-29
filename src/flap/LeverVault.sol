@@ -2,6 +2,7 @@
 pragma solidity 0.8.26;
 
 import {VaultBaseV2} from "./VaultBaseV2.sol";
+import {IFlapTriggerService, ITriggerReceiver} from "./IFlapTriggerService.sol";
 import {VaultUISchema, VaultMethodSchema, FieldDescriptor, ApproveAction} from "./IVaultSchemasV1.sol";
 import {
     IVToken,
@@ -49,7 +50,7 @@ interface IDividend {
 ///         emergency mechanism.
 ///       - **001 (permissions):** there are no role-gated functions to grant the Guardian.
 ///         Nothing here is privileged, so nothing can lock the Guardian out.
-contract LeverVault is VaultBaseV2 {
+contract LeverVault is VaultBaseV2, ITriggerReceiver {
     // ---------------------------------------------------------------- constants
 
     address internal constant WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
@@ -83,6 +84,19 @@ contract LeverVault is VaultBaseV2 {
     /// @notice Of every harvest, after the caller's bounty: 40% to the project, 60% to
     ///         holders. Constant — nobody can move it, including the project.
     uint256 public constant PROJECT_SHARE_BPS = 4000;
+
+    /// @notice Flap's trigger service on BNB Chain. It calls `trigger()` on a schedule,
+    ///         which is why holders never have to press anything.
+    address internal constant TRIGGER_SERVICE = 0xcf4EE25035CF883895110f367F5BA8172416a7F9;
+    /// @notice Settlement cadence when there is work to do.
+    uint64 public constant TRIGGER_INTERVAL = 5 minutes;
+    /// @notice Cadence when the last wake found nothing. Checking every 5 minutes forever
+    ///         would spend the treasury on trigger fees during a quiet market.
+    uint64 public constant IDLE_INTERVAL = 1 hours;
+    /// @dev Rule 008 caps a callback at 2,000,000 gas. A build measures ~1.7M, so the
+    ///      schedule is bought FIRST and the work is attempted second, inside a try —
+    ///      a failed job must never break the chain that would have retried it.
+    uint256 internal constant WORK_GAS_FLOOR = 1_800_000;
     uint256 public constant MIN_HARVEST = 0.02 ether;
 
     // ------------------------------------------------------- storage (append-only)
@@ -109,6 +123,9 @@ contract LeverVault is VaultBaseV2 {
     uint256 public lastRebalanceAt;
     /// @notice Lifetime BNB paid to the project out of harvests.
     uint256 public totalToProject;
+    /// @notice The one trigger request this vault is waiting on. Zero means the chain is
+    ///         idle and anyone may restart it with `kickstart()`.
+    uint256 public pendingRequestId;
 
     bool private _entered;
 
@@ -118,6 +135,9 @@ contract LeverVault is VaultBaseV2 {
     event Deployed(address indexed caller, uint256 amount, uint256 bounty, uint256 leverage);
     event Harvested(address indexed caller, uint256 toHolders, uint256 toProject, uint256 bounty);
     event Rebalanced(address indexed caller, uint256 leverageBefore, uint256 leverageAfter, uint256 bounty);
+    event Scheduled(uint256 indexed requestId, uint64 executeAfter);
+    event Settled(uint256 indexed requestId, uint8 action);
+    event WorkFailed(uint256 indexed requestId, bytes reason);
 
     // Rule 004: the UI renders revert strings verbatim and cannot decode custom error
     // selectors, so every revert here is a require() with an inline bilingual literal.
@@ -234,10 +254,16 @@ contract LeverVault is VaultBaseV2 {
     /// @notice Turn accumulated tax into position. Permissionless and paid, because with
     ///         no keeper there has to be a reason for anyone to show up.
     function deployPending() external nonReentrant returns (uint256 bounty) {
+        return _deploy(msg.sender);
+    }
+
+    /// @dev `bountyTo == address(0)` is the automatic path: the trigger fee has already
+    ///      been paid out of the treasury, so no second fee is charged on top of it.
+    function _deploy(address bountyTo) internal returns (uint256 bounty) {
         uint256 amount = pendingRevenue;
         require(amount >= MIN_DEPLOY, unicode"LeverVault: nothing to deploy yet / 暂无可部署的税收");
 
-        bounty = amount * DEPLOY_BOUNTY_BPS / BPS;
+        bounty = bountyTo == address(0) ? 0 : amount * DEPLOY_BOUNTY_BPS / BPS;
         uint256 work = amount - bounty;
         pendingRevenue = 0;
         totalDeployed += work;
@@ -250,14 +276,20 @@ contract LeverVault is VaultBaseV2 {
             unicode"LeverVault: build breached the health floor / 建仓跌破健康度下限"
         );
 
-        (bool ok,) = msg.sender.call{value: bounty}("");
-        require(ok, unicode"LeverVault: bounty transfer failed / 赏金转账失败");
-        emit Deployed(msg.sender, work, bounty, currentLeverage());
+        if (bounty > 0) {
+            (bool ok,) = bountyTo.call{value: bounty}("");
+            require(ok, unicode"LeverVault: bounty transfer failed / 赏金转账失败");
+        }
+        emit Deployed(bountyTo, work, bounty, currentLeverage());
     }
 
     /// @notice Send the position's gain to every holder through the token's own dividend
     ///         contract. Permissionless and paid.
     function harvest() external nonReentrant returns (uint256 bounty) {
+        return _harvest(msg.sender);
+    }
+
+    function _harvest(address bountyTo) internal returns (uint256 bounty) {
         _accrue();
         uint256 gain = unrealisedGain();
         require(gain >= MIN_HARVEST, unicode"LeverVault: no gain to harvest yet / 暂无可分配的收益");
@@ -273,7 +305,7 @@ contract LeverVault is VaultBaseV2 {
         uint256 freed = address(this).balance - before;
         require(freed > 0, unicode"LeverVault: unwind freed nothing / 减仓没有释放出资金");
 
-        bounty = freed * HARVEST_BOUNTY_BPS / BPS;
+        bounty = bountyTo == address(0) ? 0 : freed * HARVEST_BOUNTY_BPS / BPS;
         uint256 net = freed - bounty;
         uint256 toProject = net * PROJECT_SHARE_BPS / BPS;
         uint256 toHolders = net - toProject;
@@ -297,13 +329,19 @@ contract LeverVault is VaultBaseV2 {
             unicode"LeverVault: harvest breached the health floor / 分配收益跌破健康度下限"
         );
 
-        (bool ok,) = msg.sender.call{value: bounty}("");
-        require(ok, unicode"LeverVault: bounty transfer failed / 赏金转账失败");
-        emit Harvested(msg.sender, toHolders, toProject, bounty);
+        if (bounty > 0) {
+            (bool ok,) = bountyTo.call{value: bounty}("");
+            require(ok, unicode"LeverVault: bounty transfer failed / 赏金转账失败");
+        }
+        emit Harvested(bountyTo, toHolders, toProject, bounty);
     }
 
     /// @notice Push leverage back inside the band. Permissionless and paid.
     function rebalance() external nonReentrant returns (uint256 bounty) {
+        return _rebalance(msg.sender);
+    }
+
+    function _rebalance(address bountyTo) internal returns (uint256 bounty) {
         _accrue();
         require(needsRebalance(), unicode"LeverVault: leverage is inside the band / 杠杆仍在区间内");
         uint256 cd = healthBps() < URGENT_HEALTH_BPS ? 0 : rebalanceCooldown();
@@ -324,9 +362,9 @@ contract LeverVault is VaultBaseV2 {
             _build(0);
         }
         uint256 freed = address(this).balance - bnbBefore;
-        bounty = freed * REBALANCE_BOUNTY_BPS / BPS;
+        bounty = bountyTo == address(0) ? 0 : freed * REBALANCE_BOUNTY_BPS / BPS;
         if (bounty > 0) {
-            (bool ok,) = msg.sender.call{value: bounty}("");
+            (bool ok,) = bountyTo.call{value: bounty}("");
             require(ok, unicode"LeverVault: bounty transfer failed / 赏金转账失败");
         }
         uint256 rest = address(this).balance - bnbBefore;
@@ -335,7 +373,98 @@ contract LeverVault is VaultBaseV2 {
             healthBps() >= MIN_HEALTH_BPS,
             unicode"LeverVault: rebalance breached the health floor / 再平衡跌破健康度下限"
         );
-        emit Rebalanced(msg.sender, before, currentLeverage(), bounty);
+        emit Rebalanced(bountyTo, before, currentLeverage(), bounty);
+    }
+
+    // ------------------------------------------------------- automatic settlement
+
+    /// @notice Called by Flap's trigger service on a schedule. Holders press nothing.
+    /// @dev Rule 008 in three parts:
+    ///      - sender is checked against the one official service address;
+    ///      - the request id must be the exact one this vault is waiting on, and it is
+    ///        consumed before any work runs, so a replay finds nothing to replay;
+    ///      - nothing here assumes the callback arrived on time. Every job re-reads the
+    ///        chain and decides again.
+    function trigger(uint256 requestId) external override {
+        require(
+            msg.sender == TRIGGER_SERVICE,
+            unicode"LeverVault: caller is not the trigger service / 调用方不是定时服务"
+        );
+        require(
+            requestId != 0 && requestId == pendingRequestId,
+            unicode"LeverVault: unknown or spent trigger / 未知或已消费的定时请求"
+        );
+        pendingRequestId = 0;
+
+        uint8 action = _pickAction();
+
+        // Buy the next slot before doing the work. A build costs ~1.7M gas against a 2M
+        // cap; if it reverted after scheduling, the chain would still be alive to retry.
+        _schedule(action == 0 ? IDLE_INTERVAL : TRIGGER_INTERVAL);
+
+        if (action != 0 && gasleft() >= WORK_GAS_FLOOR) {
+            try this.settleSelf(action) {
+                emit Settled(requestId, action);
+            } catch (bytes memory reason) {
+                emit WorkFailed(requestId, reason);
+            }
+        }
+    }
+
+    /// @notice Anyone may restart settlement if the chain ever goes idle — after a failed
+    ///         schedule, or after the treasury was briefly too empty to buy a slot.
+    function kickstart() external nonReentrant {
+        require(pendingRequestId == 0, unicode"LeverVault: already scheduled / 已排定下一次结算");
+        _schedule(TRIGGER_INTERVAL);
+        require(pendingRequestId != 0, unicode"LeverVault: could not schedule / 无法排定结算");
+    }
+
+    /// @notice Seconds until the next settlement, or zero when the chain is idle.
+    function nextSettlementIn() external view returns (uint256) {
+        if (pendingRequestId == 0) return 0;
+        IFlapTriggerService.TriggerRequest memory r =
+            IFlapTriggerService(TRIGGER_SERVICE).getRequest(pendingRequestId);
+        return r.executeAfter > block.timestamp ? r.executeAfter - block.timestamp : 0;
+    }
+
+    /// @notice What the next settlement will do. 0 nothing, 1 rescue, 2 build, 3 harvest,
+    ///         4 rebalance.
+    function pendingAction() external view returns (uint8) {
+        return _pickAction();
+    }
+
+    function _pickAction() internal view returns (uint8) {
+        if (healthBps() < URGENT_HEALTH_BPS) return 1;
+        if (pendingRevenue >= MIN_DEPLOY) return 2;
+        if (unrealisedGain() >= MIN_HARVEST) return 3;
+        if (needsRebalance()) return 4;
+        return 0;
+    }
+
+    /// @dev External only so `trigger()` can wrap it in a try. Self-calls only.
+    function settleSelf(uint8 action) external {
+        require(msg.sender == address(this), unicode"LeverVault: self only / 仅限自调用");
+        if (action == 2) {
+            _deploy(address(0));
+        } else if (action == 3) {
+            _harvest(address(0));
+        } else {
+            _rebalance(address(0));
+        }
+    }
+
+    function _schedule(uint64 delay) internal {
+        uint256 fee = IFlapTriggerService(TRIGGER_SERVICE).getFee();
+        if (address(this).balance < fee) return;
+        uint256 id =
+            IFlapTriggerService(TRIGGER_SERVICE).requestTrigger{value: fee}(uint64(block.timestamp) + delay);
+        // The slot is bought out of undeployed revenue. Without this the balance drops and
+        // pendingRevenue does not, so the next build tries to deploy more BNB than the
+        // vault holds and reverts with empty returndata. The manual path hid it: its 0.25%
+        // bounty happened to leave exactly enough room.
+        pendingRevenue = pendingRevenue > fee ? pendingRevenue - fee : 0;
+        pendingRequestId = id;
+        emit Scheduled(id, uint64(block.timestamp) + delay);
     }
 
     // -------------------------------------------------------------- position work
