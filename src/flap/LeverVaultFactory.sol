@@ -4,6 +4,7 @@ pragma solidity 0.8.26;
 import {BeaconProxy} from "openzeppelin-contracts/contracts/proxy/beacon/BeaconProxy.sol";
 import {VaultFactoryBaseV2} from "./VaultFactoryBaseV2.sol";
 import {VaultDataSchema, FieldDescriptor} from "./IVaultSchemasV1.sol";
+import {IVaultPortalTypes} from "./IVaultPortal.sol";
 import {LeverVault} from "./LeverVault.sol";
 import {LeverBeacon} from "./LeverBeacon.sol";
 
@@ -21,6 +22,8 @@ import {LeverBeacon} from "./LeverBeacon.sol";
 ///        Guardian's authority is the beacon it owns, set in `LeverBeacon`'s constructor;
 ///      - reverts are `require()` with inline bilingual literals, per rule 004.
 contract LeverVaultFactory is VaultFactoryBaseV2 {
+    address internal constant WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
+
     /// @notice The beacon every vault this factory deploys points at. Guardian-owned.
     address public immutable beacon;
 
@@ -45,6 +48,48 @@ contract LeverVaultFactory is VaultFactoryBaseV2 {
     ///         parameter of this one.
     function isQuoteTokenSupported(address quoteToken) external pure override returns (bool supported) {
         return quoteToken == address(0);
+    }
+
+    /// @notice Refuse a launch this vault could never serve, before the token exists.
+    ///
+    /// @dev Without this the failure is silent and late. `harvest()` requires the token's
+    ///      dividend contract to pay in WBNB; a token launched with any other dividend
+    ///      token would build its position fine and then **never be able to distribute a
+    ///      gain** — the treasury grows and no holder can ever be paid from it. A zero-tax
+    ///      token is the same shape of mistake: the vault would be created and never
+    ///      funded. Both are cheap to reject here and unfixable afterwards.
+    function onBeforeNewTokenV6WithVault(IVaultPortalTypes.NewTokenV6WithVaultParams calldata params)
+        external
+        pure
+        override
+        returns (bool success, string memory reason)
+    {
+        if (params.quoteToken != address(0)) {
+            return
+                (
+                    false,
+                    unicode"LeverVaultFactory: quote must be native BNB / 计价资产必须是原生 BNB"
+                );
+        }
+        // address(0) means "pay dividends in the quote token", which here is BNB and
+        // reaches the dividend contract as WBNB. An explicit WBNB is the same thing.
+        if (params.dividendToken != address(0) && params.dividendToken != WBNB) {
+            return (
+                false,
+                unicode"LeverVaultFactory: dividends must be BNB or WBNB / 分红资产必须是 BNB 或 WBNB"
+            );
+        }
+        if (params.buyTaxRate == 0 && params.sellTaxRate == 0) {
+            return (
+                false,
+                unicode"LeverVaultFactory: a zero-tax token never funds the vault / 零税代币无法为金库注资"
+            );
+        }
+        if (params.dividendBps == 0) {
+            return
+                (false, unicode"LeverVaultFactory: dividendBps must be non-zero / 分红份额不能为零");
+        }
+        return (true, "");
     }
 
     function vaultDataSchema() public pure override returns (VaultDataSchema memory schema) {

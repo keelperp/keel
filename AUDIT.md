@@ -39,6 +39,12 @@ health 地板 1.20 对应上限 **3.00x**;**5x 算出来正好 1.00,即清算点
 `_shrinkBy` 的两个目标都取自**原始**两条腿。早期用循环后的 supply 重算目标,把循环已赎回
 的部分又扣了一次,0.99 的收益释放了 1.90。修复后实测释放额与收益之比为 **1.00x**(三个规模)。
 
+### 发币参数在创建前就被校验
+`onBeforeNewTokenV6WithVault` 拒绝三类本金库永远无法服务的代币:非 BNB 计价、非 WBNB 分红、
+以及零税或零 `dividendBps`。**这不是洁癖**:`harvest()` 要求分红合约收 WBNB,一个用 BTCB 分红
+的代币会正常建仓、正常增值,然后**永远无法把收益分给任何人**——金库越涨越大,持有者一分拿不到,
+且发币后不可修复。零税代币同理,金库会被创建然后永远收不到钱。两者都在发币前一步拦掉。
+
 ### 分账不可变
 `PROJECT_SHARE_BPS = 4000`,持有者 60% / 项目方 40%,均为 `constant`,**无 setter**。
 项目方无法移动自己那份。赏金、滑点余量、路由费率档、结算间隔同样全部是常数。
@@ -50,7 +56,7 @@ health 地板 1.20 对应上限 **3.00x**;**5x 算出来正好 1.00,即清算点
 | 规则 | 结论 | 依据 |
 |---|---|---|
 | **001** Base / UI schema / Guardian / No-DoS | ✅ | 继承 `VaultBaseV2`;`vaultUISchema()` 覆盖全部 6 个用户可见方法,且**名字逐个与编译期 selector 比对**(`test_everySchemaMethodNameResolvesToARealSelector`);合约无任何 role-gated 函数,故不存在可把 Guardian 锁在门外的角色。Guardian 的权限是它所有的 beacon。 |
-| **002** Factory / commission | ✅ | `LeverVaultFactory` 继承 `VaultFactoryBaseV2`;`newVault` 拒绝一切非 VaultPortal 调用并逐项校验参数(5 个 revert 全部有测试);`vaultDataSchema()` 与 `newVault` 的 `vaultData` ABI 一致(一个 address);`isQuoteTokenSupported` 只认原生 BNB。 |
+| **002** Factory / commission | ⚠️ 见 SB-01 | `LeverVaultFactory` 继承 `VaultFactoryBaseV2`;`newVault` 拒绝一切非 VaultPortal 调用并逐项校验参数(5 个 revert 全部有测试);`vaultDataSchema()` 与 `newVault` 的 `vaultData` ABI 一致(一个 address);`isQuoteTokenSupported` 只认原生 BNB;`onBeforeNewTokenV6WithVault` 拒绝本金库无法服务的发币参数。`commissionReceiver` 是**发币参数**不是 factory 字段,commissionBps 由 launcher 按税率内部计算,本 factory 不触碰。**但 40% 的项目方分成需要 Flap 书面接受,见 SB-01。** |
 | **003** 公平性 / 三明治 | ✅ | 三个工作函数全部无许可。**没有任何特权角色能改滑点、路由、时机或触发条件**——它们全是 `constant`。自动路径不付赏金(触发费已从金库出),手动路径付固定 bps,内部人相对机器人无任何结构性优势。 |
 | **004** 字面量错误 / 双语 | ✅ | **零 custom error**;全部 revert 为 `require()` + `unicode` 中英内联字面量。开发期违反过此条,已全部替换。 |
 | **005** `receive()` gas | ✅ | 冷 **57,433** / 热 **9,133**,上限 1,000,000。另有测试证明 1 wei 与 0 value 均不 revert,以及在 **2,300 gas stipend** 下对已知发送方仍然成功。 |
@@ -135,6 +141,32 @@ Venus 的 ResilientOracle 一次 `getUnderlyingPrice` 要 **26,308** gas(它要�
 
 `_accrue()` 保留(vBNB 37,950 + vUSDT 28,558)。跳过它可以再省 66k,但那样健康度判断会
 读到上一次计息时的债务,**偏乐观**——这 66k 买的是不朝危险那侧犯错。
+
+## 提交阻断项
+
+### SB-01 — 项目方 40% 分成需要 Flap 书面接受
+
+Flap 对 factory commission 的推荐在 2% 税率下约为 **3%**。参考实现 ShiftVault 的 30% project
+share 已被其自审标为提交阻断,本金库的 40% 更高。
+
+**但口径不同,这是需要向 Flap 说明的核心事实:**
+
+| | ShiftVault | LeverVault |
+|---|---|---|
+| 项目方从**税**里拿 | 30% | **0%** |
+| 项目方从**仓位收益**里拿 | — | 40% |
+
+本金库的税 **100% 进入仓位**,一分不分给项目方。项目方只在仓位**赚到钱之后**,从那笔收益里
+拿 40%,持有者拿 60%。仓位不赚钱,项目方收入为零。这与"从每笔交易税里抽成"是两种不同的
+经济关系,但**是否接受由 Flap 决定,不由本文决定**。
+
+两条都是 `constant` 且无 setter,若 Flap 要求调整,只能改代码重新部署。
+
+### SB-02 — factory 必须先部署,注册权在 Flap
+
+`registerVaultFactory` 需要 `VAULT_ADMIN_ROLE`,只有 Flap 能调。提交流程是:
+**先把 factory 部署到 BSC 主网 → 把地址交给 Flap → 由 Flap 注册**。
+本仓库当前 `NOT_DEPLOYED`,因此**尚不能提交**——不是代码没准备好,是流程上还差部署这一步。
 
 ## 待处理项(部署前)
 
