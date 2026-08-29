@@ -32,6 +32,9 @@ fi
 echo; echo "=== live state: 33 assertions, one atomic eth_call each ==="
 python3 tools/verify.py || fail=1
 
+echo; echo "=== vault UI package: ABI currency and i18n coverage ==="
+node tools/check-vault-ui.mjs || fail=1
+
 echo; echo "=== sizes (EIP-170) ==="
 forge build --sizes | awk '/^\|/ {gsub(/\|/,""); if ($2+0 > 24576) { print "  OVER:", $1, $2; over=1 }} END { if (!over) print "  all within limit" }'
 

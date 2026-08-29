@@ -1,0 +1,315 @@
+"use client";
+
+/**
+ * Keel — the vault page.
+ *
+ * The thing worth showing here is not a set of buttons. This vault settles itself every five
+ * minutes through Flap's trigger service, so the page leads with what the next wake will do and
+ * how long until it happens; the manual calls are a fallback and are laid out as one.
+ *
+ * Boundaries this stays inside, deliberately: every read goes through `context.vaultAddress`,
+ * the health gauge is static SVG geometry positioned from React state (no text nodes, no
+ * external reference), no font file travels with the package so the stacks below name faces and
+ * fall back to system ones, and the component makes no outbound request of any kind.
+ */
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { VaultComponentProps } from "@/src/sdk";
+import { handleTxError, useFlapSdk } from "@/src/sdk";
+import { Alert, Button, Card, CardContent, CardHeader, CardTitle } from "@/src/ui";
+import { vaultAbi } from "./VaultABI";
+
+const INK = "#11181f";
+const BODY = "#3a4652";
+const MUTE = "#6b7683";
+const LINE = "#dcd7cb";
+const PAPER = "#f6f4ef";
+const PANEL = "#fffdf9";
+const COPPER = "#a85d2e";
+const SEA = "#1f5f5b";
+const RUST = "#8c3a2b";
+const MONO = "ui-monospace, 'SF Mono', Menlo, Consolas, monospace";
+
+const WAD = 10n ** 18n;
+
+/** A value that has not loaded is not zero. Every reader here returns undefined until it has one. */
+type Maybe<T> = T | undefined;
+
+function dec(v: Maybe<bigint>, dp = 4): string {
+  if (v === undefined) return "—";
+  const whole = v / WAD;
+  const frac = (v % WAD) / 10n ** BigInt(18 - dp);
+  return `${whole.toString()}.${frac.toString().padStart(dp, "0")}`;
+}
+
+function lev(v: Maybe<bigint>): string {
+  return v === undefined ? "—" : `${dec(v, 2)}×`;
+}
+
+/** Health is bps over the liquidation point. An unlevered vault reads type(uint256).max. */
+function healthText(v: Maybe<bigint>): string {
+  if (v === undefined) return "—";
+  if (v > 10n ** 9n) return "no debt";
+  return (Number(v) / 10000).toFixed(3);
+}
+
+/** The move against the position that would liquidate it: 1 − 1/health. */
+function liqMove(v: Maybe<bigint>): string {
+  if (v === undefined || v > 10n ** 9n || v <= 10000n) return "—";
+  return `${((1 - 10000 / Number(v)) * 100).toFixed(1)}%`;
+}
+
+function clock(s: Maybe<number>): string {
+  if (s === undefined) return "—";
+  if (s <= 0) return "due";
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}:${r.toString().padStart(2, "0")}`;
+}
+
+export default function KeelVault({ sdk: injected, context: injectedContext }: VaultComponentProps) {
+  const sdk = useFlapSdk(injected);
+  const context = injectedContext ?? sdk.context;
+  const t = useCallback((k: string) => sdk.i18n.t(k), [sdk]);
+  const vault = context.vaultAddress;
+
+  const [nav, setNav] = useState<Maybe<bigint>>();
+  const [leverage, setLeverage] = useState<Maybe<bigint>>();
+  const [target, setTarget] = useState<Maybe<bigint>>();
+  const [health, setHealth] = useState<Maybe<bigint>>();
+  const [floor, setFloor] = useState<Maybe<bigint>>();
+  const [pending, setPending] = useState<Maybe<bigint>>();
+  const [toHolders, setToHolders] = useState<Maybe<bigint>>();
+  const [toProject, setToProject] = useState<Maybe<bigint>>();
+  const [action, setAction] = useState<Maybe<number>>();
+  const [requestId, setRequestId] = useState<Maybe<bigint>>();
+  const [countdown, setCountdown] = useState<Maybe<number>>();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+
+  const read = useCallback(
+    async <T,>(functionName: string): Promise<Maybe<T>> => {
+      try {
+        return (await sdk.readContract({ address: vault, abi: vaultAbi, functionName })) as T;
+      } catch {
+        return undefined;
+      }
+    },
+    [sdk, vault]
+  );
+
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      const [n, l, tg, h, f, p, th, tp, a, rid, secs] = await Promise.all([
+        read<bigint>("nav"),
+        read<bigint>("currentLeverage"),
+        read<bigint>("TARGET_LEVERAGE"),
+        read<bigint>("healthBps"),
+        read<bigint>("MIN_HEALTH_BPS"),
+        read<bigint>("pendingRevenue"),
+        read<bigint>("totalHarvested"),
+        read<bigint>("totalToProject"),
+        read<number>("pendingAction"),
+        read<bigint>("pendingRequestId"),
+        read<bigint>("nextSettlementIn"),
+      ]);
+      if (!live) return;
+      setNav(n);
+      setLeverage(l);
+      setTarget(tg);
+      setHealth(h);
+      setFloor(f);
+      setPending(p);
+      setToHolders(th);
+      setToProject(tp);
+      setAction(a === undefined ? undefined : Number(a));
+      setRequestId(rid);
+      setCountdown(secs === undefined ? undefined : Number(secs));
+    })();
+    return () => {
+      live = false;
+    };
+  }, [read, sdk.refetchNonce]);
+
+  // Tick the countdown locally rather than polling the chain once a second.
+  useEffect(() => {
+    if (countdown === undefined) return;
+    const id = setInterval(() => setCountdown((s) => (s === undefined ? s : Math.max(0, s - 1))), 1000);
+    return () => clearInterval(id);
+  }, [countdown === undefined]);
+
+  const actionLabel = useMemo(() => {
+    switch (action) {
+      case 1:
+        return t("actionRescue");
+      case 2:
+        return t("actionBuild");
+      case 3:
+        return t("actionHarvest");
+      case 4:
+        return t("actionRebalance");
+      case 0:
+        return t("actionNothing");
+      default:
+        return "—";
+    }
+  }, [action, t]);
+
+  const send = useCallback(
+    async (functionName: string, key: string) => {
+      setNote(null);
+      setBusy(key);
+      try {
+        await sdk.simulateContract({ address: vault, abi: vaultAbi, functionName });
+        const hash = await sdk.writeContract({ address: vault, abi: vaultAbi, functionName });
+        await sdk.waitForTx(hash);
+        await sdk.refetch();
+      } catch (e) {
+        setNote(handleTxError(e));
+      } finally {
+        setBusy(null);
+      }
+    },
+    [sdk, vault]
+  );
+
+  const connected = Boolean(context.userAddress);
+  const scheduled = requestId !== undefined && requestId > 0n;
+
+  // Gauge geometry: 1.00 is liquidation, the floor sits at MIN_HEALTH_BPS, and 2.00 is the far
+  // end of the drawn range. Positions come from state; the SVG carries no text.
+  const gaugePos = (bps: Maybe<bigint>): number | undefined => {
+    if (bps === undefined || bps > 10n ** 9n) return undefined;
+    const v = Number(bps) / 10000;
+    return Math.max(0, Math.min(1, (v - 1) / 1));
+  };
+  const hx = gaugePos(health);
+  const fx = gaugePos(floor);
+
+  const stat = (label: string, value: string, hint?: string, tone?: string) => (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <div style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", color: MUTE }}>
+        {label}
+      </div>
+      <div style={{ fontFamily: MONO, fontSize: 24, fontVariantNumeric: "tabular-nums", color: tone ?? INK }}>
+        {value}
+      </div>
+      {hint ? <div style={{ fontSize: 12, color: MUTE, lineHeight: 1.45 }}>{hint}</div> : null}
+    </div>
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14, color: INK, background: PAPER }}>
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("title")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+            <div style={{ fontSize: 15, color: BODY, maxWidth: "56ch", lineHeight: 1.55 }}>{t("tagline")}</div>
+
+            {/* What the vault will do next, and when. This is the page's lead. */}
+            <div
+              style={{
+                border: `1px solid ${LINE}`,
+                borderLeft: `3px solid ${COPPER}`,
+                borderRadius: 3,
+                background: PANEL,
+                padding: "16px 18px",
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 22,
+                alignItems: "baseline",
+              }}
+            >
+              {scheduled
+                ? stat(t("nextSettlement"), clock(countdown), `${t("willDo")}: ${actionLabel}`, COPPER)
+                : stat(t("idle"), "—", t("nothingToDo"), MUTE)}
+              {stat(t("awaitingTax"), `${dec(pending)} BNB`)}
+            </div>
+
+            <div style={{ fontSize: 13, color: BODY, lineHeight: 1.55 }}>{t("auto")}</div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+                gap: 18,
+              }}
+            >
+              {stat(t("treasury"), `${dec(nav)} BNB`, t("treasuryHint"))}
+              {stat(t("leverage"), lev(leverage), `${t("target")} ${lev(target)}`)}
+              {stat(
+                t("health"),
+                healthText(health),
+                t("liquidatesAt").replace("{pct}", liqMove(health)),
+                health !== undefined && health <= 11000n ? RUST : SEA
+              )}
+            </div>
+
+            {/* Health gauge. Left edge is the Venus liquidation point, the notch is the vault's
+                own floor, and the mark is where the position stands now. */}
+            <svg viewBox="0 0 300 26" width="100%" height="26" role="presentation" aria-hidden="true">
+              <rect x="0" y="11" width="300" height="4" fill={LINE} />
+              <rect x="0" y="9" width="3" height="8" fill={RUST} />
+              {fx !== undefined ? <rect x={fx * 297} y="7" width="2" height="12" fill={MUTE} /> : null}
+              {hx !== undefined ? (
+                <>
+                  <rect x="0" y="11" width={Math.max(3, hx * 297)} height="4" fill={SEA} />
+                  <circle cx={Math.max(3, hx * 297)} cy="13" r="5" fill={SEA} />
+                </>
+              ) : null}
+            </svg>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+                gap: 18,
+                borderTop: `1px solid ${LINE}`,
+                paddingTop: 16,
+              }}
+            >
+              {stat(t("paidHolders"), `${dec(toHolders)} BNB`, undefined, SEA)}
+              {stat(t("paidProject"), `${dec(toProject)} BNB`)}
+            </div>
+            <div style={{ fontSize: 12, color: MUTE, lineHeight: 1.5 }}>{t("split")}</div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("manualTitle")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ fontSize: 13, color: BODY, lineHeight: 1.55 }}>{t("manualHint")}</div>
+            {note ? <Alert>{note}</Alert> : null}
+            {connected ? null : <Alert>{t("connect")}</Alert>}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              <Button disabled={!connected || busy !== null} onClick={() => send("deployPending", "deploy")}>
+                {busy === "deploy" ? "…" : t("deploy")}
+              </Button>
+              <Button disabled={!connected || busy !== null} onClick={() => send("harvest", "harvest")}>
+                {busy === "harvest" ? "…" : t("harvestBtn")}
+              </Button>
+              <Button disabled={!connected || busy !== null} onClick={() => send("rebalance", "rebalance")}>
+                {busy === "rebalance" ? "…" : t("rebalanceBtn")}
+              </Button>
+              {scheduled ? null : (
+                <Button disabled={!connected || busy !== null} onClick={() => send("kickstart", "kickstart")}>
+                  {busy === "kickstart" ? "…" : t("kickstart")}
+                </Button>
+              )}
+            </div>
+            <div style={{ fontSize: 12, color: RUST, lineHeight: 1.5, borderTop: `1px solid ${LINE}`, paddingTop: 12 }}>
+              {t("risk")}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

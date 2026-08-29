@@ -60,6 +60,21 @@ Flap 的 factory commission 抽的是**税**——用户每一笔买卖产生的
 - [x] **59 项验证全绿**:24 个 forge 测试 + 33 条主网活状态断言(`bash scripts/test.sh`)
 - [x] 编译参数固定,全部合约在 EIP-170 之内
 
+## Vault UI 包
+
+`vault-ui/` 下是 Flap Vault UI 模板要求的四个文件:`Component.tsx`(首屏是**下一次结算的倒计时**
+和这次会做什么,三个工作函数放在"手动兜底"卡片里)、`manifest.json`、`VaultABI.ts`、`i18n.json`
+(中英双语)。
+
+`VaultABI.ts` 由 `tools/gen-vault-abi.mjs` 从 forge 产物生成并裁剪到组件真正调用的名字;
+`tools/check-vault-ui.mjs` 是回归门:重新生成必须是空操作、组件调用的每个名字都要在 ABI 里、
+两种语言 key 必须一致、每个 `t()` 都要有定义。已接入 `scripts/test.sh`。
+
+**本目录不产出 zip,也不该产出。** Flap 只接受 `yarn vault:package` 的产物(带 format-version 6
+marker、runtime provenance、递归文件哈希与 `qa/e2e-report.json`),**手工组装的 zip 会被 Workbench
+拒绝**。而 scaffold 与 `match.bindings` 都需要真实部署的 factory 地址和一个真实的 `7777` 代币,
+**所以打包必然排在部署之后**。部署后的五步流程写在 `vault-ui/README.md`。
+
 ## 待 Flap
 
 - [ ] **裁定 SB-01**(40% 收益分成)
@@ -70,6 +85,8 @@ Flap 的 factory commission 抽的是**税**——用户每一笔买卖产生的
 
 - [ ] 冻结 commit,重跑全部测试与 size gate
 - [ ] 部署 factory 至 BSC 主网,交付地址
+- [ ] 用真实地址填 `vault-ui/manifest.json`,在 Flap 模板仓库跑
+      `vault:check` → `vault:e2e` → `vault:package`,提交 zip
 
 ---
 
