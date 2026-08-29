@@ -1,28 +1,25 @@
 #!/usr/bin/env bash
 # Run the full suite. Pins the fork a few blocks back on purpose.
 #
-# bsc-dataseed is load balanced across nodes at different heights: five calls in a row
-# returned blocks 118767492 through 118767511. Forge forks at the height one node reports
-# and then reads state from another, so Venus's stored accrual block can be AHEAD of the
-# fork block, blockDelta underflows, and accrueInterest reverts "math error" at random.
-# Pinning a few blocks back makes every node agree.
+# Note on the fork: bsc-dataseed is load balanced across nodes at different heights (five
+# calls in a row spanned 19 blocks), so forge can fork at one node's height and read state
+# from another. Venus's stored accrual block then leads the fork block and accrueInterest
+# reverts "math error". The fix is in each test's setUp — vm.roll forward past anything a
+# node could have recorded. Pinning the fork BACKWARD makes it worse.
 set -uo pipefail
 cd "$(cd "$(dirname "$0")/.." && pwd)"
 
 RPC="${KEEL_RPC_URL:-https://bsc-dataseed.bnbchain.org}"
-LAG="${FORK_LAG:-5}"
-BLK=$(( $(cast block-number --rpc-url "$RPC") - LAG ))
-echo "fork pinned at $BLK (lag $LAG)"
 
 fail=0
 echo; echo "=== offline: schema, factory guards, beacon ownership ==="
 forge test --match-contract LeverVaultSchemaTest || fail=1
 
 echo; echo "=== forked: authorization, guards, receive stipend ==="
-forge test --match-contract LeverVaultAuthTest --fork-url "$RPC" --fork-block-number "$BLK" || fail=1
+forge test --match-contract LeverVaultAuthTest --fork-url "$RPC" || fail=1
 
 echo; echo "=== forked: receive gas budget (rule 005) ==="
-forge test --match-contract LeverVaultGasTest --fork-url "$RPC" --fork-block-number "$BLK" || fail=1
+forge test --match-contract LeverVaultGasTest --fork-url "$RPC" || fail=1
 
 echo; echo "=== forked: position lifecycle ==="
 if [ "${KEEL_ARCHIVE:-0}" = "1" ]; then

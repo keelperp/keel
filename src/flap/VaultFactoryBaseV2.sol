@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.13;
 
-import {IVaultFactory} from "./IVaultFactory.sol";
+import {IVaultFactory, IVaultFactoryValidationV2} from "./IVaultFactory.sol";
 import {VaultDataSchema, FactoryPolicy} from "./IVaultSchemasV1.sol";
 import {IVaultPortalTypes} from "./IVaultPortal.sol";
 
@@ -14,7 +14,8 @@ import {IVaultPortalTypes} from "./IVaultPortal.sol";
 ///           2. A `_getGuardian()` helper (mirrors VaultBase's pattern)
 ///           3. (v2.1) Policy discovery via `tokenCreationPolicies()` so the
 ///                    UI can surface validation hints before a transaction
-///           4. (v2.1) `factorySpecVersion()` to identify the spec revision
+///           4. (v2.2) `factorySpecVersion()` to identify the spec revision
+///           5. (v2.2) `onBeforeLaunch(bytes)` for wrapper-agnostic pre-launch validation
 ///
 /// @dev  ── MOTIVATION ───────────────────────────────────────────────────────
 ///
@@ -182,10 +183,14 @@ import {IVaultPortalTypes} from "./IVaultPortal.sol";
 ///       schema.isArray = false;
 ///   }
 ///
-abstract contract VaultFactoryBaseV2 is IVaultFactory {
+abstract contract VaultFactoryBaseV2 is IVaultFactory, IVaultFactoryValidationV2 {
     /// @notice Error thrown when the current chain is not supported by
     ///         `_getGuardian()`.
     error UnsupportedChain(uint256 chainId);
+
+    /// @notice Error thrown when the deprecated legacy V6 validation hook is
+    ///         reached without a factory-specific override.
+    error LegacyV6ValidationHookNotImplemented();
 
     /// @notice Returns the schema describing the `vaultData` bytes expected
     ///         by this factory's `newVault()` method.
@@ -209,24 +214,30 @@ abstract contract VaultFactoryBaseV2 is IVaultFactory {
     /// @return schema The vault data schema for this factory.
     function vaultDataSchema() public pure virtual returns (VaultDataSchema memory schema);
 
-    /// @notice Optional hook called by VaultPortal immediately before a new V6 tax token
-    ///         is created via `newTokenV6WithVault`.
+    /// @notice Deprecated legacy hook called by VaultPortal immediately before a new V6
+    ///         tax token is created via `newTokenV6WithVault`.
     ///
-    /// @dev    **This method is optional.** The default implementation always returns
-    ///         `(true, "")`, so factories that do not need to validate params do not
-    ///         need to override it.
+    /// @dev    This hook is no longer allowed by default.
     ///
-    ///         Override this function to enforce factory-specific constraints on the
-    ///         token creation parameters.
+    ///         Any factory that still intends to use the legacy v2.1 validation surface
+    ///         MUST explicitly override this function. The base implementation always
+    ///         reverts with `LegacyV6ValidationHookNotImplemented()` so that new factories
+    ///         do not accidentally opt into the old path.
+    ///
+    ///         New factories should prefer the normalized `onBeforeLaunch(bytes)` flow and
+    ///         keep `factorySpecVersion()` at the default `"v2.2"`.
+    ///
+    ///         Override this function only when a factory intentionally stays on the legacy
+    ///         V6-only validation path.
     ///
     ///         ── RETURN VALUE CONTRACT ──────────────────────────────────────────────
     ///
     ///         The caller (VaultPortal) MUST invoke this hook via a low-level call so
     ///         it can distinguish between the three possible outcomes:
     ///
-    ///           1. **Hook not implemented** — the low-level call reverts with empty
-    ///              returndata (no selector match on the target contract).
-    ///              VaultPortal treats this as a pass and continues.
+    ///           1. **Hook selector missing entirely** — the low-level call reverts with
+    ///              empty returndata (no selector match on the target contract).
+    ///              VaultPortal may treat this as absence of legacy support.
     ///
     ///           2. **Hook implemented, validation passed** — returns `(true, "")`.
     ///              VaultPortal continues with token creation.
@@ -248,7 +259,7 @@ abstract contract VaultFactoryBaseV2 is IVaultFactory {
     ///               // Unexpected revert with error data — bubble it up.
     ///               assembly { revert(add(ret, 32), mload(ret)) }
     ///           }
-    ///           // ret.length == 0: hook not implemented, treat as pass.
+    ///           // ret.length == 0: selector missing on target contract.
     ///           ```
     ///
     ///         Example use-cases for overrides:
@@ -264,28 +275,57 @@ abstract contract VaultFactoryBaseV2 is IVaultFactory {
     function onBeforeNewTokenV6WithVault(IVaultPortalTypes.NewTokenV6WithVaultParams calldata params)
         external
         virtual
-        returns (bool success, string memory reason)
+        returns (bool, string memory)
     {
         params = params;
+        revert LegacyV6ValidationHookNotImplemented();
+    }
+
+    /// @notice Optional wrapper-agnostic pre-launch validation hook introduced in spec v2.2.
+    /// @dev    The default implementation decodes the normalized payload and forwards it to
+    ///         `_validateBeforeLaunch(...)`. Legacy factories that must stay on the older V6
+    ///         hook path should override `factorySpecVersion()` and return `"v2.1"`.
+    function onBeforeLaunch(bytes calldata validationData)
+        external
+        view
+        virtual
+        override
+        returns (bool success, string memory reason)
+    {
+        IVaultFactoryValidationV2.LaunchValidationDataV1 memory data =
+            abi.decode(validationData, (IVaultFactoryValidationV2.LaunchValidationDataV1));
+        return _validateBeforeLaunch(data);
+    }
+
+    /// @notice Internal validation hook for spec-v2.2+ factories.
+    /// @dev    Concrete factories can override this when they want the generic `onBeforeLaunch(...)`
+    ///         path. The default implementation is a no-op so older factories remain source-compatible.
+    function _validateBeforeLaunch(IVaultFactoryValidationV2.LaunchValidationDataV1 memory data)
+        internal
+        view
+        virtual
+        returns (bool success, string memory reason)
+    {
+        data = data;
         return (true, "");
     }
 
     /// @notice Returns the version of the VaultFactoryBaseV2 specification that
     ///         this contract conforms to.
     ///
-    /// @dev    Not virtual — the spec version is fixed by the base contract and
-    ///         must not be overridden by individual factory implementations.
-    ///         Factory authors may add their own separate versioning method if
-    ///         needed.
+    /// @dev    The default return value is `"v2.2"`, meaning new factories that inherit this
+    ///         base opt into the normalized `onBeforeLaunch(...)` validation generation by default.
+    ///         Legacy factories that must keep the older V6 hook semantics should override this
+    ///         and return `"v2.1"`.
     ///
     ///         The UI SHOULD call this via a low-level `staticcall` before
     ///         calling `tokenCreationPolicies()`.  A revert (or the absence of
     ///         this selector) indicates a pre-v2.1 factory that does not
     ///         support policy discovery.
     ///
-    /// @return The spec version string "v2.1".
-    function factorySpecVersion() public pure returns (string memory) {
-        return "v2.1";
+    /// @return The spec version string, defaulting to "v2.2".
+    function factorySpecVersion() public pure virtual returns (string memory) {
+        return "v2.2";
     }
 
     /// @notice Returns the list of constraints this factory enforces on
@@ -293,13 +333,15 @@ abstract contract VaultFactoryBaseV2 is IVaultFactory {
     ///
     /// @dev    The policies returned here are **informational only** — they are
     ///         intended for UI rendering (inline validation hints, error
-    ///         messages).  The actual enforcement always happens inside
-    ///         `onBeforeNewTokenV6WithVault`.
+    ///         messages). The actual enforcement happens in whichever validation
+    ///         hook the factory uses: `onBeforeLaunch(bytes)` for spec-v2.2+
+    ///         factories, or `onBeforeNewTokenV6WithVault(...)` for explicitly
+    ///         legacy v2.1 factories.
     ///
     ///         The default implementation returns an empty array, meaning the
     ///         factory declares no machine-readable constraints.  Factories that
-    ///         override `onBeforeNewTokenV6WithVault` SHOULD also override this
-    ///         method to describe their constraints in policy form.
+    ///         override either validation hook SHOULD also override this method
+    ///         to describe their constraints in policy form.
     ///
     ///         Policies are ordered from most to least important; the UI MAY
     ///         display them in this order.
@@ -333,6 +375,9 @@ abstract contract VaultFactoryBaseV2 is IVaultFactory {
         } else if (chainId == 97) {
             // BNB Testnet VaultPortal address
             return 0x027e3704fC5C16522e9393d04C60A3ac5c0d775f;
+        } else if (chainId == 4663 || chainId == 46630) {
+            // Robinhood Chain — VaultPortal address
+            return 0xe9F7AB7DE8FB8756acbB6a1cd13316a43308197B;
         }
         revert UnsupportedChain(chainId);
     }
@@ -358,6 +403,9 @@ abstract contract VaultFactoryBaseV2 is IVaultFactory {
         } else if (chainId == 97) {
             // BNB Testnet Guardian address
             return 0x76Fa8C526f8Bc27ba6958B76DeEf92a0dbE46950;
+        } else if (chainId == 4663 || chainId == 46630) {
+            // Robinhood Chain Guardian address
+            return 0x0000b48720d3B4ED6BC5031768B07F2b59270000;
         }
         revert UnsupportedChain(chainId);
     }

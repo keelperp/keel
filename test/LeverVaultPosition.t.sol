@@ -26,6 +26,15 @@ contract LeverVaultPositionTest is Test {
     ///        KEEL_ARCHIVE=1 forge test --match-contract LeverVaultPositionTest \
     ///          --fork-url <archive-rpc>
     function setUp() public {
+        // bsc-dataseed is load balanced across nodes at different heights — five calls in
+        // a row spanned 19 blocks. Forge forks at one node's height and then reads state
+        // from another, so Venus's stored accrual block can be AHEAD of the fork block.
+        // Compound's `currentBlockNumber - accrualBlockNumberPrior` then underflows and
+        // accrueInterest reverts "math error" intermittently. Rolling forward puts the
+        // block number past anything a node could have recorded. Lagging the fork makes
+        // it worse, not better.
+        vm.roll(block.number + 1000);
+
         if (vm.envOr("KEEL_ARCHIVE", uint256(0)) == 0) {
             vm.skip(true);
         }

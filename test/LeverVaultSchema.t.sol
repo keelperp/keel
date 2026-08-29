@@ -6,7 +6,9 @@ import {LeverVault} from "../src/flap/LeverVault.sol";
 import {LeverVaultFactory} from "../src/flap/LeverVaultFactory.sol";
 import {LeverBeacon} from "../src/flap/LeverBeacon.sol";
 import {VaultUISchema, VaultDataSchema} from "../src/flap/IVaultSchemasV1.sol";
-import {IVaultPortalTypes} from "../src/flap/IVaultPortal.sol";
+import {IVaultFactoryValidationV2} from "../src/flap/IVaultFactory.sol";
+import {IPortalTypes} from "../src/flap/IPortal.sol";
+import {IVaultPortalTypes as IVaultPortalTypesShim} from "../src/flap/IVaultPortal.sol";
 
 /// @notice Rule 006 coverage for the surfaces a Flap UI reads, plus the factory guards
 ///         that do not need Venus. Runs without a fork: `vm.chainId(56)` is enough for
@@ -126,47 +128,74 @@ contract LeverVaultSchemaTest is Test {
 
     // ------------------------------- launch validation (the late-failure guard)
 
-    function _params() internal pure returns (IVaultPortalTypes.NewTokenV6WithVaultParams memory p) {
+    function _params() internal pure returns (IVaultFactoryValidationV2.LaunchValidationDataV1 memory p) {
+        p.tokenVersion = IPortalTypes.TokenVersion.TOKEN_TAXED_V3;
         p.quoteToken = address(0);
         p.dividendToken = address(0);
         p.buyTaxRate = 200;
         p.sellTaxRate = 200;
-        p.dividendBps = 5000;
+        p.vaultBps = 5000;
+        p.dividendBps = 3000;
+    }
+
+    function _validate(IVaultFactoryValidationV2.LaunchValidationDataV1 memory p)
+        internal
+        view
+        returns (bool ok, string memory reason)
+    {
+        return factory.onBeforeLaunch(abi.encode(p));
     }
 
     function test_launchValidationAcceptsAServeableToken() public view {
-        (bool ok, string memory why) = factory.onBeforeNewTokenV6WithVault(_params());
+        (bool ok, string memory why) = _validate(_params());
         assertTrue(ok, why);
 
-        IVaultPortalTypes.NewTokenV6WithVaultParams memory wbnb = _params();
+        IVaultFactoryValidationV2.LaunchValidationDataV1 memory wbnb = _params();
         wbnb.dividendToken = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
-        (ok,) = factory.onBeforeNewTokenV6WithVault(wbnb);
+        (ok,) = _validate(wbnb);
         assertTrue(ok, "explicit WBNB dividends must be accepted");
     }
 
     /// @dev Each of these would otherwise build a position and then be unable to pay
     ///      anyone from it, or never be funded at all. Both are unfixable after launch.
     function test_launchValidationRejectsTokensTheVaultCouldNeverServe() public view {
-        IVaultPortalTypes.NewTokenV6WithVaultParams memory p = _params();
+        IVaultFactoryValidationV2.LaunchValidationDataV1 memory p = _params();
         p.quoteToken = 0x55d398326f99059fF775485246999027B3197955;
-        (bool ok,) = factory.onBeforeNewTokenV6WithVault(p);
+        (bool ok,) = _validate(p);
         assertFalse(ok, "a non-BNB quote must be rejected");
 
         p = _params();
         p.dividendToken = 0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c; // BTCB
-        (ok,) = factory.onBeforeNewTokenV6WithVault(p);
+        (ok,) = _validate(p);
         assertFalse(ok, "non-WBNB dividends would strand every gain");
 
         p = _params();
         p.buyTaxRate = 0;
         p.sellTaxRate = 0;
-        (ok,) = factory.onBeforeNewTokenV6WithVault(p);
+        (ok,) = _validate(p);
         assertFalse(ok, "a zero-tax token never funds the vault");
 
         p = _params();
+        p.vaultBps = 0;
+        (ok,) = _validate(p);
+        assertFalse(ok, "a zero vault share means the vault is never funded");
+
+        p = _params();
         p.dividendBps = 0;
-        (ok,) = factory.onBeforeNewTokenV6WithVault(p);
+        (ok,) = _validate(p);
         assertFalse(ok, "zero dividendBps would strand every gain");
+    }
+
+    /// @dev Spec v2.2 retires the V6 hook. A factory that still implements it would have
+    ///      a guard that never runs; assert the base's refusal so nobody re-adds one.
+    function test_theRetiredV6HookIsRefusedNotSilentlyIgnored() public {
+        IVaultPortalTypesShim.NewTokenV6WithVaultParams memory legacy;
+        vm.expectRevert();
+        factory.onBeforeNewTokenV6WithVault(legacy);
+    }
+
+    function test_factoryReportsTheV22Spec() public view {
+        assertEq(factory.factorySpecVersion(), "v2.2", "submission baseline drifted");
     }
 
     // ------------------------------------------------------------------- rule 009

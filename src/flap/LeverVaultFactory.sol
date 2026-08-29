@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import {BeaconProxy} from "openzeppelin-contracts/contracts/proxy/beacon/BeaconProxy.sol";
 import {VaultFactoryBaseV2} from "./VaultFactoryBaseV2.sol";
 import {VaultDataSchema, FieldDescriptor} from "./IVaultSchemasV1.sol";
-import {IVaultPortalTypes} from "./IVaultPortal.sol";
+import {IVaultFactoryValidationV2} from "./IVaultFactory.sol";
 import {LeverVault} from "./LeverVault.sol";
 import {LeverBeacon} from "./LeverBeacon.sol";
 
@@ -52,19 +52,23 @@ contract LeverVaultFactory is VaultFactoryBaseV2 {
 
     /// @notice Refuse a launch this vault could never serve, before the token exists.
     ///
-    /// @dev Without this the failure is silent and late. `harvest()` requires the token's
-    ///      dividend contract to pay in WBNB; a token launched with any other dividend
-    ///      token would build its position fine and then **never be able to distribute a
-    ///      gain** — the treasury grows and no holder can ever be paid from it. A zero-tax
-    ///      token is the same shape of mistake: the vault would be created and never
-    ///      funded. Both are cheap to reject here and unfixable afterwards.
-    function onBeforeNewTokenV6WithVault(IVaultPortalTypes.NewTokenV6WithVaultParams calldata params)
-        external
+    /// @dev Spec v2.2 retires `onBeforeNewTokenV6WithVault` — the base reverts
+    ///      `LegacyV6ValidationHookNotImplemented` — and routes validation through
+    ///      `onBeforeLaunch`, which lands here. Getting this wrong is silent: a guard
+    ///      written against the old hook simply never runs.
+    ///
+    ///      Each rejection below is a mistake that cannot be repaired after launch:
+    ///      - a non-WBNB dividend token makes `harvest()` revert forever, so the treasury
+    ///        grows and no holder can ever be paid out of it;
+    ///      - zero tax, or a zero vault share, means the vault is created and never funded;
+    ///      - zero `dividendBps` strands every gain the same way a wrong dividend token does.
+    function _validateBeforeLaunch(IVaultFactoryValidationV2.LaunchValidationDataV1 memory data)
+        internal
         pure
         override
         returns (bool success, string memory reason)
     {
-        if (params.quoteToken != address(0)) {
+        if (data.quoteToken != address(0)) {
             return
                 (
                     false,
@@ -73,19 +77,25 @@ contract LeverVaultFactory is VaultFactoryBaseV2 {
         }
         // address(0) means "pay dividends in the quote token", which here is BNB and
         // reaches the dividend contract as WBNB. An explicit WBNB is the same thing.
-        if (params.dividendToken != address(0) && params.dividendToken != WBNB) {
+        if (data.dividendToken != address(0) && data.dividendToken != WBNB) {
             return (
                 false,
                 unicode"LeverVaultFactory: dividends must be BNB or WBNB / 分红资产必须是 BNB 或 WBNB"
             );
         }
-        if (params.buyTaxRate == 0 && params.sellTaxRate == 0) {
+        if (data.buyTaxRate == 0 && data.sellTaxRate == 0) {
             return (
                 false,
                 unicode"LeverVaultFactory: a zero-tax token never funds the vault / 零税代币无法为金库注资"
             );
         }
-        if (params.dividendBps == 0) {
+        if (data.vaultBps == 0) {
+            return (
+                false,
+                unicode"LeverVaultFactory: vaultBps zero means the vault never receives tax / 金库分成为零则永远收不到税"
+            );
+        }
+        if (data.dividendBps == 0) {
             return
                 (false, unicode"LeverVaultFactory: dividendBps must be non-zero / 分红份额不能为零");
         }

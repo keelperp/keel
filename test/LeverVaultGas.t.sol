@@ -13,6 +13,15 @@ contract LeverVaultGasTest is Test {
     address constant PROJECT = address(0xBEEF);
 
     function setUp() public {
+        // bsc-dataseed is load balanced across nodes at different heights — five calls in
+        // a row spanned 19 blocks. Forge forks at one node's height and then reads state
+        // from another, so Venus's stored accrual block can be AHEAD of the fork block.
+        // Compound's `currentBlockNumber - accrualBlockNumberPrior` then underflows and
+        // accrueInterest reverts "math error" intermittently. Rolling forward puts the
+        // block number past anything a node could have recorded. Lagging the fork makes
+        // it worse, not better.
+        vm.roll(block.number + 1000);
+
         vault = new LeverVault();
         vault.initialize(TOKEN, PROJECT);
     }

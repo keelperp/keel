@@ -40,8 +40,8 @@ health 地板 1.20 对应上限 **3.00x**;**5x 算出来正好 1.00,即清算点
 的部分又扣了一次,0.99 的收益释放了 1.90。修复后实测释放额与收益之比为 **1.00x**(三个规模)。
 
 ### 发币参数在创建前就被校验
-`onBeforeNewTokenV6WithVault` 拒绝三类本金库永远无法服务的代币:非 BNB 计价、非 WBNB 分红、
-以及零税或零 `dividendBps`。**这不是洁癖**:`harvest()` 要求分红合约收 WBNB,一个用 BTCB 分红
+`_validateBeforeLaunch`(spec v2.2 路径)拒绝五类本金库永远无法服务的代币:非 BNB 计价、
+非 WBNB 分红、零税、`vaultBps == 0`、`dividendBps == 0`。**这不是洁癖**:`harvest()` 要求分红合约收 WBNB,一个用 BTCB 分红
 的代币会正常建仓、正常增值,然后**永远无法把收益分给任何人**——金库越涨越大,持有者一分拿不到,
 且发币后不可修复。零税代币同理,金库会被创建然后永远收不到钱。两者都在发币前一步拦掉。
 
@@ -56,7 +56,7 @@ health 地板 1.20 对应上限 **3.00x**;**5x 算出来正好 1.00,即清算点
 | 规则 | 结论 | 依据 |
 |---|---|---|
 | **001** Base / UI schema / Guardian / No-DoS | ✅ | 继承 `VaultBaseV2`;`vaultUISchema()` 覆盖全部 6 个用户可见方法,且**名字逐个与编译期 selector 比对**(`test_everySchemaMethodNameResolvesToARealSelector`);合约无任何 role-gated 函数,故不存在可把 Guardian 锁在门外的角色。Guardian 的权限是它所有的 beacon。 |
-| **002** Factory / commission | ⚠️ 见 SB-01 | `LeverVaultFactory` 继承 `VaultFactoryBaseV2`;`newVault` 拒绝一切非 VaultPortal 调用并逐项校验参数(5 个 revert 全部有测试);`vaultDataSchema()` 与 `newVault` 的 `vaultData` ABI 一致(一个 address);`isQuoteTokenSupported` 只认原生 BNB;`onBeforeNewTokenV6WithVault` 拒绝本金库无法服务的发币参数。`commissionReceiver` 是**发币参数**不是 factory 字段,commissionBps 由 launcher 按税率内部计算,本 factory 不触碰。**但 40% 的项目方分成需要 Flap 书面接受,见 SB-01。** |
+| **002** Factory / commission | ⚠️ 见 SB-01 | **spec `v2.2`**。 `LeverVaultFactory` 继承 `VaultFactoryBaseV2`;`newVault` 拒绝一切非 VaultPortal 调用并逐项校验参数(5 个 revert 全部有测试);`vaultDataSchema()` 与 `newVault` 的 `vaultData` ABI 一致(一个 address);`isQuoteTokenSupported` 只认原生 BNB;发币校验走 v2.2 的 `_validateBeforeLaunch`——**v2.2 已废弃 `onBeforeNewTokenV6WithVault`,基类对它直接 revert,写在旧钩子上的守卫会静默失效**;有回归测试钉死这一点。`commissionReceiver` 是**发币参数**不是 factory 字段,commissionBps 由 launcher 按税率内部计算,本 factory 不触碰。**但 40% 的项目方分成需要 Flap 书面接受,见 SB-01。** |
 | **003** 公平性 / 三明治 | ✅ | 三个工作函数全部无许可。**没有任何特权角色能改滑点、路由、时机或触发条件**——它们全是 `constant`。自动路径不付赏金(触发费已从金库出),手动路径付固定 bps,内部人相对机器人无任何结构性优势。 |
 | **004** 字面量错误 / 双语 | ✅ | **零 custom error**;全部 revert 为 `require()` + `unicode` 中英内联字面量。开发期违反过此条,已全部替换。 |
 | **005** `receive()` gas | ✅ | 冷 **57,433** / 热 **9,133**,上限 1,000,000。另有测试证明 1 wei 与 0 value 均不 revert,以及在 **2,300 gas stipend** 下对已知发送方仍然成功。 |
@@ -109,6 +109,16 @@ $ bash scripts/test.sh
 
 ---
 
+## 测试环境的一个坑(会让套件间歇性变红)
+
+`bsc-dataseed` 是**负载均衡的多节点**,高度不一致——连续五次调用曾跨 **19 个块**。forge 在
+某个节点报的高度上 fork,却从另一个节点读状态,于是 Venus 记录的计息块号**领先于** fork 块,
+Compound 的 `currentBlockNumber - accrualBlockNumberPrior` 下溢,`accrueInterest()` 随机
+revert `math error`。
+
+**把 fork 往回退是错的修法**(退得越远越容易下溢);正确做法是在每个 fork 测试的 `setUp` 里
+`vm.roll` 向前推,越过任何节点可能记录的高度。三轮连跑全绿。
+
 ## 编译与 EIP-170
 
 | 合约 | runtime | 余量 |
@@ -149,16 +159,19 @@ Venus 的 ResilientOracle 一次 `getUnderlyingPrice` 要 **26,308** gas(它要�
 Flap 对 factory commission 的推荐在 2% 税率下约为 **3%**。参考实现 ShiftVault 的 30% project
 share 已被其自审标为提交阻断,本金库的 40% 更高。
 
-**但口径不同,这是需要向 Flap 说明的核心事实:**
+**口径不同,但不要误读成"我们拿得少"。** 按链上实测参数(Venus 借款 2.62%、3 倍持仓成本
+−4.87%/年)折算项目方的等价抽税率:
 
-| | ShiftVault | LeverVault |
-|---|---|---|
-| 项目方从**税**里拿 | 30% | **0%** |
-| 项目方从**仓位收益**里拿 | — | 40% |
+| BNB 年涨幅 | 项目方等价抽成 | 对比 ~3% |
+|---:|---:|:--|
+| ≤ 0% | **0%** | 低 |
+| +4.1% | 3.0% | 持平 |
+| +10% | **10.1%** | 高 3.4 倍 |
+| +20% | **22.1%** | 高 7.4 倍 |
 
-本金库的税 **100% 进入仓位**,一分不分给项目方。项目方只在仓位**赚到钱之后**,从那笔收益里
-拿 40%,持有者拿 60%。仓位不赚钱,项目方收入为零。这与"从每笔交易税里抽成"是两种不同的
-经济关系,但**是否接受由 Flap 决定,不由本文决定**。
+**牛市里项目方拿到的远超 3%,这一点不回避。** 请求的理由是结构而非数额:下行时归零;
+与持有者严格同向且持有者恒为 1.5 倍;两个数都是 `constant` 无 setter;税这一层零抽成,
+不与 Flap 的 commission 机制竞争。完整论证见 `SUBMISSION.md`。**是否接受由 Flap 判断。**
 
 两条都是 `constant` 且无 setter,若 Flap 要求调整,只能改代码重新部署。
 
