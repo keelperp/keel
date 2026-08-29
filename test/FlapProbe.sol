@@ -151,14 +151,12 @@ contract FlapProbe {
 
         try v.kickstart() {
             a.doubleKickRefused = 0;
-        }
-            catch {
+        } catch {
             a.doubleKickRefused = 1;
         }
         try v.trigger(a.requestId) {
             a.strangerTriggerRefused = 0;
-        }
-            catch {
+        } catch {
             a.strangerTriggerRefused = 1;
         }
 
@@ -224,8 +222,7 @@ contract FlapProbe {
 
         try v.trigger(firstId) {
             o.replayRefused = 0;
-        }
-            catch {
+        } catch {
             o.replayRefused = 1;
         }
 
