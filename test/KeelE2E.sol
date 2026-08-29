@@ -3,6 +3,7 @@ pragma solidity 0.8.26;
 
 import {LevVault} from "../src/LevVault.sol";
 import {Bonding} from "../src/Bonding.sol";
+import {VaultFactory} from "../src/VaultFactory.sol";
 import {LaunchToken} from "../src/LaunchToken.sol";
 import {IERC20Min} from "../src/interfaces/IVenus.sol";
 
@@ -32,11 +33,17 @@ contract KeelE2E {
         uint256 protocolFee;
     }
 
-    function run(uint256 seed, uint256 sellBps) external returns (Out memory o) {
-        LevVault v = new LevVault(
+    /// @notice The gate proven red: a vault the factory never created must be refused.
+    /// @return refused 1 when launch reverted with "unknown vault", 0 when it went through
+    function rogueVault() external returns (uint8 refused, string memory got) {
+        VaultFactory f = new VaultFactory(address(this));
+        Bonding b = new Bonding(USDT, FACTORY, ROUTER, address(this), address(f));
+
+        // built directly, never listed by the factory
+        LevVault rogue = new LevVault(
             LevVault.Config({
-                name: "Keel BTC 3L",
-                symbol: "kBTC3L",
+                name: "Rogue",
+                symbol: "R",
                 base_: USDT,
                 collateral_: BTCB,
                 vBase: vUSDT,
@@ -51,7 +58,41 @@ contract KeelE2E {
                 swapHop: 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c
             })
         );
-        Bonding b = new Bonding(USDT, FACTORY, ROUTER, address(this));
+        require(rogue.targetLeverage() > 0, "rogue looks real");
+
+        IERC20Min(USDT).approve(address(b), type(uint256).max);
+        Bonding.Meta memory m =
+            Bonding.Meta({name: "Rogue", symbol: "R", description: "", image: "", links: ["", "", ""]});
+        try b.launch(m, address(rogue), 1000e18) returns (address) {
+            return (0, "ACCEPTED - GATE IS OPEN");
+        } catch Error(string memory reason) {
+            return (1, reason);
+        }
+    }
+
+    function run(uint256 seed, uint256 sellBps) external returns (Out memory o) {
+        VaultFactory f = new VaultFactory(address(this));
+        LevVault v = LevVault(
+            payable(f.create(
+                    LevVault.Config({
+                        name: "Keel BTC 3L",
+                        symbol: "kBTC3L",
+                        base_: USDT,
+                        collateral_: BTCB,
+                        vBase: vUSDT,
+                        vCollateral: vBTC,
+                        comptroller: COMPTROLLER,
+                        router: ROUTER,
+                        targetLeverage_: 3e18,
+                        isLong_: true,
+                        bandBps_: 500,
+                        maxLoops_: 5,
+                        collateralIsNative: false,
+                        swapHop: 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c
+                    })
+                ))
+        );
+        Bonding b = new Bonding(USDT, FACTORY, ROUTER, address(this), address(f));
         IERC20Min(USDT).approve(address(b), type(uint256).max);
 
         Bonding.Meta memory m = Bonding.Meta({

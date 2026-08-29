@@ -5,6 +5,7 @@ import {LaunchToken} from "./LaunchToken.sol";
 import {FeeVault} from "./FeeVault.sol";
 import {LPLock} from "./LPLock.sol";
 import {LevVault} from "./LevVault.sol";
+import {VaultFactory} from "./VaultFactory.sol";
 import {IERC20Min, IPancakeRouter} from "./interfaces/IVenus.sol";
 
 interface IPancakeFactory {
@@ -43,6 +44,7 @@ contract Bonding {
     IPancakeRouterLiq public immutable pancakeRouter;
     FeeVault public immutable feeVault;
     LPLock public immutable lpLock;
+    VaultFactory public immutable vaultFactory;
 
     struct Curve {
         address vault;
@@ -70,7 +72,9 @@ contract Bonding {
         string[3] links;
     }
 
-    constructor(address _base, address _factory, address _router, address _custody) {
+    constructor(address _base, address _factory, address _router, address _custody, address _vaultFactory) {
+        require(_vaultFactory != address(0), "vault factory zero");
+        vaultFactory = VaultFactory(_vaultFactory);
         base = IERC20Min(_base);
         pancakeFactory = IPancakeFactory(_factory);
         pancakeRouter = IPancakeRouterLiq(_router);
@@ -118,7 +122,9 @@ contract Bonding {
 
     function launch(Meta calldata m, address vault, uint256 seed) external returns (address token) {
         require(seed >= MIN_SEED, "seed too small");
-        require(LevVault(payable(vault)).targetLeverage() > 0, "bad vault");
+        // Provenance, not shape. An interface check would let a caller pass a look-alike
+        // whose mint() keeps the deposit — see VaultFactory.
+        require(vaultFactory.isVault(vault), "unknown vault");
 
         LaunchToken t = new LaunchToken(m.name, m.symbol, m.description, m.image, m.links);
         token = address(t);
