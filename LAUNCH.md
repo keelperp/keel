@@ -7,8 +7,8 @@
 
 | 字段 | 值 | 来源 |
 |---|---|---|
-| `name` | **待定** | 待 |
-| `symbol` | **待定** | 待 |
+| `name` | **Keel** | 决 |
+| `symbol` | **KEEL** | 决 |
 | 总供应量 | `1,000,000,000` (1e27) | 硬 · Flap 固定,抽样三个线上代币均为此值 |
 | `meta` | 待定(图标/描述) | 待 |
 
@@ -19,7 +19,7 @@
 | `buyTaxRate` | `200` (2%) | 决 |
 | `sellTaxRate` | `200` (2%) | 决 |
 | `taxDuration` | `3153600000` (100 年,即永久) | 决 · 税一停,金库就只剩一个不再长大的存量仓位 |
-| `antiFarmerDuration` | **待定** | 待 · Flap 上限 1 年;按房屋标准此类阈值不写进前端 |
+| `antiFarmerDuration` | **建议 259200(3 天)** | 待确认 · 见下节调查 |
 
 ## 税的四路分配（必须加起来 = 10000）
 
@@ -51,13 +51,33 @@
 | `migratorType` | `V2_MIGRATOR` (1) | 硬 · taxed V3 只能迁到 Uniswap V2 fork |
 | `commissionReceiver` | `address(0)` | 决 · 本 factory 不触碰 commission,不与 Flap 机制竞争 |
 | `vaultFactory` | 部署后填 | 待 |
-| `vaultData` | `abi.encode(项目方地址)` | 门 · 该地址收 40% 收益份额,**发币后不可改** |
+| `vaultData` | `abi.encode(部署者钱包)` | 决 · 项目方地址默认取部署者钱包,收 40% 收益份额,**发币后不可改** |
 | `quoteAmt` | **待定** | 待 · 你自己的首笔买入 |
 | `salt` | 挖 `7777` 后缀 | 硬 · 从高偏移开始搜,低位 salt 已被占 |
 
+## `antiFarmerDuration` 的调查结果
+
+**同行取值**:Flap 官方币 `Flap` 用 **3 天**(259,200s);社区币 `肥嘟嘟`、`BAUD` 用
+**30 天**(2,592,000s)。协议上限 1 年。窗口**从发币时刻起算**
+(`antiFarmerExpirationTime - antiFarmerDuration` 正好落在创建时间)。
+
+**实测排除了三件事**(在 BAUD 的窗口内,把探针代码覆盖到它的 pair 上模拟一次真实买入):
+
+- **不阻止分红份额**:买家收到 49,500 枚,`totalShares` 精确增加 49,500;
+- **不把买家排除在分红外**:`excludedFromDividends` 为 false;
+- **不改变税率**:转 50,000 到账 49,500,正好是它的 1% 税,没有额外惩罚;
+- `deferredOrigins` 对 pair / router / token 全为 false,不是这条路。
+
+**没能确定它到底约束什么。** 一个未验证的推测:BAUD 的 `state()` 为 2(未迁移),而窗口已过期的
+Flap 官方币 `state()` 为 3(已迁移)——该机制可能只在迁移后生效,所以在 BAUD 上测不出效果。
+**这是推测,不是结论。**
+
+**建议取 3 天**,跟随 Flap 官方币:一个作用不明、且发出去不可改的参数,暴露时间越短风险越小。
+**发币前应向 Flap 确认其确切语义**,或在测试网上跑完整迁移后实测。
+
 ## 发出去就改不了的四件事
 
-1. **`vaultData` 里的项目方地址**——金库没有 setter。
+1. **`vaultData` 里的项目方地址**(= 部署者钱包)——金库没有 setter。
 2. **四路 bps**——税的分配写死在代币里。
 3. **税率与税期**。
 4. **`minimumShareBalance`**——决定谁有资格拿分红。
