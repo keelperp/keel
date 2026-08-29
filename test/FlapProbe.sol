@@ -4,6 +4,15 @@ pragma solidity 0.8.26;
 import {LeverVault} from "../src/flap/LeverVault.sol";
 import {IVBNB, IERC20Min} from "../src/interfaces/IVenus.sol";
 
+interface IComptrollerLike {
+    function oracle() external view returns (address);
+    function markets(address) external view returns (bool, uint256, bool);
+}
+
+interface IVenusOracleLike {
+    function getUnderlyingPrice(address) external view returns (uint256);
+}
+
 /// @notice Tax in -> leveraged BNB position -> gain out, as one atomic eth_call against
 ///         live BNB Chain state. BSC prunes state after ~96s and has no free archive node,
 ///         so a multi-step fork test cannot survive; one call can.
@@ -239,6 +248,48 @@ contract FlapProbe {
             o.workError = "";
         }
     }
+
+    struct GasOut {
+        uint256 accrue; // _accrue() alone
+        uint256 views; // positionUsd + nav + healthBps + currentLeverage once each
+        uint256 wholeDeploy; // deployPending end to end
+        uint256 scheduleOnly; // kickstart, i.e. one requestTrigger round trip
+        uint256 oracleCall; // one getUnderlyingPrice
+        uint256 cfCall; // one markets() lookup
+    }
+
+    /// @notice Where the callback's gas actually goes. Measured, not modelled.
+    function gasProfile(uint256 tax, address token_) external returns (GasOut memory g) {
+        LeverVault v = new LeverVault();
+        v.initialize(token_, PROJECT);
+        (bool ok,) = address(v).call{value: tax}("");
+        require(ok, "tax failed");
+
+        uint256 t = gasleft();
+        v.positionUsd();
+        v.nav();
+        v.healthBps();
+        v.currentLeverage();
+        g.views = t - gasleft();
+
+        t = gasleft();
+        IVenusOracleLike(IComptrollerLike(COMPTROLLER_).oracle()).getUnderlyingPrice(vBNB_);
+        g.oracleCall = t - gasleft();
+
+        t = gasleft();
+        IComptrollerLike(COMPTROLLER_).markets(vBNB_);
+        g.cfCall = t - gasleft();
+
+        t = gasleft();
+        v.kickstart();
+        g.scheduleOnly = t - gasleft();
+
+        t = gasleft();
+        v.deployPending();
+        g.wholeDeploy = t - gasleft();
+    }
+
+    address constant COMPTROLLER_ = 0xfD36E2c2a6789Db23113685031d7F16329158384;
 
     receive() external payable {}
 }

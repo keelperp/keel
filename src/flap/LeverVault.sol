@@ -197,21 +197,49 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         (, cf,) = IComptroller(COMPTROLLER).markets(vBNB);
     }
 
+    /// @dev One oracle round trip costs ~26,300 gas on Venus's ResilientOracle, and the
+    ///      collateral-factor lookup another ~17,900. Reading them once and threading the
+    ///      values through the build took the callback from 1,420,949 to well under it.
+    struct Px {
+        uint256 bnb;
+        uint256 usdt;
+        uint256 cf;
+    }
+
+    function _px() internal view returns (Px memory p) {
+        IComptroller c = comptroller_();
+        IVenusOracle o = IVenusOracle(c.oracle());
+        p.bnb = o.getUnderlyingPrice(vBNB);
+        p.usdt = o.getUnderlyingPrice(vUSDT);
+        (, p.cf,) = c.markets(vBNB);
+    }
+
+    function comptroller_() internal pure returns (IComptroller) {
+        return IComptroller(COMPTROLLER);
+    }
+
     /// @notice The two legs of the position, valued in USD (1e18).
     function positionUsd() public view returns (uint256 supplyUsd, uint256 borrowUsd) {
-        IVenusOracle o = _oracle();
+        return _positionUsd(_px());
+    }
+
+    function _positionUsd(Px memory p) internal view returns (uint256 supplyUsd, uint256 borrowUsd) {
         uint256 bnb = IVToken(vBNB).balanceOf(address(this)) * IVToken(vBNB).exchangeRateStored() / WAD;
-        supplyUsd = bnb * o.getUnderlyingPrice(vBNB) / WAD;
-        borrowUsd = IVToken(vUSDT).borrowBalanceStored(address(this)) * o.getUnderlyingPrice(vUSDT) / WAD;
+        supplyUsd = bnb * p.bnb / WAD;
+        borrowUsd = IVToken(vUSDT).borrowBalanceStored(address(this)) * p.usdt / WAD;
     }
 
     /// @notice Treasury value in BNB. A view over Venus — nothing is published, so nothing
     ///         can go stale and nobody can stop publishing it.
     function nav() public view returns (uint256) {
-        (uint256 s, uint256 b) = positionUsd();
+        return _nav(_px());
+    }
+
+    function _nav(Px memory p) internal view returns (uint256) {
+        (uint256 s, uint256 b) = _positionUsd(p);
         uint256 idle = address(this).balance;
         if (s <= b) return idle;
-        return (s - b) * WAD / _oracle().getUnderlyingPrice(vBNB) + idle;
+        return (s - b) * WAD / p.bnb + idle;
     }
 
     /// @notice BNB exposure over net value, 1e18-scaled.
@@ -221,16 +249,30 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         return s * WAD / (s - b);
     }
 
+    function _leverage(Px memory p) internal view returns (uint256) {
+        (uint256 s, uint256 b) = _positionUsd(p);
+        if (s <= b) return 0;
+        return s * WAD / (s - b);
+    }
+
     /// @notice supply x CF / debt, in bps. Venus liquidates at 10000.
     function healthBps() public view returns (uint256) {
-        (uint256 s, uint256 b) = positionUsd();
+        return _health(_px());
+    }
+
+    function _health(Px memory p) internal view returns (uint256) {
+        (uint256 s, uint256 b) = _positionUsd(p);
         if (b == 0) return type(uint256).max;
-        return s * _cf() / WAD * BPS / b;
+        return s * p.cf / WAD * BPS / b;
     }
 
     /// @notice Gain over the cost of everything deployed so far, in BNB.
     function unrealisedGain() public view returns (uint256) {
-        uint256 n = nav();
+        return _gain(_px());
+    }
+
+    function _gain(Px memory p) internal view returns (uint256) {
+        uint256 n = _nav(p);
         uint256 basis = costBasis + pendingRevenue;
         return n > basis ? n - basis : 0;
     }
@@ -247,6 +289,10 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
     ///         enough to liquidation that waiting is the larger risk.
     function rebalanceCooldown() public pure returns (uint256) {
         return 1 hours;
+    }
+
+    function _cooldown(Px memory p) internal view returns (uint256) {
+        return _health(p) < URGENT_HEALTH_BPS ? 0 : 1 hours;
     }
 
     // ------------------------------------------------------------ the three jobs
@@ -270,9 +316,10 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         costBasis += work;
 
         _accrue();
-        _build(work);
+        Px memory p = _px();
+        _build(work, p);
         require(
-            healthBps() >= MIN_HEALTH_BPS,
+            _health(p) >= MIN_HEALTH_BPS,
             unicode"LeverVault: build breached the health floor / 建仓跌破健康度下限"
         );
 
@@ -280,7 +327,7 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
             (bool ok,) = bountyTo.call{value: bounty}("");
             require(ok, unicode"LeverVault: bounty transfer failed / 赏金转账失败");
         }
-        emit Deployed(bountyTo, work, bounty, currentLeverage());
+        emit Deployed(bountyTo, work, bounty, _leverage(p));
     }
 
     /// @notice Send the position's gain to every holder through the token's own dividend
@@ -291,7 +338,8 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
 
     function _harvest(address bountyTo) internal returns (uint256 bounty) {
         _accrue();
-        uint256 gain = unrealisedGain();
+        Px memory p = _px();
+        uint256 gain = _gain(p);
         require(gain >= MIN_HARVEST, unicode"LeverVault: no gain to harvest yet / 暂无可分配的收益");
 
         address div = IFlapTaxToken(token).dividendContract();
@@ -301,7 +349,7 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         );
 
         uint256 before = address(this).balance;
-        _shrinkBy(gain);
+        _shrinkBy(gain, p);
         uint256 freed = address(this).balance - before;
         require(freed > 0, unicode"LeverVault: unwind freed nothing / 减仓没有释放出资金");
 
@@ -325,7 +373,7 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         }
 
         require(
-            healthBps() >= MIN_HEALTH_BPS,
+            _health(p) >= MIN_HEALTH_BPS,
             unicode"LeverVault: harvest breached the health floor / 分配收益跌破健康度下限"
         );
 
@@ -344,22 +392,22 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
     function _rebalance(address bountyTo) internal returns (uint256 bounty) {
         _accrue();
         require(needsRebalance(), unicode"LeverVault: leverage is inside the band / 杠杆仍在区间内");
-        uint256 cd = healthBps() < URGENT_HEALTH_BPS ? 0 : rebalanceCooldown();
+        Px memory p = _px();
+        uint256 cd = _cooldown(p);
         require(
             block.timestamp >= lastRebalanceAt + cd,
             unicode"LeverVault: rebalance cooldown / 再平衡冷却中"
         );
         lastRebalanceAt = block.timestamp;
 
-        uint256 before = currentLeverage();
+        uint256 before = _leverage(p);
         uint256 bnbBefore = address(this).balance;
         if (before > TARGET_LEVERAGE) {
-            (uint256 s, uint256 b) = positionUsd();
-            uint256 navUsd = s - b;
-            uint256 excess = s - navUsd * TARGET_LEVERAGE / WAD;
-            _shrinkBy(excess * WAD / _oracle().getUnderlyingPrice(vBNB));
+            (uint256 s, uint256 b) = _positionUsd(p);
+            uint256 excess = s - (s - b) * TARGET_LEVERAGE / WAD;
+            _shrinkBy(excess * WAD / p.bnb, p);
         } else {
-            _build(0);
+            _build(0, p);
         }
         uint256 freed = address(this).balance - bnbBefore;
         bounty = bountyTo == address(0) ? 0 : freed * REBALANCE_BOUNTY_BPS / BPS;
@@ -370,10 +418,10 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         uint256 rest = address(this).balance - bnbBefore;
         if (rest > 0) pendingRevenue += rest;
         require(
-            healthBps() >= MIN_HEALTH_BPS,
+            _health(_px()) >= MIN_HEALTH_BPS,
             unicode"LeverVault: rebalance breached the health floor / 再平衡跌破健康度下限"
         );
-        emit Rebalanced(bountyTo, before, currentLeverage(), bounty);
+        emit Rebalanced(bountyTo, before, _leverage(p), bounty);
     }
 
     // ------------------------------------------------------- automatic settlement
@@ -434,10 +482,18 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
     }
 
     function _pickAction() internal view returns (uint8) {
-        if (healthBps() < URGENT_HEALTH_BPS) return 1;
+        // Cheapest checks first: pendingRevenue is a single SLOAD, and it is what a wake
+        // finds most of the time. Only reach for the oracle when it has to.
+        Px memory p = _px();
+        if (_health(p) < URGENT_HEALTH_BPS) return 1;
         if (pendingRevenue >= MIN_DEPLOY) return 2;
-        if (unrealisedGain() >= MIN_HARVEST) return 3;
-        if (needsRebalance()) return 4;
+        if (_gain(p) >= MIN_HARVEST) return 3;
+        uint256 lev = _leverage(p);
+        if (lev != 0) {
+            uint256 lo = TARGET_LEVERAGE * (BPS - REBALANCE_BAND_BPS) / BPS;
+            uint256 hi = TARGET_LEVERAGE * (BPS + REBALANCE_BAND_BPS) / BPS;
+            if (lev < lo || lev > hi) return 4;
+        }
         return 0;
     }
 
@@ -478,16 +534,15 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
     ///      collateral at the instant of the borrow, before the proceeds become collateral,
     ///      so a loop can only take the sliver current collateral supports and converges at
     ///      cf/health. Flash supplies first and borrows second.
-    function _build(uint256 extra) internal {
+    function _build(uint256 extra, Px memory p) internal {
         if (extra > 0) IVBNB(vBNB).mint{value: extra}();
 
-        uint256 navBnb = nav() - address(this).balance;
+        uint256 navBnb = _nav(p) - address(this).balance;
         if (navBnb == 0) return;
-        uint256 pxBnb = _oracle().getUnderlyingPrice(vBNB);
-        uint256 navUsd = navBnb * pxBnb / WAD;
+        uint256 navUsd = navBnb * p.bnb / WAD;
 
         uint256 targetDebt = navUsd * (TARGET_LEVERAGE - WAD) / WAD;
-        uint256 cfBps = _cf() / 1e14;
+        uint256 cfBps = p.cf / 1e14;
         // The health floor binds before the leverage target does, and at cf 0.80 / health
         // 1.20 a 3x long sits exactly on it. Take 1% off so the build clears it.
         // At cf 0.80 / health 1.20 a 3x long sits exactly ON the floor, and the build adds
@@ -496,14 +551,15 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         uint256 debtCap = navUsd * cfBps / (MIN_HEALTH_BPS - cfBps) * 97 / 100;
         if (targetDebt > debtCap) targetDebt = debtCap;
 
-        (, uint256 curDebt) = positionUsd();
+        (, uint256 curDebt) = _positionUsd(p);
         if (targetDebt <= curDebt) return;
-        uint256 needUsd = targetDebt - curDebt;
-        uint256 wbnbToFlash = needUsd * WAD / pxBnb;
+        uint256 wbnbToFlash = (targetDebt - curDebt) * WAD / p.bnb;
         if (wbnbToFlash < MIN_DEPLOY) return;
 
         // WBNB is token1 in the WBNB/USDT pool (0x55d3.. < 0xbb4C..).
-        IV3Pool(FLASH_POOL).flash(address(this), 0, wbnbToFlash, abi.encode(wbnbToFlash));
+        // Prices ride along in the callback data: reading them again inside the callback
+        // is two more ResilientOracle round trips at ~26,300 gas each.
+        IV3Pool(FLASH_POOL).flash(address(this), 0, wbnbToFlash, abi.encode(wbnbToFlash, p.bnb, p.usdt));
     }
 
     /// @notice PancakeSwap V3 flash callback. Only the one pool may call it.
@@ -512,13 +568,13 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
             msg.sender == FLASH_POOL,
             unicode"LeverVault: caller is not the flash pool / 调用方不是闪电贷池"
         );
-        uint256 borrowed = abi.decode(data, (uint256));
+        (uint256 borrowed, uint256 pxBnb, uint256 pxUsdt) = abi.decode(data, (uint256, uint256, uint256));
         uint256 owed = borrowed + fee1;
 
         IWNative(WBNB).withdraw(borrowed);
         IVBNB(vBNB).mint{value: borrowed}();
 
-        uint256 usdtNeeded = _quoteUsdtForWbnb(owed);
+        uint256 usdtNeeded = owed * pxBnb / pxUsdt * 1003 / 1000;
         require(
             IVToken(vUSDT).borrow(usdtNeeded) == 0,
             unicode"LeverVault: Venus borrow failed / Venus 借款失败"
@@ -531,19 +587,9 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         }
     }
 
-    /// @dev USDT needed to buy `wbnbOut`, priced by the Venus oracle plus room for the
-    ///      swap. Constant margin, so no role can widen it to make sandwiching easier.
-    function _quoteUsdtForWbnb(uint256 wbnbOut) internal view returns (uint256) {
-        IVenusOracle o = _oracle();
-        uint256 usd = wbnbOut * o.getUnderlyingPrice(vBNB) / WAD;
-        // 0.3% covers the 0.01% swap tier's fee and slippage. Every excess unit borrowed
-        // is debt that pushes health down, so this is deliberately tight, not generous.
-        return usd * WAD / o.getUnderlyingPrice(vUSDT) * 1003 / 1000;
-    }
-
     /// @dev Free `wantBnb` of BNB by shrinking both legs proportionally.
-    function _shrinkBy(uint256 wantBnb) internal {
-        uint256 navBnb = nav() - address(this).balance;
+    function _shrinkBy(uint256 wantBnb, Px memory p) internal {
+        uint256 navBnb = _nav(p) - address(this).balance;
         if (navBnb == 0 || wantBnb == 0) return;
         uint256 fraction = wantBnb >= navBnb ? WAD : wantBnb * WAD / navBnb;
 
@@ -562,9 +608,8 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
             // maximum each pass left the surplus sitting as WBNB, which the tail then
             // unwrapped and counted as freed — a 0.99 BNB harvest paid out 1.89.
             uint256 needUsdt = debt - debtTarget;
-            uint256 needBnb = needUsdt * _oracle().getUnderlyingPrice(vUSDT)
-                / _oracle().getUnderlyingPrice(vBNB) * 101 / 100;
-            uint256 cap = _maxRedeemableBnb();
+            uint256 needBnb = needUsdt * p.usdt / p.bnb * 101 / 100;
+            uint256 cap = _maxRedeemableBnb(p);
             uint256 pull = needBnb < cap ? needBnb : cap;
             if (pull < MIN_DEPLOY) break;
             require(
@@ -584,7 +629,7 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         uint256 supplyNow = IVToken(vBNB).balanceOf(address(this)) * IVToken(vBNB).exchangeRateStored() / WAD;
         if (supplyNow > supplyTarget) {
             uint256 rest = supplyNow - supplyTarget;
-            uint256 cap = _maxRedeemableBnb();
+            uint256 cap = _maxRedeemableBnb(p);
             if (rest > cap) rest = cap;
             if (rest >= MIN_DEPLOY) {
                 require(
@@ -602,14 +647,13 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
     ///      free 3.88 BNB against a 0.99 BNB gain and leave health at 1.003 — the loop
     ///      had not repaid enough debt, and the tail redeemed its share regardless.
     ///      Solving (s - x) * cf >= h * b for x gives the only safe pull.
-    function _maxRedeemableBnb() internal view returns (uint256) {
-        (uint256 s, uint256 b) = positionUsd();
-        uint256 px = _oracle().getUnderlyingPrice(vBNB);
-        if (b == 0) return s * WAD / px;
-        uint256 cfBps = _cf() / 1e14;
+    function _maxRedeemableBnb(Px memory p) internal view returns (uint256) {
+        (uint256 s, uint256 b) = _positionUsd(p);
+        if (b == 0) return s * WAD / p.bnb;
+        uint256 cfBps = p.cf / 1e14;
         uint256 floorSupply = MIN_HEALTH_BPS * b / cfBps;
         if (s <= floorSupply) return 0;
-        return (s - floorSupply) * WAD * 99 / (px * 100);
+        return (s - floorSupply) * WAD * 99 / (p.bnb * 100);
     }
 
     function _swap(address from, address to, uint256 amountIn) internal returns (uint256) {
@@ -617,15 +661,15 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         return IV3Router(V3_ROUTER)
             .exactInputSingle(
                 IV3Router.ExactInputSingleParams({
-                tokenIn: from,
-                tokenOut: to,
-                fee: SWAP_FEE,
-                recipient: address(this),
-                deadline: block.timestamp,
-                amountIn: amountIn,
-                amountOutMinimum: 0,
-                sqrtPriceLimitX96: 0
-            })
+                    tokenIn: from,
+                    tokenOut: to,
+                    fee: SWAP_FEE,
+                    recipient: address(this),
+                    deadline: block.timestamp,
+                    amountIn: amountIn,
+                    amountOutMinimum: 0,
+                    sqrtPriceLimitX96: 0
+                })
             );
     }
 
