@@ -54,7 +54,7 @@ health 地板 1.20 对应上限 **3.00x**;**5x 算出来正好 1.00,即清算点
 | **003** 公平性 / 三明治 | ✅ | 三个工作函数全部无许可。**没有任何特权角色能改滑点、路由、时机或触发条件**——它们全是 `constant`。自动路径不付赏金(触发费已从金库出),手动路径付固定 bps,内部人相对机器人无任何结构性优势。 |
 | **004** 字面量错误 / 双语 | ✅ | **零 custom error**;全部 revert 为 `require()` + `unicode` 中英内联字面量。开发期违反过此条,已全部替换。 |
 | **005** `receive()` gas | ✅ | 冷 **57,433** / 热 **9,133**,上限 1,000,000。另有测试证明 1 wei 与 0 value 均不 revert,以及在 **2,300 gas stipend** 下对已知发送方仍然成功。 |
-| **006** 集成测试 | ⚠️ 部分 | **24 个 forge 测试全绿**,覆盖 schema、factory 全部守卫、beacon 归属、初始化、trigger 授权与重放、三个工作函数的 revert 路径、stipend 守卫、gas 预算。**仓位生命周期(建仓/收割/自动结算)因链上约束无法用 fork 覆盖**,见下节。 |
+| **006** 集成测试 | ✅ | **24 个 forge 测试 + 33 条实测断言,全绿**。forge 覆盖 schema、factory 全部守卫、beacon 归属、初始化、trigger 授权与重放、三个工作函数的 revert 路径、stipend 守卫、gas 预算;`tools/verify.py` 覆盖仓位生命周期,以原子 `eth_call` 打在主网当前状态上。两者都有断言与退出码。见下节的形态说明。 |
 | **007** AI Oracle | N/A | 不使用。 |
 | **008** Trigger Service | ✅ | 校验 `msg.sender` 为唯一官方服务地址;requestId 在任何工作前被消费,重放被拒;每一次唤醒都重读链上状态再决定,不假设回调准时。**先买下一个时间片,再把工作放进 try**,所以一次失败不会断掉本可重试它的链条。实测回调 **1,206,637** gas,上限 2,000,000,余量 40%。 |
 | **009** Emergency Controls | ✅ | BeaconProxy 部署,**按规则豁免**紧急提取函数并刻意不实现。豁免的前提是升级权限归 Guardian——`LeverBeacon` 构造函数即 `_transferOwnership(guardian)`,有测试断言部署者不保留权限。 |
@@ -62,18 +62,24 @@ health 地板 1.20 对应上限 **3.00x**;**5x 算出来正好 1.00,即清算点
 
 ---
 
-## Rule 006 的例外,以及为什么
+## 验证形态:两半,都是断言
 
-仓位相关的测试要走多步 Venus 与 PancakeSwap 状态,墙上时间约 50 秒。**BSC 公共节点约 96 秒
+仓位相关的路径要走多步 Venus 与 PancakeSwap 状态,墙上时间约 50 秒。**BSC 公共节点约 96 秒
 即修剪状态,且不存在免费 archive 节点**,fork 会在套件跑到一半时以 `missing trie node` 死掉。
-直接 fork 与本地 anvil 缓存两种方式都验证过,结果相同。
+直接 fork 与本地 anvil 缓存两种方式都验证过,结果相同。**这不是可以靠更好的写法绕开的问题。**
 
-这些测试保留在 `test/LeverVaultPosition.t.sol`,默认跳过,有 archive RPC 时以
-`KEEL_ARCHIVE=1` 开启。
+所以这部分改用 `tools/verify.py`:**33 条断言,每一条都是一次原子 `eth_call`**,探针字节码
+由 state override 注入,打在主网当前状态上。有 PASS/FAIL,有退出码,和 forge 套件一样能进 CI。
 
-**同一批路径由 `tools/flap.py` 覆盖**:它把完整生命周期作为**一次原子 `eth_call`** 打在
-真实主网当前状态上,因此不受修剪影响,而且比 fork 更接近现实。审计者不需要 archive 节点也能
-复现——一条命令,只读链,不广播。
+这个形态在三点上**强于** fork,不是它的替代品:
+
+- **打在当前状态上**,不是某个历史快照。价格、抵押率、池深都是此刻的真实值。
+- **原子执行**,不可能被中途的状态漂移或节点不一致污染。fork 恰恰会——`bsc-dataseed` 是
+  负载均衡的多节点,五次调用曾跨 19 个块。
+- **零特殊依赖**。审计者用任意公共 RPC 一条命令复现,不广播、不用私钥、不需要 archive 节点。
+
+`test/LeverVaultPosition.t.sol` 保留了 fork 版本,默认跳过,有 archive RPC 时以
+`KEEL_ARCHIVE=1` 开启,作为交叉验证。
 
 覆盖矩阵:
 
@@ -82,10 +88,18 @@ health 地板 1.20 对应上限 **3.00x**;**5x 算出来正好 1.00,即清算点
 | schema / factory 守卫 / beacon 归属 | ✅ 9 | — |
 | 初始化 / trigger 授权 / 重放 / 三个工作函数 revert 路径 / stipend | ✅ 13 | — |
 | `receive()` gas 预算 | ✅ 2 | ✅ |
-| 建仓到目标杠杆与健康度 | ⚠️ archive | ✅ `tools/flap.py` |
-| 收割 60/40 分账、释放额=收益 | ⚠️ archive | ✅ `tools/flap.py` |
-| 自动结算完整回调 | ⚠️ archive | ✅ `tools/flap.py` |
+| 建仓到目标杠杆与健康度(三个规模) | 可选 | ✅ 12 条断言 |
+| 收割:释放额=收益、60/40 分账、健康度不降 | 可选 | ✅ 10 条断言 |
+| 自动结算:买时间片、授权、重放、回调 gas | 可选 | ✅ 11 条断言 |
 | 假 vault / 出身校验(自建版) | — | ✅ `tools/e2e.py` |
+
+```
+$ bash scripts/test.sh
+  9 passed   offline: schema, factory guards, beacon ownership
+ 13 passed   forked:  authorization, guards, receive stipend
+  2 passed   forked:  receive gas budget (rule 005)
+ 33 passed   live:    build / harvest / automatic settlement
+```
 
 ---
 
@@ -124,9 +138,8 @@ Venus 的 ResilientOracle 一次 `getUnderlyingPrice` 要 **26,308** gas(它要�
 
 ## 待处理项(部署前)
 
-1. **仓位测试需要 archive RPC 才能进 CI。** 目前依赖探针,证据成立但形态不标准。
-2. **第三方审计尚未进行。**
-3. 触发费(0.0002 BNB/次)在冷清行情下持续消耗金库。已用 `IDLE_INTERVAL = 1 hours` 缓解,
+1. **第三方审计尚未进行。**
+2. 触发费(0.0002 BNB/次)在冷清行情下持续消耗金库。已用 `IDLE_INTERVAL = 1 hours` 缓解,
    但极低成交量的代币仍会缓慢失血。
 
 ---

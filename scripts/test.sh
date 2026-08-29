@@ -28,12 +28,12 @@ echo; echo "=== forked: position lifecycle ==="
 if [ "${KEEL_ARCHIVE:-0}" = "1" ]; then
   forge test --match-contract LeverVaultPositionTest --fork-url "$RPC" || fail=1
 else
-  echo "  SKIPPED — needs an archive RPC (set KEEL_ARCHIVE=1 and point KEEL_RPC_URL at one)."
-  echo "  The same paths are covered by the live-state probes below, which do not fork."
+  echo "  SKIPPED by design — see AUDIT.md. These need an archive RPC; BSC has no free one."
+  echo "  The same paths are asserted by tools/verify.py below, on live state, atomically."
 fi
 
-echo; echo "=== live state: full lifecycle as one atomic eth_call ==="
-python3 tools/flap.py || fail=1
+echo; echo "=== live state: 33 assertions, one atomic eth_call each ==="
+python3 tools/verify.py || fail=1
 
 echo; echo "=== sizes (EIP-170) ==="
 forge build --sizes | awk '/^\|/ {gsub(/\|/,""); if ($2+0 > 24576) { print "  OVER:", $1, $2; over=1 }} END { if (!over) print "  all within limit" }'
