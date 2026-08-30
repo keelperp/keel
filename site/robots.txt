@@ -1,2 +1,3 @@
 User-agent: *
 Allow: /
+Sitemap: https://keel-site-zeta.vercel.app/sitemap.xml

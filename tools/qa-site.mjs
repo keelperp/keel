@@ -14,13 +14,18 @@ import { fileURLToPath } from "node:url";
 // Playwright is not a dependency of this repo — point at an existing install rather than
 // adding one. ESM ignores NODE_PATH, so the path has to be resolved explicitly.
 const PW = process.env.PLAYWRIGHT ?? "playwright";
-const { chromium } = await import(PW);
+const _pw = await import(PW);
+const chromium = _pw.chromium ?? _pw.default?.chromium;
+if (!chromium) throw new Error(`no chromium export from ${PW}`);
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "site");
 const OUT = join(dirname(fileURLToPath(import.meta.url)), "..", ".qa");
 const PAGES = ["/", "/how-it-works/", "/economics/", "/vault/", "/risks/", "/verify/"];
 const MIME = { ".html": "text/html", ".css": "text/css", ".js": "text/javascript", ".json": "application/json" };
 
+// With no argument the gate serves ./site itself; with a URL it drives the real deployment,
+// which is the only way to see CSP blocks, header effects and font MIME types.
+const TARGET = process.argv[2];
 const server = createServer(async (req, res) => {
   try {
     let p = decodeURIComponent(req.url.split("?")[0]);
@@ -33,8 +38,15 @@ const server = createServer(async (req, res) => {
     res.writeHead(404); res.end("not found");
   }
 });
-await new Promise((r) => server.listen(0, r));
-const base = `http://127.0.0.1:${server.address().port}`;
+let base;
+if (TARGET) {
+  base = TARGET.replace(/\/$/, "");
+  console.log(`target: ${base}  (live deployment)`);
+} else {
+  await new Promise((r) => server.listen(0, r));
+  base = `http://127.0.0.1:${server.address().port}`;
+  console.log(`target: ${base}  (local ./site)`);
+}
 await mkdir(OUT, { recursive: true });
 
 const browser = await chromium.launch();
@@ -111,6 +123,17 @@ for (const [w, h, label] of [[1440, 900, "desktop"], [390, 844, "mobile"]]) {
         title: document.title,
         bg: getComputedStyle(document.body).backgroundColor,
         font: getComputedStyle(document.body).fontFamily,
+        // computedStyle returns the CSS name whether or not the file loaded, so ask the
+        // font system what it actually has, and confirm the face really changes metrics.
+        fontsLoaded: [...document.fonts].filter((f) => f.status === "loaded").map((f) => f.family),
+        geistReal: document.fonts.check('400 16px Geist') && (() => {
+          const m = (fam) => { const s2 = document.createElement("span");
+            s2.textContent = "KEELkeel0123456789"; s2.style.cssText =
+              `position:absolute;visibility:hidden;font:400 40px ${fam}`;
+            document.body.appendChild(s2); const w = s2.getBoundingClientRect().width;
+            s2.remove(); return w; };
+          return Math.abs(m("Geist") - m("serif")) > 1;
+        })(),
         canvases,
         firstScreens: (() => {
           // the last section that begins within two viewport heights
@@ -127,6 +150,7 @@ for (const [w, h, label] of [[1440, 900, "desktop"], [390, 844, "mobile"]]) {
     say(geo.overflowX <= 1, `${tag} no horizontal scroll (${geo.overflowX}px)`);
     say(r.bg === "rgb(20, 20, 20)", `${tag} ground is #141414 (${r.bg})`);
     say(/Geist/.test(r.font), `${tag} Geist is applied (${r.font.split(",")[0]})`);
+    say(r.geistReal, `${tag} Geist webfont really loaded, not falling back (${r.fontsLoaded.length} face(s) loaded)`);
     const blank = r.canvases.filter((c) => c.lit === 0);
     say(blank.length === 0, `${tag} ${r.canvases.length} on-screen canvas(es) drew something${blank.length ? ` — ${blank.length} blank` : ""}`);
     say(r.firstScreens.within >= 2, `${tag} ${r.firstScreens.within} of ${r.firstScreens.total} sections start within two screens`);
@@ -146,6 +170,6 @@ for (const [w, h, label] of [[1440, 900, "desktop"], [390, 844, "mobile"]]) {
 }
 
 await browser.close();
-server.close();
+if (!TARGET) server.close();
 console.log(`\n  screenshots -> .qa/`);
 process.exit(fail);
