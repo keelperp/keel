@@ -1,9 +1,33 @@
+/* Geist and Geist Mono, SIL Open Font License 1.1, self-hosted.
+   Latin subset only — the site is English. Serving from the same origin removes the only
+   third-party request the page makes.
+
+   These are VARIABLE fonts: Google returns one identical file per weight (verified by md5 —
+   four "weights" of Geist were the same 29,288 bytes). Declaring a weight range serves one
+   file instead of four and cuts the font payload from 159.5 KB to 51.2 KB. */
+
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/assets/fonts/geist-variable.woff2') format('woff2-variations'),
+       url('/assets/fonts/geist-variable.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url('/assets/fonts/geist-mono-variable.woff2') format('woff2-variations'),
+       url('/assets/fonts/geist-mono-variable.woff2') format('woff2');
+}
+
 /* Keel — visual system.
    Palette and type are lifted from trystudio.ai's system: a near-black ground with the
    whole hierarchy built from white at different opacities, and colour reserved for meaning.
    The accent is Keel's own copper rather than their YC orange. */
-
-@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap");
 
 :root {
   --bg: #141414;
