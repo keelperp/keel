@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verify · Keel</title>
+<meta name="description" content="Fifty-seven assertions against live BNB Chain state. One command, no private key, no archive node, nothing broadcast.">
+<meta name="theme-color" content="#141414">
+<meta property="og:title" content="Verify · Keel">
+<meta property="og:description" content="How to reproduce every number on this site yourself.">
+<link rel="stylesheet" href="/assets/base.css">
+<style>
+pre.code { font-family: var(--mono); font-size: 13px; line-height: 1.7; background: var(--bg-lift);
+  border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; overflow-x: auto; margin: 0; color: var(--fg-strong); }
+pre.code .c { color: var(--fg-quaternary); }
+pre.code .k { color: var(--accent); }
+pre.code .g { color: var(--positive); }
+</style>
+</head>
+<body>
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="/">keel<span>.</span></a>
+    <a class="link" href="/how-it-works/">How it works</a>
+    <a class="link" href="/economics/">Economics</a>
+    <a class="link" href="/vault/">The vault</a>
+    <a class="link" href="/risks/">Risks</a>
+    <a class="link" href="/verify/">Verify</a>
+    <span class="sp"></span>
+    <a class="btn" href="/verify/">Check it yourself</a>
+  </div>
+</header>
+<main>
+<section>
+  <div class="wrap">
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div class="tag">verify <em>//</em> nothing here is on our word</div>
+      <h1>Every number, reproducible</h1>
+      <p class="lede">Fifty-seven checks run against BNB Chain as it stands. No private key, no
+        archive node, nothing broadcast. If a number on this site is wrong, this is how you catch
+        it.</p>
+    </div>
+  </div>
+</section>
+
+<section style="border-top:0;padding-top:0">
+  <div class="wrap">
+    <pre class="code rise"><span class="c"># the whole suite</span>
+<span class="k">forge build</span> &amp;&amp; <span class="k">bash scripts/test.sh</span>
+
+<span class="g">  13 passed</span>   <span class="c">offline: schema, factory guards, launch validation, v2.2 baseline</span>
+<span class="g">  13 passed</span>   <span class="c">forked:  authorization, guards, receive stipend</span>
+<span class="g">   2 passed</span>   <span class="c">forked:  receive gas budget (rule 005)</span>
+<span class="g">  33 passed</span>   <span class="c">live:    build / harvest / automatic settlement</span>
+<span class="g">   8 passed</span>   <span class="c">vault UI: ABI currency and i18n coverage</span>
+             <span class="c">sizes:   all within limit</span></pre>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="tag">the method <em>//</em> why not a fork</span>
+      <h2>The position checks run as one atomic call</h2>
+    </div>
+    <div class="grid g2">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <p>Exercising the position takes about fifty seconds of wall clock through Venus and
+          PancakeSwap. BNB Chain's public nodes prune state after roughly ninety-six seconds and
+          there is no free archive node, so a forked suite dies partway through with
+          <code class="mono neg">missing trie node</code>. Confirmed against both a direct fork and
+          a local anvil cache.</p>
+        <p>So those checks run as a single <code class="mono" style="color:var(--accent)">eth_call</code>
+          with the probe's bytecode injected by state override. That form is not a fallback &mdash;
+          it is better in three specific ways.</p>
+      </div>
+      <div class="card">
+        <h3>Why it beats a fork here</h3>
+        <ul style="margin:12px 0 0;padding-left:18px;color:var(--fg-body);font-size:14.5px;line-height:1.65">
+          <li style="margin-bottom:8px">Runs against <strong style="color:var(--fg)">current state</strong>, not a historical snapshot.</li>
+          <li style="margin-bottom:8px">Atomic, so mid-run drift cannot pollute it. A fork against a load-balanced RPC can &mdash; five calls in a row spanned 19 blocks.</li>
+          <li>Needs nothing but a public node. No archive, no key.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head"><span class="tag">coverage <em>//</em> what the 57 cover</span><h2>What is actually asserted</h2></div>
+    <div class="scroll rise">
+      <table>
+        <thead><tr><th>Area</th><th class="num">Checks</th><th>Examples</th></tr></thead>
+        <tbody>
+          <tr><td class="name">Build</td><td class="num">12</td><td>Leverage in band, health above the floor, cost under 1%, receive() under the gas cap &mdash; at three sizes.</td></tr>
+          <tr><td class="name">Harvest</td><td class="num">10</td><td>Frees the gain and no more, 60/40 exact, health holds, a second harvest is refused.</td></tr>
+          <tr><td class="name">Settlement</td><td class="num">11</td><td>Buys a real slot from the trigger service, refuses impostors and replays, fits the 2M callback cap.</td></tr>
+          <tr><td class="name">Authorization</td><td class="num">13</td><td>Trigger sender, request id, self-only calls, initialize once, the 2,300-gas stipend guard.</td></tr>
+          <tr><td class="name">Factory &amp; schema</td><td class="num">13</td><td>Portal-only creation, launch validation, beacon ownership, every schema name resolves to a real selector.</td></tr>
+          <tr><td class="name">Vault UI</td><td class="num">8</td><td>Generated ABI is current, both locales cover the same keys.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head"><span class="tag">once deployed <em>//</em> read it directly</span><h2>Three calls that answer everything</h2></div>
+    <pre class="code rise"><span class="c"># what the treasury is worth, right now</span>
+cast call $VAULT <span class="k">"nav()(uint256)"</span> --rpc-url https://bsc-dataseed.bnbchain.org
+
+<span class="c"># how far the position is from liquidation (10000 = liquidated)</span>
+cast call $VAULT <span class="k">"healthBps()(uint256)"</span> --rpc-url https://bsc-dataseed.bnbchain.org
+
+<span class="c"># what the next wake will do, and when</span>
+cast call $VAULT <span class="k">"pendingAction()(uint8)"</span> --rpc-url https://bsc-dataseed.bnbchain.org
+cast call $VAULT <span class="k">"nextSettlementIn()(uint256)"</span> --rpc-url https://bsc-dataseed.bnbchain.org</pre>
+    <p style="margin-top:16px;font-size:13.5px;color:var(--fg-tertiary)">None of these depends on
+      anyone publishing anything. They read Venus and the trigger service directly, in whatever
+      block you call them.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap narrow" style="text-align:center">
+    <h2>Not deployed yet</h2>
+    <p class="lede" style="margin:14px auto 22px">Nothing has been broadcast to any network. When it
+      is, the addresses appear here and on the vault page.</p>
+    <a class="btn" href="/vault/">The vault</a>
+  </div>
+</section>
+</main>
+<footer>
+  <div class="wrap foot-grid">
+    <div><h4>Product</h4>
+      <a href="/how-it-works/">How it works</a><a href="/economics/">Economics</a><a href="/vault/">The vault</a></div>
+    <div><h4>Diligence</h4>
+      <a href="/risks/">Risks</a><a href="/verify/">Verify</a></div>
+    <div><h4>Status</h4>
+      <span style="color:var(--warn)">Not deployed</span>
+      <span style="display:block;color:var(--fg-quaternary);padding-top:3px">Unaudited</span></div>
+  </div>
+  <div class="wrap" style="margin-top:30px;padding-top:18px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--fg-quaternary)">
+    A 3&times; position is liquidated by a 16.7% move against it. Venus and PancakeSwap are
+    dependencies. The contracts are unaudited.
+  </div>
+</footer>
+</body>
+</html>

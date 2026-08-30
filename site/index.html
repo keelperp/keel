@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keel · Tax does not go to a wallet. It goes into a position.</title>
+<meta name="description" content="A BNB Chain token whose trading tax is levered into a 3x BNB long the contract holds itself. It settles every five minutes on its own, and pays 60% of every gain to holders.">
+<meta name="theme-color" content="#141414">
+<meta property="og:title" content="Keel · Tax does not go to a wallet. It goes into a position.">
+<meta property="og:description" content="Trading tax becomes a leveraged BNB position the contract holds itself. Settles every five minutes. 60% of every gain to holders.">
+<meta property="og:type" content="website">
+<link rel="stylesheet" href="/assets/base.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="/">keel<span>.</span></a>
+    <a class="link" href="/how-it-works/">How it works</a>
+    <a class="link" href="/economics/">Economics</a>
+    <a class="link" href="/vault/">The vault</a>
+    <a class="link" href="/risks/">Risks</a>
+    <a class="link" href="/verify/">Verify</a>
+    <span class="sp"></span>
+    <a class="btn" href="/verify/">Check it yourself</a>
+  </div>
+</header>
+
+<main>
+
+<section>
+  <div class="wrap">
+    <div style="display:flex;flex-direction:column;gap:26px">
+      <div class="tag">keel <em>//</em> a treasury that is a position</div>
+      <h1>Tax does not go to a wallet.<br>It goes into a position.</h1>
+      <p class="lede">Every buy and sell pays 2%. That tax is levered into a 3&times; BNB long the
+        contract holds itself &mdash; no operator account, no published net asset value, no pause.
+        It moves with the market when nobody is trading, and 60% of every gain is paid to holders.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <a class="btn primary" href="/how-it-works/">See how it works</a>
+        <a class="btn" href="/vault/">Read the vault live</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="border-top:0;padding-top:0">
+  <div class="wrap">
+    <figure class="viz rise" style="margin:0">
+      <div class="viz-head">
+        <span class="tag">settlement clock <em>//</em> five minute cycle</span>
+        <span class="tag" id="clockState">running</span>
+      </div>
+      <canvas id="heroCanvas" aria-hidden="true"></canvas>
+      <figcaption>
+        A five-minute settlement cycle, drawn. A marker travels a track divided into five
+        minutes; when it reaches the end, the vault wakes and does exactly one job, chosen by
+        priority: rescue a position under health 1.10, build the accumulated tax into the
+        position, distribute a gain, or rebalance. Below the track, the position itself: the
+        supply leg at roughly three times net value, the debt leg beneath it, and a health mark
+        that sits at 1.208 with the Venus liquidation point at 1.00 on the far left.
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="grid g4">
+      <div class="stat card"><div class="k">Leverage</div><div class="v">2.96&times;</div><div class="n">Measured on live BNB Chain state, three sizes.</div></div>
+      <div class="stat card"><div class="k">Health</div><div class="v pos">1.208</div><div class="n">Liquidated only by a 16.7% move against it.</div></div>
+      <div class="stat card"><div class="k">Settles every</div><div class="v">5 min</div><div class="n">By Flap's trigger service. Nobody presses anything.</div></div>
+      <div class="stat card"><div class="k">Of every gain</div><div class="v">60%</div><div class="n">To holders as WBNB. Constant, no setter.</div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="tag">the argument <em>//</em> where tax goes</span>
+      <h2>Tax has to go somewhere</h2>
+    </div>
+    <div class="grid g2">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <p>Every token with a tax sends it somewhere. Most of the time that somewhere is a wallet.
+          Sometimes the docs say buyback, or ecosystem fund, or marketing. You cannot verify any of
+          it, because that step happens off-chain.</p>
+        <p><strong style="color:var(--fg)">This token's tax builds a position.</strong> Not a buyback,
+          not stablecoins sitting still. A 3&times; BNB long on Venus, where the contract is the
+          borrower and the contract holds the collateral.</p>
+        <p>So the treasury moves with the market. In the hours when nobody trades, it is still
+          moving. And its value is a <code class="mono" style="color:var(--accent)">view</code>
+          function &mdash; you call it, and you have priced the treasury yourself. Nobody publishes
+          that number, so nobody can stop publishing it.</p>
+      </div>
+      <figure class="viz rise" style="margin:0">
+        <div class="viz-head"><span class="tag">tax split <em>//</em> 2% per trade</span></div>
+        <canvas id="splitCanvas" aria-hidden="true"></canvas>
+        <figcaption>
+          Where each 2% goes: 80% streams into the vault and becomes leveraged position, 20%
+          reaches holders immediately through the token's own dividend contract. Nothing is burned
+          and nothing goes to liquidity. The four shares are fixed in the token at launch and sum
+          to 100%.
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="tag">the loop <em>//</em> one job per wake</span>
+      <h2>It settles itself, and only does one thing at a time</h2>
+      <p class="lede">There is no keeper account. Flap's trigger service wakes the vault on a
+        schedule, and each wake picks a single job by priority &mdash; because a callback has a
+        2,000,000 gas ceiling and a build already costs 1.2 million of it.</p>
+    </div>
+    <figure class="viz rise" style="margin:0">
+      <div class="viz-head">
+        <span class="tag">priority chain <em>//</em> evaluated every wake</span>
+        <span class="tag">gas 1,206,637 <em>/</em> 2,000,000 cap</span>
+      </div>
+      <canvas id="chainCanvas" aria-hidden="true"></canvas>
+      <figcaption>
+        The decision each wake makes, in order. If health has fallen under 1.10 the vault reduces
+        leverage immediately and the hourly cooldown is waived. Otherwise it builds any tax that has
+        arrived, then distributes any gain, then rebalances if leverage has drifted outside its band.
+        If none of those apply it books the next wake an hour out instead of five minutes, so a quiet
+        market does not spend the treasury on trigger fees.
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="tag">what is fixed <em>//</em> constants with no setter</span>
+      <h2>Four numbers nobody can move</h2>
+    </div>
+    <div class="scroll rise">
+      <table>
+        <thead><tr><th>Constant</th><th class="num">Value</th><th>What it decides</th></tr></thead>
+        <tbody>
+          <tr><td class="name">TARGET_LEVERAGE</td><td class="num">3&times;</td><td>The exposure the vault builds toward. Venus's 80% collateral factor makes 3&times; the ceiling a 1.20 health floor can hold.</td></tr>
+          <tr><td class="name">MIN_HEALTH_BPS</td><td class="num">12000</td><td>The floor the build may never breach. The constructor refuses any target the collateral factor cannot hold.</td></tr>
+          <tr><td class="name">PROJECT_SHARE_BPS</td><td class="num">4000</td><td>The project's share of a gain. Holders take the other 60%, always 1.5&times; the project.</td></tr>
+          <tr><td class="name">Settlement interval</td><td class="num">5 min</td><td>One hour when the last wake found nothing to do.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:16px;font-size:13.5px;color:var(--fg-tertiary)">Every one of these is a
+      Solidity <code class="mono">constant</code>. There is no setter, no admin path, and no
+      governance vote. Changing any of them means deploying a new factory and having Flap register
+      it again.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="tag">how it differs <em>//</em> perp-backed launchpads</span>
+      <h2>The reserve is not in anyone's account</h2>
+    </div>
+    <div class="scroll rise">
+      <table>
+        <thead><tr><th></th><th>A keeper-run reserve</th><th>Keel</th></tr></thead>
+        <tbody>
+          <tr><td class="name">Where the position lives</td><td class="neg">An exchange account someone operates</td><td class="pos">The vault contract itself</td></tr>
+          <tr><td class="name">How its value is known</td><td class="neg">A keeper publishes it periodically</td><td class="pos"><span class="mono">nav()</span>, a view over chain state</td></tr>
+          <tr><td class="name">When that data goes stale</td><td class="neg">Buying pauses</td><td class="pos">No such state exists</td></tr>
+          <tr><td class="name">If the operator vanishes</td><td class="neg">The reserve goes with them</td><td class="pos">There is nothing to take</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap narrow" style="text-align:center">
+    <h2>Everything on this page can be checked</h2>
+    <p class="lede" style="margin:14px auto 22px">Fifty-seven assertions run against BNB Chain as it
+      stands, with no key and no archive node. One command.</p>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <a class="btn primary" href="/verify/">How to verify</a>
+      <a class="btn" href="/risks/">Read the risks first</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap foot-grid">
+    <div><h4>Product</h4>
+      <a href="/how-it-works/">How it works</a><a href="/economics/">Economics</a><a href="/vault/">The vault</a></div>
+    <div><h4>Diligence</h4>
+      <a href="/risks/">Risks</a><a href="/verify/">Verify</a></div>
+    <div><h4>Status</h4>
+      <span style="color:var(--warn)">Not deployed</span>
+      <span style="display:block;color:var(--fg-quaternary);padding-top:3px">Unaudited</span></div>
+  </div>
+  <div class="wrap" style="margin-top:30px;padding-top:18px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--fg-quaternary)">
+    A 3&times; position is liquidated by a 16.7% move against it. Venus and PancakeSwap are
+    dependencies. The contracts are unaudited.
+  </div>
+</footer>
+
+<script type="module">
+import { fitCanvas, animate, C } from "/assets/site.js";
+
+/* ── hero: the settlement cycle, drawn ───────────────────────────────────── */
+const hero = document.getElementById("heroCanvas");
+const state = document.getElementById("clockState");
+const JOBS = ["build the position", "distribute the gain", "rebalance", "nothing to do"];
+let jobIdx = 0;
+
+animate(hero, (t) => {
+  const { ctx, w, h } = fitCanvas(hero, Math.max(230, Math.min(280, hero.clientWidth * 0.3)));
+  ctx.clearRect(0, 0, w, h);
+  const padX = 26, trackY = h * 0.24, trackW = w - padX * 2;
+
+  // the five-minute track
+  ctx.strokeStyle = C.lineSoft; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(padX, trackY); ctx.lineTo(padX + trackW, trackY); ctx.stroke();
+  for (let i = 0; i <= 5; i++) {
+    const x = padX + (trackW * i) / 5;
+    ctx.strokeStyle = i === 5 ? C.accent : C.line;
+    ctx.beginPath(); ctx.moveTo(x, trackY - 7); ctx.lineTo(x, trackY + 7); ctx.stroke();
+    ctx.fillStyle = C.dim; ctx.font = C.monoSm; ctx.textAlign = "center";
+    ctx.fillText(`${i}m`, x, trackY - 14);
+  }
+
+  // marker, one lap every 8 seconds
+  const lap = 8, p = (t % lap) / lap;
+  const mx = padX + trackW * p;
+  if (p < 0.02) { jobIdx = (jobIdx + 1) % JOBS.length; }
+  ctx.strokeStyle = C.accent; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(padX, trackY); ctx.lineTo(mx, trackY); ctx.stroke();
+  ctx.fillStyle = C.accent;
+  ctx.beginPath(); ctx.arc(mx, trackY, 4.5, 0, Math.PI * 2); ctx.fill();
+  if (p > 0.94) {
+    ctx.globalAlpha = (p - 0.94) / 0.06;
+    ctx.beginPath(); ctx.arc(padX + trackW, trackY, 11, 0, Math.PI * 2);
+    ctx.strokeStyle = C.accent; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+  ctx.textAlign = "left"; ctx.font = C.mono; ctx.fillStyle = C.dim;
+  const lead = "next wake will: ";
+  ctx.fillText(lead, padX, trackY + 26);
+  // Measure rather than assume: a hard-coded offset collided with the label at this size.
+  ctx.fillStyle = C.accent;
+  ctx.fillText(JOBS[jobIdx], padX + ctx.measureText(lead).width, trackY + 26);
+
+  // the position: supply, debt, health
+  const barY = h * 0.56, barH = 16, barW = trackW;
+  const supply = 2.96, debt = 1.96;
+  ctx.fillStyle = "rgba(91,191,154,0.16)";
+  ctx.fillRect(padX, barY, barW, barH);
+  ctx.fillStyle = C.positive;
+  ctx.fillRect(padX, barY, barW * (1 / supply), barH);
+  ctx.strokeStyle = C.line; ctx.strokeRect(padX + 0.5, barY + 0.5, barW - 1, barH - 1);
+  ctx.font = C.monoSm; ctx.fillStyle = C.body; ctx.textAlign = "left";
+  ctx.fillText("net value", padX + 4, barY + 11);
+  ctx.fillStyle = C.dim; ctx.textAlign = "right";
+  ctx.fillText(`supply ${supply.toFixed(2)}x  ·  debt ${debt.toFixed(2)}x`, padX + barW - 4, barY + 11);
+
+  // health scale: 1.00 liquidation on the left, current mark, floor notch
+  const hy = barY + 44;
+  ctx.strokeStyle = C.lineSoft;
+  ctx.beginPath(); ctx.moveTo(padX, hy); ctx.lineTo(padX + barW, hy); ctx.stroke();
+  const pos = (v) => padX + barW * Math.max(0, Math.min(1, (v - 1) / 1));
+  ctx.fillStyle = C.negative; ctx.fillRect(padX - 1, hy - 6, 2, 12);
+  ctx.textAlign = "left"; ctx.font = C.monoSm; ctx.fillStyle = C.negative;
+  ctx.fillText("1.00 liquidation", padX, hy + 18);
+  ctx.fillStyle = C.faint; ctx.fillRect(pos(1.2) - 1, hy - 5, 2, 10);
+  const hv = 1.208 + Math.sin(t * 0.5) * 0.012;
+  ctx.fillStyle = C.positive;
+  ctx.beginPath(); ctx.arc(pos(hv), hy, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.textAlign = "center";
+  ctx.fillText(`health ${hv.toFixed(3)}`, pos(hv), hy + 18);
+  if (state) state.textContent = `t+${Math.floor((t % lap) * 37.5).toString().padStart(3, "0")}s of 300s`;
+});
+
+/* ── the 2% split ─────────────────────────────────────────────────────────── */
+const split = document.getElementById("splitCanvas");
+animate(split, (t) => {
+  const { ctx, w, h } = fitCanvas(split, 250);
+  ctx.clearRect(0, 0, w, h);
+  const padX = 24, topY = 36, botY = h - 52, colW = w - padX * 2;
+
+  ctx.font = C.mono; ctx.textAlign = "center"; ctx.fillStyle = C.dim;
+  ctx.fillText("2% of every trade", w / 2, 20);
+  ctx.fillStyle = C.faint;
+  ctx.fillRect(padX, topY, colW, 3);
+
+  const legs = [
+    { label: "vault · builds the position", share: 0.8, color: C.accent },
+    { label: "holders · paid immediately", share: 0.2, color: C.positive },
+  ];
+  let x = padX;
+  legs.forEach((leg, i) => {
+    const lw = colW * leg.share;
+    const cx = x + lw / 2;
+    // flowing particles down each leg
+    for (let k = 0; k < 5; k++) {
+      const prog = ((t * 0.42 + k / 5 + i * 0.13) % 1);
+      const py = topY + (botY - topY) * prog;
+      ctx.globalAlpha = Math.sin(prog * Math.PI) * 0.85;
+      ctx.fillStyle = leg.color;
+      ctx.beginPath(); ctx.arc(cx, py, 2.4, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = C.lineSoft; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cx, topY + 4); ctx.lineTo(cx, botY - 6); ctx.stroke();
+
+    ctx.fillStyle = leg.color; ctx.fillRect(x, botY, lw, 26);
+    ctx.fillStyle = "#141414"; ctx.font = '600 13px "Geist Mono", monospace';
+    ctx.textAlign = "center";
+    ctx.fillText(`${leg.share * 100}%`, cx, botY + 18);
+    ctx.fillStyle = C.dim; ctx.font = C.monoSm;
+    ctx.fillText(leg.label, cx, botY + 44);
+    x += lw;
+  });
+});
+
+/* ── the priority chain ───────────────────────────────────────────────────── */
+const chain = document.getElementById("chainCanvas");
+const STEPS = [
+  ["health < 1.10", "reduce leverage now", C.negative],
+  ["tax waiting", "build the position", C.accent],
+  ["gain ≥ 0.02 BNB", "distribute it", C.positive],
+  ["leverage drifted", "rebalance", C.info],
+  ["none of the above", "check back in an hour", C.faint],
+];
+animate(chain, (t) => {
+  const { ctx, w, h } = fitCanvas(chain, 210);
+  ctx.clearRect(0, 0, w, h);
+  const padX = 24, colW = (w - padX * 2) / STEPS.length;
+  const active = Math.floor(t / 1.6) % STEPS.length;
+  STEPS.forEach(([cond, act, col], i) => {
+    const x = padX + colW * i, cx = x + colW / 2;
+    const on = i === active;
+    ctx.globalAlpha = on ? 1 : 0.38;
+    ctx.strokeStyle = on ? col : C.line;
+    ctx.lineWidth = on ? 1.6 : 1;
+    const bx = x + 5, bw = colW - 10, by = 48, bh = 62;
+    ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 7); ctx.stroke();
+    if (on) { ctx.fillStyle = "rgba(224,137,74,0.06)"; ctx.fill(); }
+    ctx.fillStyle = on ? col : C.dim;
+    ctx.font = C.monoSm; ctx.textAlign = "center";
+    ctx.fillText(String(i + 1), cx, by - 8);
+    ctx.fillStyle = on ? C.fg : C.dim;
+    ctx.font = C.monoSm;
+    wrapText(ctx, cond, cx, by + 22, bw - 12, 12);
+    ctx.fillStyle = on ? col : C.faint;
+    wrapText(ctx, act, cx, by + 46, bw - 12, 12);
+    if (i < STEPS.length - 1) {
+      ctx.strokeStyle = C.lineSoft; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(bx + bw, by + bh / 2); ctx.lineTo(bx + bw + 10, by + bh / 2); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  });
+  ctx.fillStyle = C.dim; ctx.font = C.monoSm; ctx.textAlign = "left";
+  ctx.fillText("one wake picks exactly one", padX, h - 14);
+});
+
+function wrapText(ctx, text, cx, y, maxW, lh) {
+  const words = text.split(" ");
+  let line = "", lines = [];
+  words.forEach((wd) => {
+    const test = line ? line + " " + wd : wd;
+    if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = wd; }
+    else line = test;
+  });
+  lines.push(line);
+  lines.forEach((l, i) => ctx.fillText(l, cx, y + i * lh));
+}
+</script>
+</body>
+</html>

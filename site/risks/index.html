@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Risks · Keel</title>
+<meta name="description" content="A 3x position is liquidated by a 16.7% move. Leverage decays in a flat market. Venus and PancakeSwap are dependencies. The contracts are unaudited.">
+<meta name="theme-color" content="#141414">
+<meta property="og:title" content="Risks · Keel">
+<meta property="og:description" content="What can go wrong, in the order it would hurt.">
+<link rel="stylesheet" href="/assets/base.css">
+</head>
+<body>
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="/">keel<span>.</span></a>
+    <a class="link" href="/how-it-works/">How it works</a>
+    <a class="link" href="/economics/">Economics</a>
+    <a class="link" href="/vault/">The vault</a>
+    <a class="link" href="/risks/">Risks</a>
+    <a class="link" href="/verify/">Verify</a>
+    <span class="sp"></span>
+    <a class="btn" href="/verify/">Check it yourself</a>
+  </div>
+</header>
+<main>
+<section>
+  <div class="wrap">
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div class="tag">risks <em>//</em> read before buying</div>
+      <h1>What can go wrong</h1>
+      <p class="lede">This is beta software holding real money. Every number below is the honest
+        one, and the ones that argue against this design are on the page rather than in a
+        footnote.</p>
+    </div>
+  </div>
+</section>
+
+<section style="border-top:0;padding-top:0">
+  <div class="wrap">
+    <figure class="viz rise" style="margin:0">
+      <div class="viz-head">
+        <span class="tag">liquidation distance <em>//</em> by target leverage</span>
+      </div>
+      <canvas id="liqCanvas" aria-hidden="true"></canvas>
+      <figcaption>
+        How far BNB has to fall before each leverage target is liquidated on Venus, at its 80%
+        collateral factor. At 2x the position survives a 37.5% drop; at 3x, the level this vault
+        builds, it survives 16.7%; at 4x only 6.3%; and at 5x the position is already at the
+        liquidation point before the price has moved at all, which is why 5x is refused by the
+        constructor rather than offered with a warning.
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="grid g2">
+      <div class="card" style="border-color:rgba(217,106,106,0.4)">
+        <h3 style="color:var(--negative)">A 16.7% move liquidates the position</h3>
+        <p style="margin-top:10px">Not "may be affected by volatility". Liquidated: Venus sells the
+          collateral, and the treasury is permanently smaller. The vault reduces leverage on its own
+          when health falls under 1.10, and waives its cooldown to do it, but a fast enough move
+          does not wait for a five-minute wake.</p>
+      </div>
+      <div class="card">
+        <h3>We are not trustless. We changed who you trust.</h3>
+        <p style="margin-top:10px">The position lives in the contract, but it borrows from Venus and
+          trades on PancakeSwap, and it is woken by Flap's trigger service. If any of those fails,
+          the treasury is affected. This is a better trade than one operator's private key. It is
+          not the absence of one.</p>
+      </div>
+      <div class="card">
+        <h3>Leverage decays</h3>
+        <p style="margin-top:10px">A 3&times; position loses value in a choppy market even if BNB
+          ends where it started, and the carry is <span class="mono neg">&minus;4.87%</span> a year
+          before any price move. This is arithmetic, not a bug.</p>
+      </div>
+      <div class="card">
+        <h3>Every step needs someone to show up</h3>
+        <p style="margin-top:10px">Flap's service wakes the vault, and anyone may restart the chain
+          if it stops. Both paths pay. But nobody is <em style="font-style:normal;color:var(--fg-strong)">obliged</em>
+          to appear, and a trigger call that fails is recorded as failed.</p>
+      </div>
+      <div class="card">
+        <h3>Dividends have a holding threshold</h3>
+        <p style="margin-top:10px">A balance under the threshold earns no dividend share at all.
+          That rule belongs to Flap's dividend contract, not to this vault, but it decides whether
+          you can be paid.</p>
+      </div>
+      <div class="card" style="border-color:rgba(217,180,91,0.4)">
+        <h3 style="color:var(--warn)">The contracts are unaudited</h3>
+        <p style="margin-top:10px">They have been reviewed adversarially against themselves many
+          times and checked rule by rule against Flap's specification. That is not an audit and we
+          will not call it one.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head"><span class="tag">what is fixed <em>//</em> and therefore unfixable</span><h2>Four things nobody can change after launch</h2></div>
+    <div class="scroll rise">
+      <table>
+        <thead><tr><th>Fixed at launch</th><th>Consequence</th></tr></thead>
+        <tbody>
+          <tr><td class="name">The project address</td><td>Receives 40% of every gain, forever. The vault has no setter.</td></tr>
+          <tr><td class="name">The tax split</td><td>80 / 20 is written into the token. It cannot be retuned later.</td></tr>
+          <tr><td class="name">Tax rate and duration</td><td>2% for 100 years.</td></tr>
+          <tr><td class="name">The dividend threshold</td><td>Decides who is eligible to be paid, for the life of the token.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:16px;font-size:13.5px;color:var(--fg-tertiary)">This cuts both ways. Nobody
+      can quietly raise the project's share &mdash; and nobody can fix a number that turns out to be
+      wrong, either. Changing any of them means a new token.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap narrow" style="text-align:center">
+    <h2>Everything above is checkable</h2>
+    <p class="lede" style="margin:14px auto 22px">Including the numbers that make this look worse.</p>
+    <a class="btn primary" href="/verify/">How to verify</a>
+  </div>
+</section>
+</main>
+<footer>
+  <div class="wrap foot-grid">
+    <div><h4>Product</h4><a href="/how-it-works/">How it works</a><a href="/economics/">Economics</a><a href="/vault/">The vault</a></div>
+    <div><h4>Diligence</h4><a href="/risks/">Risks</a><a href="/verify/">Verify</a></div>
+    <div><h4>Status</h4><span style="color:var(--warn)">Not deployed</span><span style="display:block;color:var(--fg-quaternary);padding-top:3px">Unaudited</span></div>
+  </div>
+  <div class="wrap" style="margin-top:30px;padding-top:18px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--fg-quaternary)">
+    A 3&times; position is liquidated by a 16.7% move against it. Venus and PancakeSwap are
+    dependencies. The contracts are unaudited.
+  </div>
+</footer>
+<script type="module">
+import { fitCanvas, animate, C } from "/assets/site.js";
+const cv = document.getElementById("liqCanvas");
+const ROWS = [
+  { lev: 2.0, health: 1.6, drop: 37.5, col: C.positive },
+  { lev: 3.0, health: 1.2, drop: 16.7, col: C.accent },
+  { lev: 4.0, health: 1.067, drop: 6.3, col: C.warn },
+  { lev: 5.0, health: 1.0, drop: 0.0, col: C.negative },
+];
+animate(cv, (t) => {
+  const { ctx, w, h } = fitCanvas(cv, 262);
+  ctx.clearRect(0, 0, w, h);
+  const padL = 74, padR = 26, top = 34, rowH = 50;
+  const trackW = w - padL - padR;
+  ctx.font = C.monoSm; ctx.fillStyle = C.dim; ctx.textAlign = "left";
+  ctx.fillText("BNB drop from here", padL, 20);
+  ctx.textAlign = "right";
+  ctx.fillText("40%", padL + trackW, 20);
+  ROWS.forEach((r, i) => {
+    const y = top + rowH * i + 14;
+    ctx.textAlign = "right"; ctx.font = C.mono;
+    ctx.fillStyle = r.lev === 3 ? C.fg : C.dim;
+    ctx.fillText(`${r.lev.toFixed(1)}x`, padL - 14, y + 4);
+    ctx.strokeStyle = C.lineSoft; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + trackW, y); ctx.stroke();
+    const frac = r.drop / 40;
+    const pulse = 0.6 + Math.sin(t * 1.4 + i) * 0.4;
+    ctx.strokeStyle = r.col; ctx.lineWidth = r.lev === 3 ? 2.5 : 1.5;
+    ctx.globalAlpha = r.lev === 3 ? 1 : 0.7;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + trackW * frac, y); ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = r.col;
+    ctx.beginPath(); ctx.arc(padL + trackW * frac, y, r.lev === 3 ? 5 : 3.5, 0, Math.PI * 2); ctx.fill();
+    if (r.drop === 0) {
+      ctx.globalAlpha = pulse;
+      ctx.beginPath(); ctx.arc(padL, y, 9, 0, Math.PI * 2); ctx.strokeStyle = r.col; ctx.lineWidth = 1; ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    // Put the label inside the box: at 2x the marker sits at the far right and a
+    // right-hand label was clipped off the canvas on a 390px viewport.
+    const label = r.drop === 0 ? "already there" : `-${r.drop}%`;
+    ctx.font = C.monoSm;
+    const lw = ctx.measureText(label).width;
+    const mx = padL + trackW * frac;
+    const fitsRight = mx + 12 + lw < w - 6;
+    ctx.textAlign = fitsRight ? "left" : "right";
+    ctx.fillStyle = r.col;
+    ctx.fillText(label, fitsRight ? mx + 12 : mx - 12, y + 4);
+    ctx.textAlign = "left"; ctx.fillStyle = C.faint;
+    ctx.fillText(`health ${r.health.toFixed(3)}`, padL, y + 21);
+  });
+});
+</script>
+</body>
+</html>

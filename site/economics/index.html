@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Economics · Keel</title>
+<meta name="description" content="Where every basis point goes: 80% of tax builds the position, 20% pays holders immediately, and every gain splits 60/40 with holders always taking 1.5x the project.">
+<meta name="theme-color" content="#141414">
+<meta property="og:title" content="Economics · Keel">
+<meta property="og:description" content="Two layers of money, four constants nobody can move, and what each job pays the caller.">
+<link rel="stylesheet" href="/assets/base.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="/">keel<span>.</span></a>
+    <a class="link" href="/how-it-works/">How it works</a>
+    <a class="link" href="/economics/">Economics</a>
+    <a class="link" href="/vault/">The vault</a>
+    <a class="link" href="/risks/">Risks</a>
+    <a class="link" href="/verify/">Verify</a>
+    <span class="sp"></span>
+    <a class="btn" href="/verify/">Check it yourself</a>
+  </div>
+</header>
+
+<main>
+
+<section>
+  <div class="wrap">
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div class="tag">economics <em>//</em> two layers of money</div>
+      <h1>Nothing is taken from the tax</h1>
+      <p class="lede">There are two separate pools here and they are worth keeping apart. The tax is
+        money a trade produced. The gain is money the position earned in the market &mdash; it did
+        not exist before the position did, and it comes out of nobody's pocket.</p>
+    </div>
+  </div>
+</section>
+
+<section style="border-top:0;padding-top:0">
+  <div class="wrap">
+    <figure class="viz rise" style="margin:0">
+      <div class="viz-head"><span class="tag">two layers <em>//</em> tax and gain</span></div>
+      <canvas id="layersCanvas" aria-hidden="true"></canvas>
+      <figcaption>
+        The tax layer on top: 2% per trade splits 80% into the vault and 20% straight to holders,
+        with nothing withheld for the project. The gain layer beneath it, fed by the position rather
+        than by any trade: 60% to holders, 40% to the project, and zero whenever the position has
+        not profited.
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head"><span class="tag">layer one <em>//</em> the tax</span><h2>2% per trade, split four ways</h2></div>
+    <div class="scroll rise">
+      <table>
+        <thead><tr><th>Share</th><th class="num">Bps</th><th>Goes to</th></tr></thead>
+        <tbody>
+          <tr><td class="name">mktBps</td><td class="num" style="color:var(--accent)">8000</td><td>The vault. Becomes leveraged position.</td></tr>
+          <tr><td class="name">dividendBps</td><td class="num pos">2000</td><td>Holders, immediately, through the token's dividend contract.</td></tr>
+          <tr><td class="name">deflationBps</td><td class="num">0</td><td>Nothing burned.</td></tr>
+          <tr><td class="name">lpBps</td><td class="num">0</td><td>Nothing to liquidity.</td></tr>
+          <tr><td class="name">project</td><td class="num pos">0</td><td>The project takes nothing from this layer.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:16px;font-size:13.5px;color:var(--fg-tertiary)">The four must sum to 10000
+      and the token enforces it. They are set once at launch and cannot be changed afterwards.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head"><span class="tag">layer two <em>//</em> the gain</span><h2>60 to holders, 40 to the project</h2></div>
+    <div class="grid g2">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <p>Whenever the position has earned at least 0.02 BNB, a wake distributes it. Holders take
+          60%, the project takes 40%, and both numbers are Solidity
+          <code class="mono" style="color:var(--fg-strong)">constant</code>s with no setter &mdash;
+          the project cannot move its own share any more than anyone else can.</p>
+        <p><strong style="color:var(--fg)">Holders always take 1.5&times; whatever the project
+          takes.</strong> There is no arrangement in which the project earns more without handing
+          holders one and a half times as much first. And if the position never profits, the project
+          earns nothing at all.</p>
+      </div>
+      <div class="card">
+        <div class="stat"><div class="k">Holders</div><div class="v pos">60%</div><div class="n">Paid in WBNB through the token's dividend contract. Claimed, never expires.</div></div>
+        <hr style="border:0;border-top:1px solid var(--line-soft);margin:18px 0">
+        <div class="stat"><div class="k">Project</div><div class="v">40%</div><div class="n">To the address written into the vault at creation. No setter.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="tag">the jobs <em>//</em> what each pays</span>
+      <h2>Every job that has to happen, pays</h2>
+      <p class="lede">There is no keeper account here, so each thing that needs doing is worth
+        someone's gas. In normal operation the trigger service does them and no bounty is charged
+        &mdash; the wake fee already came out of the treasury. These rates apply when a human steps
+        in because the schedule stopped.</p>
+    </div>
+    <div class="grid g3">
+      <div class="card stat"><div class="k">Build the position</div><div class="v">25 bps</div><div class="n">Of the tax being deployed.</div></div>
+      <div class="card stat"><div class="k">Distribute a gain</div><div class="v">50 bps</div><div class="n">Of what the unwind frees.</div></div>
+      <div class="card stat"><div class="k">Rebalance</div><div class="v">30 bps</div><div class="n">Of what it frees. 100 bps when health is under 1.10.</div></div>
+    </div>
+    <p style="margin-top:18px;font-size:13.5px;color:var(--fg-tertiary)">Under health 1.10 the hourly
+      cooldown is waived as well. A rule that caps bleed should not also be the rule that stops
+      someone rescuing the position.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head"><span class="tag">running cost <em>//</em> measured</span><h2>What it costs to keep turning</h2></div>
+    <div class="scroll rise">
+      <table>
+        <thead><tr><th>Cost</th><th class="num">Rate</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="name">Trigger fee</td><td class="num">0.0002 BNB</td><td>Per wake. Five minutes when there is work, one hour when there is not.</td></tr>
+          <tr><td class="name">Build slippage</td><td class="num pos">0.06&ndash;0.18%</td><td>One flash-funded swap through PancakeSwap V3's deep tier.</td></tr>
+          <tr><td class="name">Venus borrow</td><td class="num">2.62% APR</td><td>On the USDT leg. Read from the chain, moves with utilisation.</td></tr>
+          <tr><td class="name">3&times; carry</td><td class="num neg">&minus;4.87% / yr</td><td>Three units of supply yield minus two units of borrow, before any price move.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:16px;font-size:13.5px;color:var(--fg-tertiary)">The carry is negative and
+      that is not a defect: a leveraged long pays to be leveraged. It means a flat market slowly
+      costs the treasury, and the position has to be right about direction to be worth holding.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap narrow" style="text-align:center">
+    <h2>The costs above are the honest half</h2>
+    <p class="lede" style="margin:14px auto 22px">The risks page is the other one.</p>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <a class="btn primary" href="/risks/">Read the risks</a>
+      <a class="btn" href="/verify/">Verify the numbers</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap foot-grid">
+    <div><h4>Product</h4><a href="/how-it-works/">How it works</a><a href="/economics/">Economics</a><a href="/vault/">The vault</a></div>
+    <div><h4>Diligence</h4><a href="/risks/">Risks</a><a href="/verify/">Verify</a></div>
+    <div><h4>Status</h4><span style="color:var(--warn)">Not deployed</span><span style="display:block;color:var(--fg-quaternary);padding-top:3px">Unaudited</span></div>
+  </div>
+  <div class="wrap" style="margin-top:30px;padding-top:18px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--fg-quaternary)">
+    A 3&times; position is liquidated by a 16.7% move against it. Venus and PancakeSwap are
+    dependencies. The contracts are unaudited.
+  </div>
+</footer>
+
+<script type="module">
+import { fitCanvas, animate, C } from "/assets/site.js";
+
+const cv = document.getElementById("layersCanvas");
+animate(cv, (t) => {
+  const { ctx, w, h } = fitCanvas(cv, 270);
+  ctx.clearRect(0, 0, w, h);
+  const padX = 26, colW = w - padX * 2;
+
+  const layer = (y, title, source, legs) => {
+    // Title sits clear of the particle track: both were drawing into the same 14px band
+    // and the right-aligned caption collided with the inbound dots.
+    ctx.font = C.mono; ctx.textAlign = "left"; ctx.fillStyle = C.fg;
+    ctx.fillText(title, padX, y - 24);
+    ctx.textAlign = "right"; ctx.font = C.monoSm; ctx.fillStyle = C.dim;
+    ctx.fillText(source, w - padX, y - 24);
+    ctx.textAlign = "left";
+    let x = padX;
+    legs.forEach((leg, i) => {
+      const lw = colW * leg.share;
+      ctx.fillStyle = leg.color;
+      ctx.globalAlpha = leg.share === 0 ? 0.18 : 1;
+      ctx.fillRect(x, y, Math.max(1, lw - 2), 26);
+      ctx.globalAlpha = 1;
+      if (leg.share >= 0.15) {
+        ctx.fillStyle = "#141414"; ctx.font = '600 12px "Geist Mono", monospace';
+        ctx.textAlign = "center";
+        ctx.fillText(`${Math.round(leg.share * 100)}%`, x + lw / 2, y + 18);
+        ctx.fillStyle = C.dim; ctx.font = C.monoSm;
+        ctx.fillText(leg.label, x + lw / 2, y + 42);
+      }
+      // particles travelling into each non-zero leg
+      if (leg.share > 0) {
+        for (let k = 0; k < 4; k++) {
+          const prog = (t * 0.5 + k / 4 + i * 0.2) % 1;
+          ctx.globalAlpha = Math.sin(prog * Math.PI) * 0.7;
+          ctx.fillStyle = leg.color;
+          ctx.beginPath();
+          ctx.arc(x + lw / 2, y - 4 - prog * 12, 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      }
+      x += lw;
+      ctx.textAlign = "left";
+    });
+  };
+
+  layer(56, "tax layer", "money a trade produced", [
+    { share: 0.8, label: "vault · position", color: C.accent },
+    { share: 0.2, label: "holders · now", color: C.positive },
+  ]);
+  ctx.strokeStyle = C.lineSoft; ctx.setLineDash([3, 4]);
+  ctx.beginPath(); ctx.moveTo(padX, 132); ctx.lineTo(w - padX, 132); ctx.stroke();
+  ctx.setLineDash([]);
+  layer(184, "gain layer", "money the position earned", [
+    { share: 0.6, label: "holders", color: C.positive },
+    { share: 0.4, label: "project", color: C.info },
+  ]);
+  ctx.fillStyle = C.faint; ctx.font = C.monoSm; ctx.textAlign = "center";
+  ctx.fillText("the project takes nothing from the layer above", w / 2, 124);
+});
+</script>
+</body>
+</html>

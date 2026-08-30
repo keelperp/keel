@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How it works · Keel</title>
+<meta name="description" content="Six steps from a trade to a dividend: tax accrues, Flap converts it, the vault builds a 3x BNB long with a flash loan, and every gain splits 60/40.">
+<meta name="theme-color" content="#141414">
+<meta property="og:title" content="How it works · Keel">
+<meta property="og:description" content="Six steps from a trade to a dividend, with the gas and the numbers at each one.">
+<link rel="stylesheet" href="/assets/base.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="/">keel<span>.</span></a>
+    <a class="link" href="/how-it-works/">How it works</a>
+    <a class="link" href="/economics/">Economics</a>
+    <a class="link" href="/vault/">The vault</a>
+    <a class="link" href="/risks/">Risks</a>
+    <a class="link" href="/verify/">Verify</a>
+    <span class="sp"></span>
+    <a class="btn" href="/verify/">Check it yourself</a>
+  </div>
+</header>
+
+<main>
+
+<section>
+  <div class="wrap">
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div class="tag">how it works <em>//</em> trade to dividend</div>
+      <h1>Six steps, and every one is on chain</h1>
+      <p class="lede">Nothing here happens in a backend. Each step below names the contract that
+        does it and the number it produced when measured against live BNB Chain state.</p>
+    </div>
+  </div>
+</section>
+
+<section style="border-top:0;padding-top:0">
+  <div class="wrap">
+    <figure class="viz rise" style="margin:0">
+      <div class="viz-head">
+        <span class="tag">the path <em>//</em> one trade's 2%</span>
+        <span class="tag" id="pipeStage">stage 1 of 6</span>
+      </div>
+      <canvas id="pipeCanvas" aria-hidden="true"></canvas>
+      <figcaption>
+        A single trade's tax travelling the whole path. It leaves the trade as token, accrues
+        inside the token contract until Flap's processor converts a batch to BNB, lands in the
+        vault where a two-store receive books it, waits for the next five-minute wake, is built
+        into a 3&times; long with one flash-funded swap, and finally returns as a gain that splits
+        60/40 between holders and the project.
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head"><span class="tag">step 1 <em>//</em> the trade</span><h2>2% leaves the trade as token</h2></div>
+    <div class="grid g2">
+      <p>Buy or sell, the token withholds 2%. At this point it is still token, not money, and it
+        sits inside the token contract. Nothing has reached the vault yet.</p>
+      <div class="card"><div class="stat"><div class="k">Buy / sell tax</div><div class="v">200 / 200 bps</div><div class="n">Symmetric, and fixed for 100 years at launch.</div></div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head"><span class="tag">step 2 <em>//</em> conversion</span><h2>Flap converts a batch to BNB</h2></div>
+    <div class="grid g2">
+      <p>Accrued tax is liquidated when it crosses a threshold set at launch, not on every trade.
+        That batching is why the vault's <code class="mono">receive()</code> has to be almost free:
+        Flap forwards with a plain call, and if that call ever ran out of gas or reverted, tax
+        collection for the token would break permanently.</p>
+      <div class="card"><div class="stat"><div class="k">receive() gas</div><div class="v">9,133</div><div class="n">Warm path. 57,433 cold. The protocol cap is 1,000,000.</div></div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head"><span class="tag">step 3 <em>//</em> the wake</span><h2>The vault wakes on a schedule</h2></div>
+    <p style="max-width:62ch;margin-bottom:20px">Flap's trigger service calls the vault every five
+      minutes. Each wake buys the next slot <em style="color:var(--fg-strong);font-style:normal">before</em>
+      doing any work and runs the job inside a try, so a job that fails cannot break the chain that
+      would have retried it. When there is nothing to do, the next slot is booked an hour out
+      instead.</p>
+    <div class="grid g3">
+      <div class="card stat"><div class="k">Per wake</div><div class="v">0.0002 BNB</div><div class="n">The service's quoted fee, paid out of undeployed revenue.</div></div>
+      <div class="card stat"><div class="k">Callback gas</div><div class="v">1,206,637</div><div class="n">Against a hard 2,000,000 cap. 40% headroom.</div></div>
+      <div class="card stat"><div class="k">If the chain stops</div><div class="v">kickstart()</div><div class="n">Permissionless. Anyone can restart settlement.</div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="tag">step 4 <em>//</em> the build</span>
+      <h2>One flash loan, one swap, three passes</h2>
+      <p class="lede">Venus checks collateral at the instant of the borrow, before the proceeds
+        become collateral. So a loop can only take the sliver its current collateral supports, and
+        those passes converge slowly &mdash; eighteen swaps to reach 3&times;. A flash loan reverses
+        the order: supply first, borrow second.</p>
+    </div>
+    <figure class="viz rise" style="margin:0 0 20px">
+      <div class="viz-head"><span class="tag">loop versus flash <em>//</em> cost to reach 3x</span></div>
+      <canvas id="buildCanvas" aria-hidden="true"></canvas>
+      <figcaption>
+        Two ways to reach the same position. The loop path takes eighteen swaps and costs 0.30%,
+        each pass limited to what the collateral already posted can support. The flash path supplies
+        the borrowed collateral first and repays from the position it just built: one swap, three
+        passes, 0.089%.
+      </figcaption>
+    </figure>
+    <div class="scroll rise">
+      <table>
+        <thead><tr><th>Path</th><th class="num">Swaps</th><th class="num">Cost</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td class="name">Loop</td><td class="num">18</td><td class="num neg">0.30%</td><td>Converges at cf/health = 0.667 per pass</td></tr>
+          <tr><td class="name">Flash</td><td class="num pos">1</td><td class="num pos">0.089%</td><td>Supply first, borrow second, repay from the position</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:16px;font-size:13.5px;color:var(--fg-tertiary)">The flash pool must be a
+      different fee tier from the swap pool. A V3 pool is locked for the duration of its own flash
+      callback, so borrowing and swapping in the same pool reverts <code class="mono">LOK</code>.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head"><span class="tag">step 5 <em>//</em> the position</span><h2>3&times; is the ceiling, not a choice</h2></div>
+    <div class="grid g2">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <p>Venus lends against BNB at an 80% collateral factor. Health is
+          <code class="mono" style="color:var(--fg-strong)">supply × CF / debt</code>, and Venus
+          liquidates at 1.00. Run leverage against that and the product line writes itself.</p>
+        <p><strong style="color:var(--fg)">At 5&times;, health is exactly 1.00.</strong> That is not
+          an aggressive position, it is one that liquidates on arrival. The constructor refuses any
+          target the collateral factor cannot hold, so the mistake cannot be made by configuration.</p>
+      </div>
+      <div class="scroll">
+        <table>
+          <thead><tr><th class="num">Target</th><th class="num">Health</th><th class="num">Liquidates on</th></tr></thead>
+          <tbody>
+            <tr><td class="num">2.00&times;</td><td class="num pos">1.600</td><td class="num pos">&minus;37.5%</td></tr>
+            <tr><td class="num">3.00&times;</td><td class="num pos">1.200</td><td class="num pos">&minus;16.7%</td></tr>
+            <tr><td class="num">4.00&times;</td><td class="num wrn">1.067</td><td class="num wrn">&minus;6.3%</td></tr>
+            <tr><td class="num neg">5.00&times;</td><td class="num neg">1.000</td><td class="num neg">0.0%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head"><span class="tag">step 6 <em>//</em> the payout</span><h2>A gain leaves, the principal stays</h2></div>
+    <div class="grid g2">
+      <p>When the position has gained at least 0.02 BNB, a wake distributes it. The unwind takes
+        only the gain &mdash; measured at three sizes, what it frees over what it gained is
+        1.00&times; &mdash; and health <em style="font-style:normal;color:var(--positive)">rises</em>
+        rather than falls, because the position gets smaller relative to its collateral.</p>
+      <div class="card">
+        <div class="stat"><div class="k">Freed vs gained</div><div class="v pos">1.00&times;</div><div class="n">Measured at 1, 3 and 4 BNB of gain.</div></div>
+        <hr style="border:0;border-top:1px solid var(--line-soft);margin:18px 0">
+        <div class="stat"><div class="k">Health after</div><div class="v pos">1.290</div><div class="n">Up from 1.208, not down.</div></div>
+      </div>
+    </div>
+    <p style="margin-top:18px;font-size:13.5px;color:var(--fg-tertiary)">Holders are paid through the
+      token's own dividend contract in WBNB. Flap's dividends are claimed, not pushed &mdash; call
+      <code class="mono">withdrawDividends()</code> when you want yours. They do not expire. A
+      holding below the dividend threshold earns no share; that rule is Flap's, not ours.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap narrow" style="text-align:center">
+    <h2>Now read what can go wrong</h2>
+    <p class="lede" style="margin:14px auto 22px">A 3&times; position is liquidated by a 16.7% move.
+      That number belongs on the page, not in a footnote.</p>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <a class="btn primary" href="/risks/">Risks</a>
+      <a class="btn" href="/economics/">Economics</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap foot-grid">
+    <div><h4>Product</h4><a href="/how-it-works/">How it works</a><a href="/economics/">Economics</a><a href="/vault/">The vault</a></div>
+    <div><h4>Diligence</h4><a href="/risks/">Risks</a><a href="/verify/">Verify</a></div>
+    <div><h4>Status</h4><span style="color:var(--warn)">Not deployed</span><span style="display:block;color:var(--fg-quaternary);padding-top:3px">Unaudited</span></div>
+  </div>
+  <div class="wrap" style="margin-top:30px;padding-top:18px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--fg-quaternary)">
+    A 3&times; position is liquidated by a 16.7% move against it. Venus and PancakeSwap are
+    dependencies. The contracts are unaudited.
+  </div>
+</footer>
+
+<script type="module">
+import { fitCanvas, animate, C } from "/assets/site.js";
+
+/* ── the six-stage path a single tax payment travels ──────────────────────── */
+const pipe = document.getElementById("pipeCanvas");
+const stageEl = document.getElementById("pipeStage");
+const STAGES = [
+  ["trade", "2% withheld", C.dim],
+  ["token", "accrues in contract", C.dim],
+  ["flap", "batch → BNB", C.info],
+  ["vault", "receive() books it", C.accent],
+  ["build", "3x long, one swap", C.accent],
+  ["payout", "60 / 40", C.positive],
+];
+animate(pipe, (t) => {
+  const { ctx, w, h } = fitCanvas(pipe, 200);
+  ctx.clearRect(0, 0, w, h);
+  const padX = 22, y = 78, n = STAGES.length;
+  const step = (w - padX * 2) / (n - 1);
+  const cycle = 12, p = (t % cycle) / cycle;
+  const at = p * (n - 1);
+  const stage = Math.min(n - 1, Math.floor(at));
+  if (stageEl) stageEl.textContent = `stage ${stage + 1} of ${n}`;
+
+  ctx.strokeStyle = C.lineSoft; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(w - padX, y); ctx.stroke();
+  ctx.strokeStyle = C.accent; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(padX + step * at, y); ctx.stroke();
+
+  STAGES.forEach(([name, note, col], i) => {
+    const x = padX + step * i, on = i <= at + 0.001;
+    ctx.fillStyle = on ? col : C.faint;
+    ctx.beginPath(); ctx.arc(x, y, i === stage ? 6.5 : 4, 0, Math.PI * 2); ctx.fill();
+    if (i === stage) {
+      ctx.strokeStyle = col; ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.5;
+      ctx.beginPath(); ctx.arc(x, y, 6.5 + ((t * 2) % 1) * 10, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    ctx.textAlign = "center"; ctx.font = C.mono;
+    ctx.fillStyle = on ? C.fg : C.faint;
+    ctx.fillText(name, x, y - 20);
+    ctx.font = C.monoSm; ctx.fillStyle = on ? C.dim : C.faint;
+    ctx.fillText(note, x, y + 26);
+  });
+});
+
+/* ── loop versus flash ────────────────────────────────────────────────────── */
+const build = document.getElementById("buildCanvas");
+animate(build, (t) => {
+  const { ctx, w, h } = fitCanvas(build, 210);
+  ctx.clearRect(0, 0, w, h);
+  const padX = 26, colW = w - padX * 2;
+  const rows = [
+    { name: "loop", swaps: 18, cost: 0.30, col: C.negative, y: 56 },
+    { name: "flash", swaps: 1, cost: 0.089, col: C.positive, y: 132 },
+  ];
+  ctx.font = C.monoSm; ctx.textAlign = "left";
+  rows.forEach((r) => {
+    ctx.fillStyle = C.fg; ctx.font = C.mono;
+    ctx.fillText(r.name, padX, r.y - 14);
+    ctx.fillStyle = C.dim; ctx.font = C.monoSm;
+    ctx.textAlign = "right";
+    ctx.fillText(`${r.swaps} swap${r.swaps > 1 ? "s" : ""} · ${r.cost}%`, w - padX, r.y - 14);
+    ctx.textAlign = "left";
+    // one tick per swap, filling left to right on a loop
+    const per = colW / 18;
+    const prog = (t * 0.6) % 1.6;
+    for (let i = 0; i < r.swaps; i++) {
+      const x = padX + per * i;
+      const lit = prog * 18 > i;
+      ctx.fillStyle = lit ? r.col : C.faint;
+      ctx.globalAlpha = lit ? 1 : 0.5;
+      ctx.fillRect(x, r.y, Math.max(3, per - 3), 16);
+    }
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = C.lineSoft;
+    ctx.beginPath(); ctx.moveTo(padX, r.y + 24); ctx.lineTo(w - padX, r.y + 24); ctx.stroke();
+  });
+  ctx.fillStyle = C.dim; ctx.font = C.monoSm; ctx.textAlign = "left";
+  ctx.fillText("each mark is one swap through PancakeSwap", padX, h - 12);
+});
+</script>
+</body>
+</html>

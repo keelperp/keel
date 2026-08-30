@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The vault · Keel</title>
+<meta name="description" content="Live treasury value, leverage, health and the next settlement, read straight from BNB Chain. Not deployed yet.">
+<meta name="theme-color" content="#141414">
+<meta property="og:title" content="The vault · Keel">
+<meta property="og:description" content="Read the treasury yourself, in whatever block you ask.">
+<link rel="stylesheet" href="/assets/base.css">
+</head>
+<body>
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="/">keel<span>.</span></a>
+    <a class="link" href="/how-it-works/">How it works</a>
+    <a class="link" href="/economics/">Economics</a>
+    <a class="link" href="/vault/">The vault</a>
+    <a class="link" href="/risks/">Risks</a>
+    <a class="link" href="/verify/">Verify</a>
+    <span class="sp"></span>
+    <a class="btn" href="/verify/">Check it yourself</a>
+  </div>
+</header>
+<main>
+<section>
+  <div class="wrap">
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div class="tag">the vault <em>//</em> read it in your own block</div>
+      <h1>Nobody publishes this number</h1>
+      <p class="lede">Everything below is a view over Venus. When the vault is live this page reads
+        it from the chain each time you load it &mdash; and so can you, with one
+        <code class="mono">cast call</code>.</p>
+    </div>
+  </div>
+</section>
+
+<section style="border-top:0;padding-top:0">
+  <div class="wrap">
+    <div id="liveState" class="card rise" style="border-color:rgba(217,180,91,0.4);display:flex;flex-direction:column;gap:12px">
+      <div class="tag" style="color:var(--warn)">status <em>//</em> not deployed</div>
+      <h3 style="color:var(--warn)">There is nothing to read yet</h3>
+      <p style="font-size:14.5px">No contract has been broadcast to any network, so this page shows
+        nothing rather than showing a demo. When the vault is live, the panel below fills from the
+        chain and the addresses appear here.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head"><span class="tag">the panel <em>//</em> what will be here</span><h2>Six readings, all views</h2></div>
+    <div class="grid g3">
+      <div class="card stat"><div class="k">nav()</div><div class="v" id="f-nav">&mdash;</div><div class="n">Treasury value in BNB. Supply minus debt, priced by the Venus oracle.</div></div>
+      <div class="card stat"><div class="k">currentLeverage()</div><div class="v" id="f-lev">&mdash;</div><div class="n">BNB exposure over net value.</div></div>
+      <div class="card stat"><div class="k">healthBps()</div><div class="v" id="f-health">&mdash;</div><div class="n">10000 is the Venus liquidation point.</div></div>
+      <div class="card stat"><div class="k">pendingRevenue()</div><div class="v" id="f-pending">&mdash;</div><div class="n">Tax that has arrived and is not yet in the position.</div></div>
+      <div class="card stat"><div class="k">nextSettlementIn()</div><div class="v" id="f-next">&mdash;</div><div class="n">Seconds until the next wake.</div></div>
+      <div class="card stat"><div class="k">totalHarvested()</div><div class="v" id="f-paid">&mdash;</div><div class="n">Lifetime BNB paid to holders as WBNB.</div></div>
+    </div>
+    <p style="margin-top:18px;font-size:13.5px;color:var(--fg-tertiary)">An em dash means the value
+      has not loaded, not that it is zero. On a page where people decide how much to put in, those
+      are different things.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="tag">measured <em>//</em> not live</span>
+      <h2>What it did on live state during testing</h2>
+      <p class="lede">These are not readings from a deployed vault. They are what the contracts
+        produced when run against BNB Chain's current state as an atomic call, at three sizes of
+        incoming tax.</p>
+    </div>
+    <div class="scroll rise">
+      <table>
+        <thead><tr><th class="num">Tax batch</th><th class="num">Leverage</th><th class="num">Health</th><th class="num">Liquidates on</th><th class="num">Build cost</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1 BNB</td><td class="num">2.960&times;</td><td class="num pos">1.208</td><td class="num">&minus;17.2%</td><td class="num pos">0.12%</td></tr>
+          <tr><td class="num">5 BNB</td><td class="num">2.960&times;</td><td class="num pos">1.208</td><td class="num">&minus;17.2%</td><td class="num pos">0.13%</td></tr>
+          <tr><td class="num">20 BNB</td><td class="num">2.960&times;</td><td class="num pos">1.208</td><td class="num">&minus;17.2%</td><td class="num pos">0.18%</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head"><span class="tag">the position <em>//</em> both legs</span><h2>What the vault actually holds</h2></div>
+    <figure class="viz rise" style="margin:0">
+      <div class="viz-head"><span class="tag">supply and debt <em>//</em> per unit of net value</span></div>
+      <canvas id="posCanvas" aria-hidden="true"></canvas>
+      <figcaption>
+        For every unit of net value the vault holds roughly three units of BNB collateral on Venus
+        and owes about two units of USDT against it. The gap between them is the treasury. The
+        health mark sits at 1.208, and the collateral would have to lose 16.7% of its value before
+        it reaches the liquidation line on the left.
+      </figcaption>
+    </figure>
+  </div>
+</section>
+</main>
+<footer>
+  <div class="wrap foot-grid">
+    <div><h4>Product</h4>
+      <a href="/how-it-works/">How it works</a><a href="/economics/">Economics</a><a href="/vault/">The vault</a></div>
+    <div><h4>Diligence</h4>
+      <a href="/risks/">Risks</a><a href="/verify/">Verify</a></div>
+    <div><h4>Status</h4>
+      <span style="color:var(--warn)">Not deployed</span>
+      <span style="display:block;color:var(--fg-quaternary);padding-top:3px">Unaudited</span></div>
+  </div>
+  <div class="wrap" style="margin-top:30px;padding-top:18px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--fg-quaternary)">
+    A 3&times; position is liquidated by a 16.7% move against it. Venus and PancakeSwap are
+    dependencies. The contracts are unaudited.
+  </div>
+</footer>
+<script type="module">
+import { fitCanvas, animate, C } from "/assets/site.js";
+
+/* The panel stays empty until an address exists. No fixture, no demo values:
+   an empty state that shows invented numbers is the one thing this page must not do. */
+const VAULT_ADDRESS = null;
+if (VAULT_ADDRESS) {
+  // populated after deployment; reads go straight to a public RPC
+}
+
+const cv = document.getElementById("posCanvas");
+animate(cv, (t) => {
+  const { ctx, w, h } = fitCanvas(cv, 220);
+  ctx.clearRect(0, 0, w, h);
+  const padX = 26, barW = w - padX * 2, y = 52, bh = 30;
+  const supply = 2.96, debt = 1.96;
+
+  ctx.fillStyle = "rgba(91,191,154,0.14)"; ctx.fillRect(padX, y, barW, bh);
+  ctx.strokeStyle = C.line; ctx.strokeRect(padX + 0.5, y + 0.5, barW - 1, bh - 1);
+  const debtW = barW * (debt / supply);
+  ctx.fillStyle = "rgba(217,106,106,0.30)"; ctx.fillRect(padX, y, debtW, bh);
+  ctx.fillStyle = C.positive; ctx.fillRect(padX + debtW, y, barW - debtW, bh);
+
+  ctx.font = C.monoSm; ctx.textAlign = "left"; ctx.fillStyle = C.negative;
+  ctx.fillText(`debt ${debt.toFixed(2)}x  ·  USDT on Venus`, padX + 6, y + 19);
+  ctx.textAlign = "right"; ctx.fillStyle = "#141414";
+  ctx.font = '600 11px "Geist Mono", monospace';
+  ctx.fillText("net value 1.00x", padX + barW - 6, y + 19);
+  ctx.textAlign = "left"; ctx.font = C.monoSm; ctx.fillStyle = C.dim;
+  ctx.fillText(`supply ${supply.toFixed(2)}x  ·  BNB collateral`, padX, y - 12);
+
+  const hy = y + bh + 52;
+  ctx.strokeStyle = C.lineSoft; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(padX, hy); ctx.lineTo(padX + barW, hy); ctx.stroke();
+  const pos = (v) => padX + barW * Math.max(0, Math.min(1, (v - 1) / 1));
+  ctx.fillStyle = C.negative; ctx.fillRect(padX - 1, hy - 7, 2, 14);
+  ctx.textAlign = "left"; ctx.fillStyle = C.negative;
+  ctx.fillText("1.00 · liquidation", padX, hy + 20);
+  ctx.fillStyle = C.faint; ctx.fillRect(pos(1.2) - 1, hy - 6, 2, 12);
+  ctx.textAlign = "center"; ctx.fillText("1.20 floor", pos(1.2), hy - 14);
+  const hv = 1.208 + Math.sin(t * 0.6) * 0.01;
+  ctx.fillStyle = C.positive;
+  ctx.beginPath(); ctx.arc(pos(hv), hy, 5.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillText(`health ${hv.toFixed(3)}`, pos(hv), hy + 20);
+});
+</script>
+</body>
+</html>

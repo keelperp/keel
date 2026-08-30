@@ -1,0 +1,175 @@
+/* Keel — visual system.
+   Palette and type are lifted from trystudio.ai's system: a near-black ground with the
+   whole hierarchy built from white at different opacities, and colour reserved for meaning.
+   The accent is Keel's own copper rather than their YC orange. */
+
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap");
+
+:root {
+  --bg: #141414;
+  --bg-lift: #191919;
+  --fg: #ffffff;
+  --fg-strong: rgba(255, 255, 255, 0.8);
+  --fg-body: rgba(255, 255, 255, 0.7);
+  --fg-secondary: #8a8a99;
+  --fg-tertiary: rgba(255, 255, 255, 0.4);
+  --fg-quaternary: rgba(255, 255, 255, 0.2);
+
+  --surface: rgba(255, 255, 255, 0.04);
+  --surface-strong: rgba(255, 255, 255, 0.08);
+  --line-soft: rgba(255, 255, 255, 0.08);
+  --line: rgba(255, 255, 255, 0.12);
+  --line-strong: rgba(255, 255, 255, 0.24);
+
+  --accent: #e0894a;
+  --accent-dim: rgba(224, 137, 74, 0.16);
+  --positive: #5bbf9a;
+  --negative: #d96a6a;
+  --warn: #d9b45b;
+  --info: #6aa3d8;
+
+  --sans: Geist, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --wide: 72rem;
+  --mid: 48rem;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg-strong);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: var(--wide); margin: 0 auto; padding: 0 clamp(20px, 5vw, 40px); }
+.narrow { max-width: var(--mid); }
+
+/* ---- type ---- */
+h1, h2, h3 { color: var(--fg); margin: 0; text-wrap: balance; font-weight: 600; letter-spacing: -0.022em; }
+h1 { font-size: clamp(34px, 5.6vw, 60px); line-height: 1.04; }
+h2 { font-size: clamp(25px, 3.2vw, 36px); line-height: 1.14; }
+h3 { font-size: 19px; line-height: 1.3; letter-spacing: -0.012em; }
+p { margin: 0; color: var(--fg-body); }
+a { color: var(--fg-strong); }
+
+/* The `label // qualifier` tag Studio uses to caption every visual. */
+.tag {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--fg-tertiary);
+  text-transform: lowercase;
+}
+.tag em { font-style: normal; color: var(--accent); }
+
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.lede { font-size: clamp(17px, 1.9vw, 20px); line-height: 1.55; color: var(--fg-body); max-width: 58ch; }
+
+/* ---- chrome ---- */
+header.nav {
+  position: sticky; top: 0; z-index: 40;
+  background: rgba(20, 20, 20, 0.82);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line-soft);
+}
+.nav-in { display: flex; align-items: center; gap: 26px; height: 58px; }
+.brand { font-family: var(--mono); font-size: 14px; color: var(--fg); text-decoration: none; letter-spacing: -0.01em; }
+.brand span { color: var(--accent); }
+.nav a.link {
+  font-size: 13.5px; color: var(--fg-tertiary); text-decoration: none;
+  transition: color 0.15s var(--ease);
+}
+.nav a.link:hover, .nav a.link[aria-current="page"] { color: var(--fg); }
+.nav .sp { flex: 1; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 13.5px; font-weight: 500; padding: 8px 15px; border-radius: 6px;
+  text-decoration: none; border: 1px solid var(--line); color: var(--fg-strong);
+  background: var(--surface); transition: all 0.15s var(--ease);
+}
+.btn:hover { background: var(--surface-strong); border-color: var(--line-strong); color: var(--fg); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #171009; font-weight: 600; }
+.btn.primary:hover { background: #eb9757; border-color: #eb9757; }
+
+/* ---- sections ---- */
+section { padding: clamp(56px, 9vw, 104px) 0; border-top: 1px solid var(--line-soft); }
+section:first-of-type { border-top: 0; }
+.sec-head { display: flex; flex-direction: column; gap: 12px; margin-bottom: 34px; }
+
+/* ---- surfaces ---- */
+.card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 10px; padding: 22px;
+}
+.grid { display: grid; gap: 14px; }
+.g2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.g3 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.g4 { grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); }
+
+/* ---- stat ---- */
+.stat .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; color: var(--fg-tertiary); text-transform: uppercase; }
+.stat .v { font-family: var(--mono); font-size: clamp(22px, 2.6vw, 30px); color: var(--fg); font-variant-numeric: tabular-nums; margin-top: 5px; letter-spacing: -0.02em; }
+.stat .n { font-size: 12.5px; color: var(--fg-tertiary); margin-top: 5px; line-height: 1.45; }
+
+/* ---- data table ---- */
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { padding: 11px 16px; text-align: left; border-bottom: 1px solid var(--line-soft); }
+thead th { font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; color: var(--fg-tertiary); white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.name { font-family: var(--mono); font-size: 13px; color: var(--fg-strong); }
+.pos { color: var(--positive); } .neg { color: var(--negative); } .wrn { color: var(--warn); } .inf { color: var(--info); }
+
+/* ---- visual frame: every diagram sits in one of these ---- */
+.viz {
+  border: 1px solid var(--line); border-radius: 12px; background: var(--bg-lift);
+  overflow: hidden;
+}
+.viz-head { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 12px 16px; border-bottom: 1px solid var(--line-soft); flex-wrap: wrap; }
+.viz-body { padding: 18px 16px; }
+.viz canvas { display: block; width: 100%; height: auto; }
+.viz figcaption { padding: 12px 16px 16px; font-size: 12.5px; color: var(--fg-tertiary); line-height: 1.5; border-top: 1px solid var(--line-soft); }
+
+/* ---- footer ---- */
+footer { border-top: 1px solid var(--line-soft); padding: 40px 0 64px; color: var(--fg-tertiary); font-size: 13px; }
+footer a { color: var(--fg-tertiary); }
+.foot-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 26px; }
+.foot-grid h4 { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-quaternary); margin: 0 0 10px; font-weight: 500; }
+.foot-grid a { display: block; text-decoration: none; padding: 3px 0; }
+.foot-grid a:hover { color: var(--fg); }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+
+/* ---- reveal ---- */
+.rise { opacity: 0; transform: translateY(14px); transition: opacity 0.7s var(--ease), transform 0.7s var(--ease); }
+.rise.in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .rise { opacity: 1; transform: none; transition: none; } }
+
+/* ---- narrow screens ----
+   The nav's six links plus a button overflow a 390px viewport and pushed every page
+   140px sideways. Wrapping is enough; a drawer would be more chrome than this needs. */
+@media (max-width: 760px) {
+  .nav-in { height: auto; padding: 11px 0 12px; flex-wrap: wrap; gap: 10px 18px; }
+  .nav-in .brand { flex: 0 0 100%; }
+  .nav-in .sp, .nav-in .btn { display: none; }
+  .nav a.link { font-size: 13px; }
+  h1 { font-size: clamp(30px, 8vw, 40px); }
+  .viz-head { gap: 8px; }
+}
+
+/* Long unbroken monospace strings (addresses, signatures) must scroll inside their own
+   box rather than widening the document. */
+pre, code { overflow-wrap: anywhere; }
