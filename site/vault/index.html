@@ -6,7 +6,17 @@
 <title>The vault · Keel</title>
 <meta name="description" content="Live treasury value, leverage, health and the next settlement, read straight from BNB Chain. Not deployed yet.">
 <meta name="theme-color" content="#141414">
+<!-- Nothing is deployed: keep this page out of the index until it has real readings. -->
+<meta name="robots" content="noindex,follow">
+<meta property="og:site_name" content="Keel">
+<meta property="og:locale" content="en_US">
 <meta property="og:title" content="The vault · Keel">
+<meta property="og:image" content="/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Keel: tax goes into a position, not a wallet">
+<meta name="twitter:card" content="summary_large_image">
+<meta property="og:type" content="website">
 <meta property="og:description" content="Read the treasury yourself, in whatever block you ask.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="mask-icon" href="/favicon.svg" color="#e0894a">
@@ -14,22 +24,23 @@
 </head>
 <body>
 <header class="nav">
-  <div class="wrap nav-in">
+  <nav class="wrap nav-in" aria-label="Main">
     <a class="brand" href="/">keel<span>.</span></a>
+    <a class="link" href="/">Overview</a>
     <a class="link" href="/how-it-works/">How it works</a>
     <a class="link" href="/economics/">Economics</a>
-    <a class="link" href="/vault/">The vault</a>
+    <a class="link" href="/vault/" aria-current="page">The vault</a>
     <a class="link" href="/risks/">Risks</a>
     <a class="link" href="/verify/">Verify</a>
     <span class="sp"></span>
     <a class="btn" href="/verify/">Check it yourself</a>
-  </div>
+  </nav>
 </header>
 <main>
 <section>
   <div class="wrap">
     <div style="display:flex;flex-direction:column;gap:20px">
-      <div class="tag">the vault <em>//</em> read it in your own block</div>
+      <div class="tag">the vault <span class="sep" aria-hidden="true">//</span> read it in your own block</div>
       <h1>Nobody publishes this number</h1>
       <p class="lede">Everything below is a view over Venus. When the vault is live this page reads
         it from the chain each time you load it &mdash; and so can you, with one
@@ -41,8 +52,8 @@
 <section style="border-top:0;padding-top:0">
   <div class="wrap">
     <div id="liveState" class="card rise" style="border-color:rgba(217,180,91,0.4);display:flex;flex-direction:column;gap:12px">
-      <div class="tag" style="color:var(--warn)">status <em>//</em> not deployed</div>
-      <h3 style="color:var(--warn)">There is nothing to read yet</h3>
+      <div class="tag" style="color:var(--warn)">status <span class="sep" aria-hidden="true">//</span> not deployed</div>
+      <p style="color:var(--warn);font-size:19px;font-weight:600;margin:0">There is nothing to read yet</p>
       <p style="font-size:14.5px">No contract has been broadcast to any network, so this page shows
         nothing rather than showing a demo. When the vault is live, the panel below fills from the
         chain and the addresses appear here.</p>
@@ -52,7 +63,7 @@
 
 <section>
   <div class="wrap">
-    <div class="sec-head"><span class="tag">the panel <em>//</em> what will be here</span><h2>Six readings, all views</h2></div>
+    <div class="sec-head"><span class="tag">the panel <span class="sep" aria-hidden="true">//</span> what will be here</span><h2>Six readings, all views</h2></div>
     <div class="grid g3">
       <div class="card stat"><div class="k">nav()</div><div class="v" id="f-nav">&mdash;</div><div class="n">Treasury value in BNB. Supply minus debt, priced by the Venus oracle.</div></div>
       <div class="card stat"><div class="k">currentLeverage()</div><div class="v" id="f-lev">&mdash;</div><div class="n">BNB exposure over net value.</div></div>
@@ -70,13 +81,13 @@
 <section>
   <div class="wrap">
     <div class="sec-head">
-      <span class="tag">measured <em>//</em> not live</span>
+      <span class="tag">measured <span class="sep" aria-hidden="true">//</span> not live</span>
       <h2>What it did on live state during testing</h2>
       <p class="lede">These are not readings from a deployed vault. They are what the contracts
         produced when run against BNB Chain's current state as an atomic call, at three sizes of
         incoming tax.</p>
     </div>
-    <div class="scroll rise">
+    <div class="scroll rise" tabindex="0" role="region" aria-label="Table, scrollable">
       <table>
         <thead><tr><th class="num">Tax batch</th><th class="num">Leverage</th><th class="num">Health</th><th class="num">Liquidates on</th><th class="num">Build cost</th></tr></thead>
         <tbody>
@@ -86,14 +97,20 @@
         </tbody>
       </table>
     </div>
+    <p style="margin-top:16px;font-size:13.5px;color:var(--fg-tertiary)">Two liquidation numbers
+      appear on this site and they mean different things. <strong style="color:var(--fg-strong)">16.7%</strong>
+      is what the 1.20 health floor guarantees &mdash; the build is never allowed below it.
+      <strong style="color:var(--fg-strong)">17.2%</strong> is what the measured 1.208 actually
+      gives, a little above the floor. Quote the floor when you want the promise; quote the
+      measurement when you want today.</p>
   </div>
 </section>
 
 <section>
   <div class="wrap">
-    <div class="sec-head"><span class="tag">the position <em>//</em> both legs</span><h2>What the vault actually holds</h2></div>
+    <div class="sec-head"><span class="tag">the position <span class="sep" aria-hidden="true">//</span> both legs</span><h2>What the vault actually holds</h2></div>
     <figure class="viz rise" style="margin:0">
-      <div class="viz-head"><span class="tag">supply and debt <em>//</em> per unit of net value</span></div>
+      <div class="viz-head"><span class="tag">supply and debt <span class="sep" aria-hidden="true">//</span> per unit of net value</span></div>
       <canvas id="posCanvas" aria-hidden="true"></canvas>
       <figcaption>
         For every unit of net value the vault holds roughly three units of BNB collateral on Venus
@@ -107,11 +124,11 @@
 </main>
 <footer>
   <div class="wrap foot-grid">
-    <div><h4>Product</h4>
-      <a href="/how-it-works/">How it works</a><a href="/economics/">Economics</a><a href="/vault/">The vault</a></div>
-    <div><h4>Diligence</h4>
+    <div><p class="foot-h">Product</p>
+      <a href="/">Overview</a><a href="/how-it-works/">How it works</a><a href="/economics/">Economics</a><a href="/vault/">The vault</a></div>
+    <div><p class="foot-h">Diligence</p>
       <a href="/risks/">Risks</a><a href="/verify/">Verify</a></div>
-    <div><h4>Status</h4>
+    <div><p class="foot-h">Status</p>
       <span style="color:var(--warn)">Not deployed</span>
       <span style="display:block;color:var(--fg-quaternary);padding-top:3px">Unaudited</span></div>
   </div>

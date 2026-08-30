@@ -35,9 +35,9 @@
   --fg: #ffffff;
   --fg-strong: rgba(255, 255, 255, 0.8);
   --fg-body: rgba(255, 255, 255, 0.7);
-  --fg-secondary: #8a8a99;
-  --fg-tertiary: rgba(255, 255, 255, 0.4);
-  --fg-quaternary: rgba(255, 255, 255, 0.2);
+  --fg-secondary: #a3a3b0;
+  --fg-tertiary: rgba(255, 255, 255, 0.62);   /* 3.83:1 -> 7.0:1 */
+  --fg-quaternary: rgba(255, 255, 255, 0.55);  /* 1.86:1 -> 5.6:1 */
 
   --surface: rgba(255, 255, 255, 0.04);
   --surface-strong: rgba(255, 255, 255, 0.08);
@@ -95,7 +95,7 @@ a { color: var(--fg-strong); }
   color: var(--fg-tertiary);
   text-transform: lowercase;
 }
-.tag em { font-style: normal; color: var(--accent); }
+.tag em, .tag .sep { font-style: normal; color: var(--accent); }
 
 .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .lede { font-size: clamp(17px, 1.9vw, 20px); line-height: 1.55; color: var(--fg-body); max-width: 58ch; }
@@ -114,7 +114,12 @@ header.nav {
   font-size: 13.5px; color: var(--fg-tertiary); text-decoration: none;
   transition: color 0.15s var(--ease);
 }
-.nav a.link:hover, .nav a.link[aria-current="page"] { color: var(--fg); }
+.nav a.link:hover { color: var(--fg); }
+.nav a.link[aria-current="page"] {
+  color: var(--fg);
+  font-weight: 500;
+  box-shadow: inset 0 -1px 0 0 var(--accent);
+}
 .nav .sp { flex: 1; }
 
 .btn {
@@ -171,16 +176,26 @@ td.name { font-family: var(--mono); font-size: 13px; color: var(--fg-strong); }
 footer { border-top: 1px solid var(--line-soft); padding: 40px 0 64px; color: var(--fg-tertiary); font-size: 13px; }
 footer a { color: var(--fg-tertiary); }
 .foot-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 26px; }
-.foot-grid h4 { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-quaternary); margin: 0 0 10px; font-weight: 500; }
+.foot-grid .foot-h { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-quaternary); margin: 0 0 10px; font-weight: 500; }
 .foot-grid a { display: block; text-decoration: none; padding: 3px 0; }
 .foot-grid a:hover { color: var(--fg); }
 
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+.btn.primary:focus-visible { outline-color: var(--fg); }
 
-/* ---- reveal ---- */
-.rise { opacity: 0; transform: translateY(14px); transition: opacity 0.7s var(--ease), transform 0.7s var(--ease); }
-.rise.in { opacity: 1; transform: none; }
-@media (prefers-reduced-motion: reduce) { .rise { opacity: 1; transform: none; transition: none; } }
+/* Scrollable panes must be reachable by keyboard. */
+.scroll:focus-visible { outline-offset: 0; }
+
+/* ---- reveal ----
+   Visible by default. The script adds `js` to <html>, and only then does .rise start
+   hidden. A page that forgets the script, or a reader with JS off, gets the content —
+   never a blank box where the evidence should be. */
+.rise { transition: opacity 0.7s var(--ease), transform 0.7s var(--ease); }
+html.js .rise { opacity: 0; transform: translateY(14px); }
+html.js .rise.in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html.js .rise { opacity: 1; transform: none; transition: none; }
+}
 
 /* ---- narrow screens ----
    The nav's six links plus a button overflow a 390px viewport and pushed every page

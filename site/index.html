@@ -3,11 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Keel · Tax does not go to a wallet. It goes into a position.</title>
+<title>Keel · Tax goes into a position, not a wallet</title>
 <meta name="description" content="A BNB Chain token whose trading tax is levered into a 3x BNB long the contract holds itself. It settles every five minutes on its own, and pays 60% of every gain to holders.">
 <meta name="theme-color" content="#141414">
+<meta property="og:site_name" content="Keel">
+<meta property="og:locale" content="en_US">
 <meta property="og:title" content="Keel · Tax does not go to a wallet. It goes into a position.">
 <meta property="og:description" content="Trading tax becomes a leveraged BNB position the contract holds itself. Settles every five minutes. 60% of every gain to holders.">
+<meta property="og:image" content="/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Keel: tax goes into a position, not a wallet">
+<meta name="twitter:card" content="summary_large_image">
 <meta property="og:type" content="website">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="mask-icon" href="/favicon.svg" color="#e0894a">
@@ -16,8 +23,9 @@
 <body>
 
 <header class="nav">
-  <div class="wrap nav-in">
+  <nav class="wrap nav-in" aria-label="Main">
     <a class="brand" href="/">keel<span>.</span></a>
+    <a class="link" href="/" aria-current="page">Overview</a>
     <a class="link" href="/how-it-works/">How it works</a>
     <a class="link" href="/economics/">Economics</a>
     <a class="link" href="/vault/">The vault</a>
@@ -25,7 +33,7 @@
     <a class="link" href="/verify/">Verify</a>
     <span class="sp"></span>
     <a class="btn" href="/verify/">Check it yourself</a>
-  </div>
+  </nav>
 </header>
 
 <main>
@@ -33,10 +41,10 @@
 <section>
   <div class="wrap">
     <div style="display:flex;flex-direction:column;gap:26px">
-      <div class="tag">keel <em>//</em> a treasury that is a position</div>
+      <div class="tag">keel <span class="sep" aria-hidden="true">//</span> a treasury that is a position</div>
       <h1>Tax does not go to a wallet.<br>It goes into a position.</h1>
       <p class="lede">Every buy and sell pays 2%. That tax is levered into a 3&times; BNB long the
-        contract holds itself &mdash; no operator account, no published net asset value, no pause.
+        contract holds itself &mdash; no operator account and no published net asset value.
         It moves with the market when nobody is trading, and 60% of every gain is paid to holders.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <a class="btn primary" href="/how-it-works/">See how it works</a>
@@ -50,8 +58,8 @@
   <div class="wrap">
     <figure class="viz rise" style="margin:0">
       <div class="viz-head">
-        <span class="tag">settlement clock <em>//</em> five minute cycle</span>
-        <span class="tag" id="clockState">running</span>
+        <span class="tag">settlement clock <span class="sep" aria-hidden="true">//</span> five minute cycle</span>
+        <span class="tag" id="clockState" aria-hidden="true">five-minute cycle</span>
       </div>
       <canvas id="heroCanvas" aria-hidden="true"></canvas>
       <figcaption>
@@ -80,7 +88,7 @@
 <section>
   <div class="wrap">
     <div class="sec-head">
-      <span class="tag">the argument <em>//</em> where tax goes</span>
+      <span class="tag">the argument <span class="sep" aria-hidden="true">//</span> where tax goes</span>
       <h2>Tax has to go somewhere</h2>
     </div>
     <div class="grid g2">
@@ -97,13 +105,13 @@
           that number, so nobody can stop publishing it.</p>
       </div>
       <figure class="viz rise" style="margin:0">
-        <div class="viz-head"><span class="tag">tax split <em>//</em> 2% per trade</span></div>
+        <div class="viz-head"><span class="tag">tax split <span class="sep" aria-hidden="true">//</span> 2% per trade</span></div>
         <canvas id="splitCanvas" aria-hidden="true"></canvas>
         <figcaption>
           Where each 2% goes: 80% streams into the vault and becomes leveraged position, 20%
-          reaches holders immediately through the token's own dividend contract. Nothing is burned
-          and nothing goes to liquidity. The four shares are fixed in the token at launch and sum
-          to 100%.
+          reaches holders immediately through the token's own dividend contract. Only these two
+          legs are drawn because the other two shares the token allows &mdash; burning and
+          liquidity &mdash; are both set to zero. All four are fixed at launch and sum to 100%.
         </figcaption>
       </figure>
     </div>
@@ -113,7 +121,7 @@
 <section>
   <div class="wrap">
     <div class="sec-head">
-      <span class="tag">the loop <em>//</em> one job per wake</span>
+      <span class="tag">the loop <span class="sep" aria-hidden="true">//</span> one job per wake</span>
       <h2>It settles itself, and only does one thing at a time</h2>
       <p class="lede">There is no keeper account. Flap's trigger service wakes the vault on a
         schedule, and each wake picks a single job by priority &mdash; because a callback has a
@@ -121,8 +129,8 @@
     </div>
     <figure class="viz rise" style="margin:0">
       <div class="viz-head">
-        <span class="tag">priority chain <em>//</em> evaluated every wake</span>
-        <span class="tag">gas 1,206,637 <em>/</em> 2,000,000 cap</span>
+        <span class="tag">priority chain <span class="sep" aria-hidden="true">//</span> evaluated every wake</span>
+        <span class="tag">gas 1,206,637 <span class="sep" aria-hidden="true">/</span> 2,000,000 cap</span>
       </div>
       <canvas id="chainCanvas" aria-hidden="true"></canvas>
       <figcaption>
@@ -139,41 +147,48 @@
 <section>
   <div class="wrap">
     <div class="sec-head">
-      <span class="tag">what is fixed <em>//</em> constants with no setter</span>
+      <span class="tag">what is fixed <span class="sep" aria-hidden="true">//</span> constants with no setter</span>
       <h2>Four numbers nobody can move</h2>
     </div>
-    <div class="scroll rise">
+    <div class="scroll rise" tabindex="0" role="region" aria-label="Table, scrollable">
       <table>
         <thead><tr><th>Constant</th><th class="num">Value</th><th>What it decides</th></tr></thead>
         <tbody>
           <tr><td class="name">TARGET_LEVERAGE</td><td class="num">3&times;</td><td>The exposure the vault builds toward. Venus's 80% collateral factor makes 3&times; the ceiling a 1.20 health floor can hold.</td></tr>
-          <tr><td class="name">MIN_HEALTH_BPS</td><td class="num">12000</td><td>The floor the build may never breach. The constructor refuses any target the collateral factor cannot hold.</td></tr>
+          <tr><td class="name">MIN_HEALTH_BPS</td><td class="num">12000</td><td>The floor the build may never breach. Debt is capped by this, not by Venus’s own limit.</td></tr>
           <tr><td class="name">PROJECT_SHARE_BPS</td><td class="num">4000</td><td>The project's share of a gain. Holders take the other 60%, always 1.5&times; the project.</td></tr>
           <tr><td class="name">Settlement interval</td><td class="num">5 min</td><td>One hour when the last wake found nothing to do.</td></tr>
         </tbody>
       </table>
     </div>
     <p style="margin-top:16px;font-size:13.5px;color:var(--fg-tertiary)">Every one of these is a
-      Solidity <code class="mono">constant</code>. There is no setter, no admin path, and no
-      governance vote. Changing any of them means deploying a new factory and having Flap register
-      it again.</p>
+      Solidity <code class="mono">constant</code>: no setter, no owner function, no governance
+      vote can move them in the deployed implementation.</p>
+    <div class="card" style="margin-top:14px;border-color:rgba(217,180,91,0.4)">
+      <h3 style="color:var(--warn)">But the implementation itself can be replaced</h3>
+      <p style="margin-top:10px;font-size:14.5px">The vault runs behind a beacon proxy owned by
+        Flap's Guardian, and that upgrade path is deliberately the emergency mechanism &mdash; it
+        is why the vault ships no emergency-withdraw function. A Guardian upgrade can change every
+        constant above, add a pause, or add a withdrawal. <a href="/risks/">This is the project's
+        largest trust assumption</a> and it is not ours to remove.</p>
+    </div>
   </div>
 </section>
 
 <section>
   <div class="wrap">
     <div class="sec-head">
-      <span class="tag">how it differs <em>//</em> perp-backed launchpads</span>
+      <span class="tag">how it differs <span class="sep" aria-hidden="true">//</span> perp-backed launchpads</span>
       <h2>The reserve is not in anyone's account</h2>
     </div>
-    <div class="scroll rise">
+    <div class="scroll rise" tabindex="0" role="region" aria-label="Table, scrollable">
       <table>
         <thead><tr><th></th><th>A keeper-run reserve</th><th>Keel</th></tr></thead>
         <tbody>
           <tr><td class="name">Where the position lives</td><td class="neg">An exchange account someone operates</td><td class="pos">The vault contract itself</td></tr>
           <tr><td class="name">How its value is known</td><td class="neg">A keeper publishes it periodically</td><td class="pos"><span class="mono">nav()</span>, a view over chain state</td></tr>
           <tr><td class="name">When that data goes stale</td><td class="neg">Buying pauses</td><td class="pos">No such state exists</td></tr>
-          <tr><td class="name">If the operator vanishes</td><td class="neg">The reserve goes with them</td><td class="pos">There is nothing to take</td></tr>
+          <tr><td class="name">If the operator vanishes</td><td class="neg">The reserve goes with them</td><td class="pos">The position stays where it is</td></tr>
         </tbody>
       </table>
     </div>
@@ -183,8 +198,8 @@
 <section>
   <div class="wrap narrow" style="text-align:center">
     <h2>Everything on this page can be checked</h2>
-    <p class="lede" style="margin:14px auto 22px">Fifty-seven assertions run against BNB Chain as it
-      stands, with no key and no archive node. One command.</p>
+    <p class="lede" style="margin:14px auto 22px">Sixty-nine assertions run against the contracts and
+      against BNB Chain as it stands, with no key and no archive node. One command.</p>
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
       <a class="btn primary" href="/verify/">How to verify</a>
       <a class="btn" href="/risks/">Read the risks first</a>
@@ -196,11 +211,11 @@
 
 <footer>
   <div class="wrap foot-grid">
-    <div><h4>Product</h4>
-      <a href="/how-it-works/">How it works</a><a href="/economics/">Economics</a><a href="/vault/">The vault</a></div>
-    <div><h4>Diligence</h4>
+    <div><p class="foot-h">Product</p>
+      <a href="/">Overview</a><a href="/how-it-works/">How it works</a><a href="/economics/">Economics</a><a href="/vault/">The vault</a></div>
+    <div><p class="foot-h">Diligence</p>
       <a href="/risks/">Risks</a><a href="/verify/">Verify</a></div>
-    <div><h4>Status</h4>
+    <div><p class="foot-h">Status</p>
       <span style="color:var(--warn)">Not deployed</span>
       <span style="display:block;color:var(--fg-quaternary);padding-top:3px">Unaudited</span></div>
   </div>
@@ -349,7 +364,10 @@ animate(chain, (t) => {
     ctx.strokeStyle = on ? col : C.line;
     ctx.lineWidth = on ? 1.6 : 1;
     const bx = x + 5, bw = colW - 10, by = 48, bh = 62;
-    ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 7); ctx.stroke();
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(bx, by, bw, bh, 7);
+    else ctx.rect(bx, by, bw, bh); // Safari < 16.4
+    ctx.stroke();
     if (on) { ctx.fillStyle = "rgba(224,137,74,0.06)"; ctx.fill(); }
     ctx.fillStyle = on ? col : C.dim;
     ctx.font = C.monoSm; ctx.textAlign = "center";

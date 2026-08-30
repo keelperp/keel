@@ -52,14 +52,44 @@ for (const [w, h, label] of [[1440, 900, "desktop"], [390, 844, "mobile"]]) {
     await page.goto(base + path, { waitUntil: "networkidle" });
     await page.waitForTimeout(700);
 
-    const name = path === "/" ? "home" : path.replaceAll("/", "");
-    await page.screenshot({ path: join(OUT, `${label}-${name}.png`), fullPage: false });
+    const name0 = path === "/" ? "home" : path.replaceAll("/", "");
+    await page.screenshot({ path: join(OUT, `${label}-${name0}.png`), fullPage: false });
+
+    const geo = await page.evaluate(() => {
+      const nav = document.querySelector("header.nav").getBoundingClientRect();
+      const h1 = document.querySelector("h1").getBoundingClientRect();
+      return {
+        navBottom: nav.bottom,
+        h1Top: h1.top,
+        h1Visible: h1.height > 0 && h1.width > 0,
+        overflowX: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      };
+    });
+
+    // Scroll the whole page before judging visibility: .rise starts hidden by design and is
+    // revealed on intersection, so anything still at opacity 0 after a full pass is content
+    // that no reader will ever see.
+    await page.evaluate(async () => {
+      // Half-viewport steps with room for the observer callback: at 0.8 screens and 90ms it
+      // outran IntersectionObserver and reported content as hidden that a reader would see.
+      const step = innerHeight * 0.5;
+      for (let y = 0; y <= document.body.scrollHeight; y += step) {
+        scrollTo(0, y);
+        await new Promise((r) => setTimeout(r, 150));
+      }
+    });
+    await page.waitForTimeout(1000);
 
     const r = await page.evaluate(() => {
-      const nav = document.querySelector("header.nav");
-      const h1 = document.querySelector("h1");
-      const navBox = nav.getBoundingClientRect();
-      const h1Box = h1.getBoundingClientRect();
+      // Visibility, not presence. The previous version of this file passed /verify/ 14/14
+      // while 46% of that page sat at opacity 0, because nothing ever measured whether the
+      // content could be seen — only whether the elements existed.
+      const hidden = [...document.querySelectorAll("main *")].filter((el) => {
+        const cs = getComputedStyle(el);
+        if (parseFloat(cs.opacity) > 0.01) return false;
+        return el.textContent.trim().length > 20;
+      }).length;
+      const bodyChars = document.querySelector("main").innerText.trim().length;
       // Only canvases actually on screen: the draw loop deliberately does not run for
       // one that has never been scrolled into view, so an off-screen blank is correct.
       const onScreen = [...document.querySelectorAll("canvas")].filter((c) => {
@@ -76,13 +106,11 @@ for (const [w, h, label] of [[1440, 900, "desktop"], [390, 844, "mobile"]]) {
         } catch { return { w: c.width, h: c.height, lit: -1 }; }
       });
       return {
+        hidden,
+        bodyChars,
         title: document.title,
         bg: getComputedStyle(document.body).backgroundColor,
         font: getComputedStyle(document.body).fontFamily,
-        navBottom: navBox.bottom,
-        h1Top: h1Box.top,
-        h1Visible: h1Box.height > 0 && h1Box.width > 0,
-        overflowX: document.documentElement.scrollWidth - document.documentElement.clientWidth,
         canvases,
         firstScreens: (() => {
           // the last section that begins within two viewport heights
@@ -95,13 +123,23 @@ for (const [w, h, label] of [[1440, 900, "desktop"], [390, 844, "mobile"]]) {
 
     const tag = `${path}`;
     say(errors.length === 0, `${tag} no console errors${errors.length ? ": " + errors[0].slice(0, 90) : ""}`);
-    say(r.h1Visible && r.h1Top >= r.navBottom - 1, `${tag} h1 clears the sticky nav (h1 top ${Math.round(r.h1Top)}, nav bottom ${Math.round(r.navBottom)})`);
-    say(r.overflowX <= 1, `${tag} no horizontal scroll (${r.overflowX}px)`);
+    say(geo.h1Visible && geo.h1Top >= geo.navBottom - 1, `${tag} h1 clears the sticky nav (h1 top ${Math.round(geo.h1Top)}, nav bottom ${Math.round(geo.navBottom)})`);
+    say(geo.overflowX <= 1, `${tag} no horizontal scroll (${geo.overflowX}px)`);
     say(r.bg === "rgb(20, 20, 20)", `${tag} ground is #141414 (${r.bg})`);
     say(/Geist/.test(r.font), `${tag} Geist is applied (${r.font.split(",")[0]})`);
     const blank = r.canvases.filter((c) => c.lit === 0);
     say(blank.length === 0, `${tag} ${r.canvases.length} on-screen canvas(es) drew something${blank.length ? ` — ${blank.length} blank` : ""}`);
     say(r.firstScreens.within >= 2, `${tag} ${r.firstScreens.within} of ${r.firstScreens.total} sections start within two screens`);
+    say(r.hidden === 0, `${tag} no text is stuck at opacity 0${r.hidden ? ` — ${r.hidden} elements invisible` : ""}`);
+
+    // The same page with scripting off must still carry its content.
+    const noJs = await ctx.browser().newContext({ viewport: { width: w, height: h }, javaScriptEnabled: false });
+    const np = await noJs.newPage();
+    await np.goto(base + path, { waitUntil: "domcontentloaded" });
+    const njChars = await np.evaluate(() => document.querySelector("main").innerText.trim().length);
+    await noJs.close();
+    const kept = r.bodyChars ? njChars / r.bodyChars : 0;
+    say(kept > 0.95, `${tag} keeps ${Math.round(kept * 100)}% of its body with JS off`);
     await page.close();
   }
   await ctx.close();

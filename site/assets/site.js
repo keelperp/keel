@@ -2,11 +2,12 @@
    Every visual on this site is drawn, not photographed — the subject is a position and a
    clock, and those are better as geometry than as stock imagery. */
 
-document.querySelectorAll("header.nav a.link").forEach((a) => {
-  const here = location.pathname.replace(/index\.html$/, "").replace(/\/$/, "") || "/";
-  const there = a.getAttribute("href").replace(/index\.html$/, "").replace(/\/$/, "") || "/";
-  if (here === there) a.setAttribute("aria-current", "page");
-});
+// Mark the document as scripted so the stylesheet may hide .rise. Without this the
+// reveal stays off and every section renders plainly, which is the correct failure.
+document.documentElement.classList.add("js");
+
+// aria-current is written into each page's HTML, so it survives with JS off. Nothing to do
+// here beyond marking the document as scripted, above.
 
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -37,8 +38,15 @@ export function animate(cv, draw) {
   let raf = 0;
   let running = false;
   const tick = (t) => {
-    draw(t / 1000);
-    if (running) raf = requestAnimationFrame(tick);
+    // Reschedule in a finally: one throwing frame used to kill a canvas permanently and
+    // silently, leaving a detailed figcaption describing an empty box.
+    try {
+      draw(t / 1000);
+    } catch (e) {
+      console.error("canvas draw failed", e);
+    } finally {
+      if (running) raf = requestAnimationFrame(tick);
+    }
   };
   const obs = new IntersectionObserver((es) => {
     es.forEach((e) => {
@@ -54,6 +62,20 @@ export function animate(cv, draw) {
   if (reduced) draw(0);
   else obs.observe(cv);
   addEventListener("resize", () => draw(performance.now() / 1000), { passive: true });
+}
+
+/** Cached per canvas: reading clientWidth and writing width/height every frame forced one
+ *  style recalculation per frame. Geometry only changes on resize. */
+const geom = new WeakMap();
+
+export function fitCanvasCached(cv, height) {
+  const hit = geom.get(cv);
+  if (hit && hit.h === height && hit.w === (cv.clientWidth || cv.parentElement.clientWidth)) {
+    return hit;
+  }
+  const box = fitCanvas(cv, height);
+  geom.set(cv, box);
+  return box;
 }
 
 export const C = {

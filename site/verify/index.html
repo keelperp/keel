@@ -4,9 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Verify · Keel</title>
-<meta name="description" content="Fifty-seven assertions against live BNB Chain state. One command, no private key, no archive node, nothing broadcast.">
+<meta name="description" content="Sixty-nine assertions, thirty-three of them against live BNB Chain state. One command, no private key, no archive node, nothing broadcast.">
 <meta name="theme-color" content="#141414">
+<meta property="og:site_name" content="Keel">
+<meta property="og:locale" content="en_US">
 <meta property="og:title" content="Verify · Keel">
+<meta property="og:image" content="/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Keel: tax goes into a position, not a wallet">
+<meta name="twitter:card" content="summary_large_image">
+<meta property="og:type" content="website">
 <meta property="og:description" content="How to reproduce every number on this site yourself.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="mask-icon" href="/favicon.svg" color="#e0894a">
@@ -21,24 +29,25 @@ pre.code .g { color: var(--positive); }
 </head>
 <body>
 <header class="nav">
-  <div class="wrap nav-in">
+  <nav class="wrap nav-in" aria-label="Main">
     <a class="brand" href="/">keel<span>.</span></a>
+    <a class="link" href="/">Overview</a>
     <a class="link" href="/how-it-works/">How it works</a>
     <a class="link" href="/economics/">Economics</a>
     <a class="link" href="/vault/">The vault</a>
     <a class="link" href="/risks/">Risks</a>
-    <a class="link" href="/verify/">Verify</a>
+    <a class="link" href="/verify/" aria-current="page">Verify</a>
     <span class="sp"></span>
     <a class="btn" href="/verify/">Check it yourself</a>
-  </div>
+  </nav>
 </header>
 <main>
 <section>
   <div class="wrap">
     <div style="display:flex;flex-direction:column;gap:20px">
-      <div class="tag">verify <em>//</em> nothing here is on our word</div>
+      <div class="tag">verify <span class="sep" aria-hidden="true">//</span> nothing here is on our word</div>
       <h1>Every number, reproducible</h1>
-      <p class="lede">Fifty-seven checks run against BNB Chain as it stands. No private key, no
+      <p class="lede">Sixty-nine checks run, thirty-three of them against BNB Chain as it stands. No private key, no
         archive node, nothing broadcast. If a number on this site is wrong, this is how you catch
         it.</p>
     </div>
@@ -62,7 +71,7 @@ pre.code .g { color: var(--positive); }
 <section>
   <div class="wrap">
     <div class="sec-head">
-      <span class="tag">the method <em>//</em> why not a fork</span>
+      <span class="tag">the method <span class="sep" aria-hidden="true">//</span> why not a fork</span>
       <h2>The position checks run as one atomic call</h2>
     </div>
     <div class="grid g2">
@@ -77,7 +86,7 @@ pre.code .g { color: var(--positive); }
           it is better in three specific ways.</p>
       </div>
       <div class="card">
-        <h3>Why it beats a fork here</h3>
+        <p style="font-size:19px;font-weight:600;color:var(--fg);margin:0">Why it beats a fork here</p>
         <ul style="margin:12px 0 0;padding-left:18px;color:var(--fg-body);font-size:14.5px;line-height:1.65">
           <li style="margin-bottom:8px">Runs against <strong style="color:var(--fg)">current state</strong>, not a historical snapshot.</li>
           <li style="margin-bottom:8px">Atomic, so mid-run drift cannot pollute it. A fork against a load-balanced RPC can &mdash; five calls in a row spanned 19 blocks.</li>
@@ -90,8 +99,8 @@ pre.code .g { color: var(--positive); }
 
 <section>
   <div class="wrap">
-    <div class="sec-head"><span class="tag">coverage <em>//</em> what the 57 cover</span><h2>What is actually asserted</h2></div>
-    <div class="scroll rise">
+    <div class="sec-head"><span class="tag">coverage <span class="sep" aria-hidden="true">//</span> what the 69 cover</span><h2>What is actually asserted</h2></div>
+    <div class="scroll rise" tabindex="0" role="region" aria-label="Table, scrollable">
       <table>
         <thead><tr><th>Area</th><th class="num">Checks</th><th>Examples</th></tr></thead>
         <tbody>
@@ -100,6 +109,7 @@ pre.code .g { color: var(--positive); }
           <tr><td class="name">Settlement</td><td class="num">11</td><td>Buys a real slot from the trigger service, refuses impostors and replays, fits the 2M callback cap.</td></tr>
           <tr><td class="name">Authorization</td><td class="num">13</td><td>Trigger sender, request id, self-only calls, initialize once, the 2,300-gas stipend guard.</td></tr>
           <tr><td class="name">Factory &amp; schema</td><td class="num">13</td><td>Portal-only creation, launch validation, beacon ownership, every schema name resolves to a real selector.</td></tr>
+          <tr><td class="name">receive() gas</td><td class="num">2</td><td>The cold and warm paths against Flap's 1,000,000 cap, and that it never reverts.</td></tr>
           <tr><td class="name">Vault UI</td><td class="num">8</td><td>Generated ABI is current, both locales cover the same keys.</td></tr>
         </tbody>
       </table>
@@ -109,7 +119,7 @@ pre.code .g { color: var(--positive); }
 
 <section>
   <div class="wrap">
-    <div class="sec-head"><span class="tag">once deployed <em>//</em> read it directly</span><h2>Three calls that answer everything</h2></div>
+    <div class="sec-head"><span class="tag">once deployed <span class="sep" aria-hidden="true">//</span> read it directly</span><h2>Three calls that answer everything</h2></div>
     <pre class="code rise"><span class="c"># what the treasury is worth, right now</span>
 cast call $VAULT <span class="k">"nav()(uint256)"</span> --rpc-url https://bsc-dataseed.bnbchain.org
 
@@ -136,11 +146,11 @@ cast call $VAULT <span class="k">"nextSettlementIn()(uint256)"</span> --rpc-url 
 </main>
 <footer>
   <div class="wrap foot-grid">
-    <div><h4>Product</h4>
-      <a href="/how-it-works/">How it works</a><a href="/economics/">Economics</a><a href="/vault/">The vault</a></div>
-    <div><h4>Diligence</h4>
+    <div><p class="foot-h">Product</p>
+      <a href="/">Overview</a><a href="/how-it-works/">How it works</a><a href="/economics/">Economics</a><a href="/vault/">The vault</a></div>
+    <div><p class="foot-h">Diligence</p>
       <a href="/risks/">Risks</a><a href="/verify/">Verify</a></div>
-    <div><h4>Status</h4>
+    <div><p class="foot-h">Status</p>
       <span style="color:var(--warn)">Not deployed</span>
       <span style="display:block;color:var(--fg-quaternary);padding-top:3px">Unaudited</span></div>
   </div>
@@ -149,5 +159,7 @@ cast call $VAULT <span class="k">"nextSettlementIn()(uint256)"</span> --rpc-url 
     dependencies. The contracts are unaudited.
   </div>
 </footer>
+
+<script type="module" src="/assets/site.js"></script>
 </body>
 </html>

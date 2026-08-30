@@ -6,7 +6,15 @@
 <title>Risks · Keel</title>
 <meta name="description" content="A 3x position is liquidated by a 16.7% move. Leverage decays in a flat market. Venus and PancakeSwap are dependencies. The contracts are unaudited.">
 <meta name="theme-color" content="#141414">
+<meta property="og:site_name" content="Keel">
+<meta property="og:locale" content="en_US">
 <meta property="og:title" content="Risks · Keel">
+<meta property="og:image" content="/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Keel: tax goes into a position, not a wallet">
+<meta name="twitter:card" content="summary_large_image">
+<meta property="og:type" content="website">
 <meta property="og:description" content="What can go wrong, in the order it would hurt.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="mask-icon" href="/favicon.svg" color="#e0894a">
@@ -14,26 +22,34 @@
 </head>
 <body>
 <header class="nav">
-  <div class="wrap nav-in">
+  <nav class="wrap nav-in" aria-label="Main">
     <a class="brand" href="/">keel<span>.</span></a>
+    <a class="link" href="/">Overview</a>
     <a class="link" href="/how-it-works/">How it works</a>
     <a class="link" href="/economics/">Economics</a>
     <a class="link" href="/vault/">The vault</a>
-    <a class="link" href="/risks/">Risks</a>
+    <a class="link" href="/risks/" aria-current="page">Risks</a>
     <a class="link" href="/verify/">Verify</a>
     <span class="sp"></span>
     <a class="btn" href="/verify/">Check it yourself</a>
-  </div>
+  </nav>
 </header>
 <main>
 <section>
   <div class="wrap">
     <div style="display:flex;flex-direction:column;gap:20px">
-      <div class="tag">risks <em>//</em> read before buying</div>
+      <div class="tag">risks <span class="sep" aria-hidden="true">//</span> read before buying</div>
       <h1>What can go wrong</h1>
-      <p class="lede">This is beta software holding real money. Every number below is the honest
-        one, and the ones that argue against this design are on the page rather than in a
-        footnote.</p>
+      <p class="lede">Nothing is deployed yet, and when it is, it will be beta software holding
+        real money. Every number below is the honest one, and the ones that argue against this
+        design are on the page rather than in a footnote.</p>
+      <div class="card" style="border-color:rgba(217,180,91,0.45);margin-top:6px">
+        <p style="color:var(--warn);font-size:19px;font-weight:600;margin:0">Two things to read before anything else</p>
+        <p style="margin-top:10px;font-size:14.5px"><strong style="color:var(--fg)">The contracts
+          are unaudited</strong>, and <strong style="color:var(--fg)">Flap's Guardian can replace
+          the implementation</strong> through the beacon this vault runs behind. Everything else on
+          this page is downstream of those two.</p>
+      </div>
     </div>
   </div>
 </section>
@@ -42,15 +58,16 @@
   <div class="wrap">
     <figure class="viz rise" style="margin:0">
       <div class="viz-head">
-        <span class="tag">liquidation distance <em>//</em> by target leverage</span>
+        <span class="tag">liquidation distance <span class="sep" aria-hidden="true">//</span> by target leverage</span>
       </div>
       <canvas id="liqCanvas" aria-hidden="true"></canvas>
       <figcaption>
         How far BNB has to fall before each leverage target is liquidated on Venus, at its 80%
-        collateral factor. At 2x the position survives a 37.5% drop; at 3x, the level this vault
-        builds, it survives 16.7%; at 4x only 6.3%; and at 5x the position is already at the
-        liquidation point before the price has moved at all, which is why 5x is refused by the
-        constructor rather than offered with a warning.
+        collateral factor. The four rows read: 2x at health 1.600 surviving a 37.5% drop; 3x, the level
+        this vault builds, at health 1.200 surviving 16.7%; 4x at health 1.067 surviving only 6.3%;
+        and 5x at health 1.000, where the position is already at the
+        liquidation point before the price has moved at all, which is why this vault
+        hard-codes 3x rather than offering 5x with a warning.
       </figcaption>
     </figure>
   </div>
@@ -58,6 +75,7 @@
 
 <section>
   <div class="wrap">
+    <div class="sec-head"><span class="tag">the list <span class="sep" aria-hidden="true">//</span> worst first</span><h2>Everything that can hurt you</h2></div>
     <div class="grid g2">
       <div class="card" style="border-color:rgba(217,106,106,0.4)">
         <h3 style="color:var(--negative)">A 16.7% move liquidates the position</h3>
@@ -66,12 +84,27 @@
           when health falls under 1.10, and waives its cooldown to do it, but a fast enough move
           does not wait for a five-minute wake.</p>
       </div>
+      <div class="card" style="border-color:rgba(217,180,91,0.4)">
+        <h3 style="color:var(--warn)">Flap's Guardian can replace the implementation</h3>
+        <p style="margin-top:10px">The vault runs behind a beacon proxy whose owner is Flap's
+          Guardian, and that upgrade path <em style="font-style:normal;color:var(--fg-strong)">is</em>
+          the emergency mechanism &mdash; it is the reason the vault ships no emergency-withdraw
+          function of its own. An upgrade can change every constant this site quotes, add a pause,
+          or add a withdrawal. This is the single largest trust assumption in the design.</p>
+      </div>
       <div class="card">
         <h3>We are not trustless. We changed who you trust.</h3>
-        <p style="margin-top:10px">The position lives in the contract, but it borrows from Venus and
+        <p style="margin-top:10px">Besides the Guardian above: the position borrows from Venus and
           trades on PancakeSwap, and it is woken by Flap's trigger service. If any of those fails,
           the treasury is affected. This is a better trade than one operator's private key. It is
           not the absence of one.</p>
+      </div>
+      <div class="card">
+        <h3>Settlement costs the treasury while nothing happens</h3>
+        <p style="margin-top:10px">Each wake costs 0.0002 BNB whether or not there is work. A wake
+          that finds nothing books the next one an hour out instead of five minutes, which slows
+          the bleed but does not stop it. A token with very little trading slowly spends its own
+          treasury staying awake.</p>
       </div>
       <div class="card">
         <h3>Leverage decays</h3>
@@ -103,8 +136,8 @@
 
 <section>
   <div class="wrap">
-    <div class="sec-head"><span class="tag">what is fixed <em>//</em> and therefore unfixable</span><h2>Four things nobody can change after launch</h2></div>
-    <div class="scroll rise">
+    <div class="sec-head"><span class="tag">what is fixed <span class="sep" aria-hidden="true">//</span> and therefore unfixable</span><h2>Four things nobody can change after launch</h2></div>
+    <div class="scroll rise" tabindex="0" role="region" aria-label="Table, scrollable">
       <table>
         <thead><tr><th>Fixed at launch</th><th>Consequence</th></tr></thead>
         <tbody>
@@ -131,9 +164,9 @@
 </main>
 <footer>
   <div class="wrap foot-grid">
-    <div><h4>Product</h4><a href="/how-it-works/">How it works</a><a href="/economics/">Economics</a><a href="/vault/">The vault</a></div>
-    <div><h4>Diligence</h4><a href="/risks/">Risks</a><a href="/verify/">Verify</a></div>
-    <div><h4>Status</h4><span style="color:var(--warn)">Not deployed</span><span style="display:block;color:var(--fg-quaternary);padding-top:3px">Unaudited</span></div>
+    <div><p class="foot-h">Product</p><a href="/">Overview</a><a href="/how-it-works/">How it works</a><a href="/economics/">Economics</a><a href="/vault/">The vault</a></div>
+    <div><p class="foot-h">Diligence</p><a href="/risks/">Risks</a><a href="/verify/">Verify</a></div>
+    <div><p class="foot-h">Status</p><span style="color:var(--warn)">Not deployed</span><span style="display:block;color:var(--fg-quaternary);padding-top:3px">Unaudited</span></div>
   </div>
   <div class="wrap" style="margin-top:30px;padding-top:18px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--fg-quaternary)">
     A 3&times; position is liquidated by a 16.7% move against it. Venus and PancakeSwap are
