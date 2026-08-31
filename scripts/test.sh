@@ -36,6 +36,22 @@ echo; echo "=== vault UI package: ABI currency and i18n coverage ==="
 node tools/check-vault-ui.mjs || fail=1
 
 echo; echo "=== sizes (EIP-170) ==="
-forge build --sizes | awk '/^\|/ {gsub(/\|/,""); if ($2+0 > 24576) { print "  OVER:", $1, $2; over=1 }} END { if (!over) print "  all within limit" }'
+# forge prints sizes with thousands separators, so "30,081"+0 evaluates to 30 and the old
+# gate waved every oversized contract through. Strip the commas before comparing. Test-only
+# probes are allowed to be huge: they are injected by eth_call state override, never deployed.
+forge build --sizes | awk -F'|' '
+  /^\|/ {
+    name = $2; size = $3
+    gsub(/[ \t]/, "", name); gsub(/[ ,\t]/, "", size)
+    if (name == "" || size !~ /^[0-9]+$/) next
+    if (size + 0 <= 24576) next
+    if (name ~ /^(FlapProbe|KeelProbe|KeelE2E)$/) { probes = probes "  note: " name " " size " (test-only probe, never deployed)\n"; next }
+    print "  OVER: " name " " size; over = 1
+  }
+  END {
+    printf "%s", probes
+    if (over) { print "  EIP-170 gate FAILED"; exit 1 }
+    print "  all deployable contracts within limit"
+  }' || fail=1
 
 exit $fail
