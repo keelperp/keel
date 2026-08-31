@@ -64,12 +64,31 @@ say(project_bps + holder_bps == 10_000, f"constant PROJECT_SHARE_BPS = {project_
 # It is: every percentage stated next to "holders" or "project" must equal the constant.
 SURFACES = ["AUDIT.md", "SUBMISSION.md", "LAUNCH.md", "vault-ui/i18n.json",
             "src/flap/LeverVault.sol", "src/flap/LeverVaultFactory.sol",
-            "site/index.html", "site/economics/index.html", "site/risks/index.html"]
+            "site/index.html", "site/economics/index.html", "site/risks/index.html",
+            "submission/README.md", "submission/FACTORY.md", "submission/MECHANISM.md",
+            "submission/RULES.md", "submission/SPEC-CHECK.md", "submission/UI-REQUEST.md"]
 W = re.compile(r"holders|持有者|project|项目方", re.I)
 PCT = re.compile(r"(\d{1,3})%")
 SUPERSEDED = {40, 60}          # the split before 2026-08-31; extend when it changes again
 assert not (SUPERSEDED & {holder_pct, project_pct}), \
     "a superseded value equals the current split — update SUPERSEDED in this file"
+
+
+# Proximity cannot decide whether a percentage is a share. It flagged a 2% tax and a 20%
+# dividend as split errors, and then missed "Receives 40% of every harvest" because the word
+# "project" sat one line above the 42-character window. So proximity is gone: a superseded
+# value is a finding wherever it appears, and every legitimate use is named here.
+ALLOWED_PHRASES = (
+    # rule 008's gas headroom, which is a percentage of a gas cap and not a share
+    "40% headroom", "余量 40%", "余量 **40%**", "| 24% | **40%** |",
+    # the retired factory is cited on purpose, so nobody registers it by finding it first
+    "described the project share as 40%",
+    "share of each harvest as 40%",
+    "Receives 40% of every harvest",
+    "40% in the schema",
+    # the liquidation chart's x-axis is a BNB drawdown scale
+    'fillText("40%"',
+)
 
 for rel in SURFACES:
     body = read(rel)
@@ -77,13 +96,48 @@ for rel in SURFACES:
     for m in PCT.finditer(body):
         if int(m.group(1)) not in SUPERSEDED:
             continue
-        near = [w for w in W.finditer(body)
-                if abs(w.start() - m.start()) <= 42
-                and "." not in body[min(m.start(), w.start()):max(m.end(), w.end())]]
-        if near:
-            line = body[:m.start()].count(chr(10)) + 1
-            bad.append(f"{m.group(1)}% beside '{near[0].group(0)}' at {rel}:{line}")
-    say(not bad, f"{rel} carries no superseded share" + (f" — {bad[:2]}" if bad else ""))
+        line = body[:m.start()].count(chr(10)) + 1
+        window = body[max(0, m.start() - 60):m.end() + 40]
+        if any(frag in window for frag in ALLOWED_PHRASES):
+            continue
+        bad.append(f"{rel}:{line} {m.group(0)}")
+    say(not bad, f"{rel} carries no superseded share" + (f" — {bad[:3]}" if bad else ""))
+
+# The split is written in words too -- a test named ...SixtyAndProjectForty survived every
+# numeric check because it contains no digits at all.
+WORDS = {40: "forty", 60: "sixty", 30: "thirty", 70: "seventy"}
+current = {WORDS[holder_pct], WORDS[project_pct]}
+superseded_words = {WORDS[v] for v in SUPERSEDED if v in WORDS} - current
+import glob as _glob
+word_bad = []
+for rel in sorted(set(SURFACES) | set(_glob.glob("test/*.sol")) | set(_glob.glob("src/flap/*.sol"))):
+    raw = read(rel)
+    for w in superseded_words:
+        hit = (re.search(rf"\b{w}\b(?![-\w])", raw.lower())
+               if rel.endswith((".md", ".html", ".json"))
+               else w.capitalize() in raw or w in raw)
+        if hit:
+            word_bad.append(f"{rel} contains '{w}'")
+say(not word_bad, "no file spells a superseded share in words" + (f" — {word_bad[:2]}" if word_bad else ""))
+
+# A redeploy leaves stale pointers behind: the last one changed the factory address in five
+# files and it was luck that no sixth existed. Every address a document names must be the one
+# deployments/56.json records, and the on-chain schema must agree with the constant.
+print("\n=== deployed addresses, as published vs as recorded ===")
+dep = json.loads(read("deployments/56.json"))
+live = dep["contracts"]["LeverVaultFactory"]
+superseded_addr = dep.get("supersedes", {}).get("factory", "")
+for rel in ["AUDIT.md", "SUBMISSION.md", "README.md", "vault-ui/manifest.json", "submission/schema.txt"]:
+    body = read(rel)
+    if live.lower() not in body.lower() and "0x" + "0" * 40 not in body:
+        say(False, f"{rel} never names the deployed factory {live}")
+    elif superseded_addr and superseded_addr.lower() in body.lower():
+        say(False, f"{rel} still names the superseded factory {superseded_addr}")
+    else:
+        say(True, f"{rel} names the current factory only")
+m = re.search(r"Receives (\d+)% of every harvest", read("submission/schema.txt"))
+say(bool(m) and int(m.group(1)) == project_pct,
+    f"on-chain schema says {m.group(1) if m else '?'}% == constant {project_pct}%")
 
 print("\n=== test counts, as published vs as declared ===")
 offline = len(re.findall(r"function test", read("test/LeverVaultSchema.t.sol")))

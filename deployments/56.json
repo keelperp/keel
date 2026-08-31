@@ -4,13 +4,17 @@
   "network": "BNB Chain mainnet",
   "note": "Flap custom-vault side only. No token has been launched; a token is created by Flap's launcher through the VaultPortal.",
   "deployer": "0x1544A8fCE3a3c39E0a744a13392981bEcDF014f4",
-  "txHash": "0x68fa64c513af80947b02c104d3e8d9a8b44ed03ce39e0e0763adb004ee666db0",
-  "block": 119107358,
+  "txHash": "0x88afc2d3bfea9e3e3ce40b49d65d53f51c1511bc3208404fa9eda4bc5238362d",
+  "block": 119116447,
   "contracts": {
-    "LeverVaultFactory": "0xE7EC91f5a78c413cDF2F1140B29d51cAfFAfE535",
-    "LeverBeacon": "0xA6B787FED6b42CbC772017A3F5d60fd988A364da",
-    "LeverVaultImplementation": "0x8D5Ca13bf1D3DCe1f210bb3Ab733A95Da37640b2"
+    "LeverVaultFactory": "0x8666262877046df9f4B338B9D7f1a30d55688A5c",
+    "LeverBeacon": "0x7444B36CdC9372588C9C6A9A21bc435F31FE761a",
+    "LeverVaultImplementation": "0xAF3A1d973724ed416FEE48E5A58146893D1a9ac1"
   },
   "beaconOwner": "0x9e27098dcD8844bcc6287a557E0b4D09C86B8a4b",
-  "beaconOwnerIs": "Flap Guardian (BNB Chain), set in LeverBeacon's constructor -- never the deployer"
+  "beaconOwnerIs": "Flap Guardian (BNB Chain), set in LeverBeacon's constructor -- never the deployer",
+  "supersedes": {
+    "factory": "0xE7EC91f5a78c413cDF2F1140B29d51cAfFAfE535",
+    "reason": "its vaultDataSchema described the project share as 40%, from before the split changed to 30%"
+  }
 }

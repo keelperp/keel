@@ -112,7 +112,7 @@ contract LeverVaultFactory is VaultFactoryBaseV2 {
         FieldDescriptor[] memory f = new FieldDescriptor[](1);
         f[0].name = "project";
         f[0].fieldType = "address";
-        f[0].description = "Receives 40% of every harvest. Fixed at creation; the vault has no setter.";
+        f[0].description = "Receives 30% of every harvest. Fixed at creation; the vault has no setter.";
         f[0].decimals = 0;
         schema.fields = f;
         schema.isArray = false;

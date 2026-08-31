@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# Every number in this package is re-derived from the build and from the chain, then diffed
+# against what the documents say. These pages exist to be handed to somebody else; a stale
+# figure in one is worse than no page at all.
+#
+# This has already caught real drift: AUDIT.md carried a factory runtime of 5,173 against an
+# artefact of 6,476, a pasted transcript claiming 9 offline tests where the suite declares 13,
+# and a factory deployed to mainnet whose vaultDataSchema still described the project share as
+# 40% after the constant had become 3000.
+#
+#   ./check            verify against the build and BNB Chain
+#   RPC=<url> ./check  use a different node
+set -uo pipefail
+cd "$(cd "$(dirname "$0")/.." && pwd)"
+
+RPC="${RPC:-https://bsc-dataseed.bnbchain.org}"
+fail=0
+ok()  { printf '  \033[32mPASS\033[0m  %s\n' "$1"; }
+no()  { printf '  \033[31mFAIL\033[0m  %s\n' "$1"; fail=1; }
+
+FACTORY=$(python3 -c "import json;print(json.load(open('deployments/56.json'))['contracts']['LeverVaultFactory'])")
+BEACON=$(python3 -c "import json;print(json.load(open('deployments/56.json'))['contracts']['LeverBeacon'])")
+IMPL=$(python3 -c "import json;print(json.load(open('deployments/56.json'))['contracts']['LeverVaultImplementation'])")
+GUARDIAN=0x9e27098dcD8844bcc6287a557E0b4D09C86B8a4b
+
+echo; echo "=== documents vs build ==="
+python3 tools/check-docs.py || fail=1
+
+echo; echo "=== deployed bytecode vs local build ==="
+for pair in "LeverVaultFactory:$FACTORY" "LeverBeacon:$BEACON" "LeverVault:$IMPL"; do
+  name="${pair%%:*}"; addr="${pair#*:}"
+  onchain=$(cast code "$addr" --rpc-url "$RPC" 2>/dev/null)
+  n=$(( (${#onchain} - 2) / 2 ))
+  local_n=$(python3 -c "
+import json;d=json.load(open('out/$name.sol/$name.json'))
+print(len(d['deployedBytecode']['object'])//2-1)")
+  [ "$n" = "$local_n" ] && ok "$name runtime on chain is $n bytes, same as the build" \
+                        || no "$name is $n bytes on chain but $local_n in the build"
+done
+
+echo; echo "=== the Guardian owns the beacon, not us ==="
+owner=$(cast call "$BEACON" 'owner()(address)' --rpc-url "$RPC" 2>/dev/null)
+[ "$(echo "$owner" | tr 'A-Z' 'a-z')" = "$(echo "$GUARDIAN" | tr 'A-Z' 'a-z')" ] \
+  && ok "beacon.owner() is the Flap Guardian $GUARDIAN" \
+  || no "beacon.owner() is $owner, expected the Guardian $GUARDIAN"
+impl=$(cast call "$BEACON" 'implementation()(address)' --rpc-url "$RPC" 2>/dev/null)
+[ "$(echo "$impl" | tr 'A-Z' 'a-z')" = "$(echo "$IMPL" | tr 'A-Z' 'a-z')" ] \
+  && ok "beacon points at the recorded implementation" \
+  || no "beacon points at $impl, not the recorded $IMPL"
+b=$(cast call "$FACTORY" 'beacon()(address)' --rpc-url "$RPC" 2>/dev/null)
+[ "$(echo "$b" | tr 'A-Z' 'a-z')" = "$(echo "$BEACON" | tr 'A-Z' 'a-z')" ] \
+  && ok "factory points at the recorded beacon" || no "factory points at $b"
+
+echo; echo "=== the split the chain reports matches the constant ==="
+bps=$(grep -oE 'PROJECT_SHARE_BPS = [0-9]+' src/flap/LeverVault.sol | grep -oE '[0-9]+')
+want=$(( bps / 100 ))
+said=$(cast call "$FACTORY" 'vaultDataSchema()((string,(string,string,string,uint8)[]))' --rpc-url "$RPC" 2>/dev/null \
+       | grep -oE 'Receives [0-9]+%' | grep -oE '[0-9]+')
+[ "$said" = "$want" ] && ok "on-chain schema says ${said}% to the project, matching PROJECT_SHARE_BPS=$bps" \
+                      || no "on-chain schema says ${said}% but PROJECT_SHARE_BPS=$bps means ${want}%"
+
+echo; echo "=== quote asset ==="
+q=$(cast call "$FACTORY" 'isQuoteTokenSupported(address)(bool)' 0x0000000000000000000000000000000000000000 --rpc-url "$RPC" 2>/dev/null)
+[ "$q" = "true" ] && ok "native BNB is supported as quote" || no "native BNB reported as $q"
+
+echo; echo "=== no token has been launched ==="
+if grep -rqiE "launched|deployed the token|token address" submission/*.md 2>/dev/null \
+   && ! grep -rqi "no token has been launched" submission/README.md; then
+  no "the package should state plainly that no token exists"
+else
+  ok "the package does not claim a token exists"
+fi
+
+echo
+[ $fail -eq 0 ] && echo "everything in this package agrees with the build and the chain" \
+                || echo "SOMETHING DISAGREES — see the failures above"
+exit $fail

@@ -2,15 +2,19 @@
   "schema": 2,
   "chainId": "97",
   "network": "BNB Chain testnet",
-  "note": "Factory only. A vault cannot be created on this chain: LeverVault's build path needs a PancakeSwap V3 pool holding WBNB to flash from, and BSC testnet has none -- 32 probed WBNB pairs across four fee tiers all return the zero address, and no PoolCreated event appears in the last 40,000 blocks. See AUDIT.md.",
+  "note": "Factory only. A vault cannot be created on this chain: the build path needs a PancakeSwap V3 pool holding WBNB to flash from, and BSC testnet has none. See AUDIT.md.",
   "deployer": "0x1544A8fCE3a3c39E0a744a13392981bEcDF014f4",
-  "txHash": "0xf2a05e42dc4e8bf91c246661c207684f2158a5e87a72a63f23a35db11a1e9de6",
-  "block": 128253393,
+  "txHash": "0xba13570ab6942c7ed29e8646eea14d6c2a5e624273e26a95b2341cb6b86276f9",
+  "block": 128260131,
   "contracts": {
-    "LeverVaultFactory": "0xE7EC91f5a78c413cDF2F1140B29d51cAfFAfE535",
-    "LeverBeacon": "0xA6B787FED6b42CbC772017A3F5d60fd988A364da",
-    "LeverVaultImplementation": "0x8D5Ca13bf1D3DCe1f210bb3Ab733A95Da37640b2"
+    "LeverVaultFactory": "0x8666262877046df9f4B338B9D7f1a30d55688A5c",
+    "LeverBeacon": "0x7444B36CdC9372588C9C6A9A21bc435F31FE761a",
+    "LeverVaultImplementation": "0xAF3A1d973724ed416FEE48E5A58146893D1a9ac1"
   },
   "beaconOwner": "0x76Fa8C526f8Bc27ba6958B76DeEf92a0dbE46950",
-  "beaconOwnerIs": "Flap Guardian (BNB testnet). Same bytecode as chain 56 resolves a different Guardian by chain id, which is what this deployment demonstrates."
+  "beaconOwnerIs": "Flap Guardian (BNB testnet). Same bytecode as chain 56 resolves a different Guardian by chain id, which is what this deployment demonstrates.",
+  "supersedes": {
+    "factory": "0xE7EC91f5a78c413cDF2F1140B29d51cAfFAfE535",
+    "reason": "its vaultDataSchema described the project share as 40%, from before the split changed to 30%"
+  }
 }

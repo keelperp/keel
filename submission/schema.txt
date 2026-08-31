@@ -1,0 +1,30 @@
+# Schemas, read from the deployed contracts on BNB Chain (56)
+# factory        0x8666262877046df9f4B338B9D7f1a30d55688A5c
+# implementation 0xAF3A1d973724ed416FEE48E5A58146893D1a9ac1
+# Tuple signatures are derived from the compiled ABI by tools/dump-schema.mjs.
+
+## factory.vaultDataSchema()
+# signature: vaultDataSchema()((string,(string,string,string,uint8)[],bool))
+
+("Trading tax is levered into a 3x BNB long the vault holds on Venus. Gains are settled automatically every 5 minutes: 70% to holders as WBNB dividends, 30% to the project.", [("project", "address", "Receives 30% of every harvest. Fixed at creation; the vault has no setter.", 0)], false)
+
+## factory.isQuoteTokenSupported(address(0))
+# signature: isQuoteTokenSupported(address)(bool)
+
+true
+
+## factory.beacon()
+# signature: beacon()(address)
+
+0x7444B36CdC9372588C9C6A9A21bc435F31FE761a
+
+## implementation.description()
+# signature: description()(string)
+
+"Trading tax becomes a leveraged BNB position the vault holds on Venus itself. The treasury moves with the market when nobody is trading, and its gain is paid to holders through the token's dividend contract. No keeper, no published NAV, no pause."
+
+## implementation.vaultUISchema()
+# signature: vaultUISchema()((string,string,(string,string,(string,string,string,uint8)[],(string,string,string,uint8)[],(string,string)[],bool,bool,bool)[]))
+
+("LeverVault", "Trading tax becomes a leveraged BNB position the vault holds on Venus itself. The treasury moves with the market when nobody is trading, and its gain is paid to holders through the token's dividend contract. No keeper, no published NAV, no pause.", [("nav", "Treasury value in BNB, read straight from Venus.", [], [("bnb", "uint256", "Treasury value in wei", 18)], [], false, false, false), ("currentLeverage", "Live BNB exposure over net value, 1e18-scaled.", [], [("leverage", "uint256", "3e18 means 3x", 18)], [], false, false, false), ("healthBps", "Collateral x factor over debt, in bps. Venus liquidates at 10000.", [], [("health", "uint256", "12000 means liquidated only by a 16.7% move", 18)], [], false, false, false), ("deployPending", "Turn accumulated tax into position. Anyone may call; pays 0.25%.", [], [("bounty", "uint256", "BNB paid to the caller", 18)], [], false, false, true), ("harvest", "Distribute the position's gain: 70% to holders as WBNB dividends, 30% to the project. Anyone may call; pays 0.5% to the caller.", [], [("bounty", "uint256", "BNB paid to the caller", 18)], [], false, false, true), ("rebalance", "Push leverage back inside the band. Anyone may call; pays 0.3% of what it frees.", [], [("bounty", "uint256", "BNB paid to the caller", 18)], [], false, false, true)])
+

@@ -1,4 +1,17 @@
 #!/usr/bin/env node
+/**
+ * WHAT THIS GATE DOES NOT DO: it never compiles the component, and it knows nothing about
+ * Flap's own rules. It passed for months while Component.tsx called `useFlapSdk(injected)` --
+ * an API that does not exist -- and while every contract call was missing the `contract` label
+ * that `vault:check` requires. The authority is Flap's checker, run from a checkout of the
+ * template:
+ *
+ *   node scripts/vault-check.mjs keel
+ *
+ * The last run is committed at submission/vault-check.json. This file only guards the things
+ * the checker does not: that VaultABI.ts is a faithful slice of the forge output, and that the
+ * two locales stay in step.
+ */
 // Gate: every name the Vault UI component calls must exist in the generated ABI, and the
 // generated ABI must match what forge just built. A drift here ships a button that reverts.
 import { readFileSync, existsSync } from "node:fs";

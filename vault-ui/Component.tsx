@@ -7,16 +7,18 @@
  * minutes through Flap's trigger service, so the page leads with what the next wake will do and
  * how long until it happens; the manual calls are a fallback and are laid out as one.
  *
- * Boundaries this stays inside, deliberately: every read goes through `context.vaultAddress`,
- * the health gauge is static SVG geometry positioned from React state (no text nodes, no
- * external reference), no font file travels with the package so the stacks below name faces and
- * fall back to system ones, and the component makes no outbound request of any kind.
+ * Boundaries this stays inside, deliberately: every contract call is labelled `vault` and targets
+ * `context.vaultAddress` — there is no second address anywhere in this file — the health gauge is
+ * static SVG geometry positioned from React state (no text nodes, no external reference), no font
+ * file travels with the package so the stacks below name faces and fall back to system ones, and
+ * the component makes no outbound request of any kind. A number that has not loaded renders as an
+ * em dash and never as a zero, so an empty read can never be mistaken for an empty vault.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { VaultComponentProps } from "@/src/sdk";
-import { handleTxError, useFlapSdk } from "@/src/sdk";
-import { Alert, Button, Card, CardContent, CardHeader, CardTitle } from "@/src/ui";
+import type { ActionAvailabilityStage, VaultComponentProps } from "@/src/sdk";
+import { handleTxError, isActionAvailableForPhase, readTaxVaultHostContext, useFlapSdk } from "@/src/sdk";
+import { Alert, Button, Card, CardContent, CardHeader, CardTitle, StatusBadge } from "@/src/ui";
 import { vaultAbi } from "./VaultABI";
 
 const INK = "#11181f";
@@ -47,9 +49,9 @@ function lev(v: Maybe<bigint>): string {
 }
 
 /** Health is bps over the liquidation point. An unlevered vault reads type(uint256).max. */
-function healthText(v: Maybe<bigint>): string {
+function healthText(v: Maybe<bigint>, noDebt: string): string {
   if (v === undefined) return "—";
-  if (v > 10n ** 9n) return "no debt";
+  if (v > 10n ** 9n) return noDebt;
   return (Number(v) / 10000).toFixed(3);
 }
 
@@ -59,19 +61,45 @@ function liqMove(v: Maybe<bigint>): string {
   return `${((1 - 10000 / Number(v)) * 100).toFixed(1)}%`;
 }
 
-function clock(s: Maybe<number>): string {
+function clock(s: Maybe<number>, due: string): string {
   if (s === undefined) return "—";
-  if (s <= 0) return "due";
+  if (s <= 0) return due;
   const m = Math.floor(s / 60);
   const r = s % 60;
   return `${m}:${r.toString().padStart(2, "0")}`;
 }
 
-export default function KeelVault({ sdk: injected, context: injectedContext }: VaultComponentProps) {
-  const sdk = useFlapSdk(injected);
-  const context = injectedContext ?? sdk.context;
-  const t = useCallback((k: string) => sdk.i18n.t(k), [sdk]);
-  const vault = context.vaultAddress;
+export default function KeelVault(_props: VaultComponentProps) {
+  const sdk = useFlapSdk();
+  const { context, i18n } = sdk;
+  const t = i18n.t;
+  const host = readTaxVaultHostContext(context.host);
+
+  // Stage gating, and why it lands on "both". deployPending, harvest and rebalance all act on BNB
+  // the vault already holds: they push collected tax into the Venus position, pull realised gain
+  // back out, or move the position back to target. None of them touches the bonding curve and none
+  // of them is a trade, so none of them depends on whether the token is still on the internal
+  // market or already listed on a DEX. The stage is "both" — the same reasoning Shift documents for
+  // claiming a wage and closing a period.
+  const marketPhase = host.marketPhase;
+  const actionStage: ActionAvailabilityStage = "both";
+  const actionsAvailable = isActionAvailableForPhase(actionStage, marketPhase);
+
+  // The host owns the risk verdict; this page only renders it. An absent level is its own state —
+  // it is not "low" and it is not zero — so it reads as danger and says so out loud below.
+  const riskLevel = host.vaultInfo?.riskLevel ?? host.taxInfo?.vaultInfo?.riskLevel ?? null;
+  const riskLabel =
+    riskLevel === 1 ? t("riskLow")
+    : riskLevel === 2 ? t("riskLowMedium")
+    : riskLevel === 3 ? t("riskMedium")
+    : riskLevel === 4 ? t("riskHigh")
+    : riskLevel === 0 ? t("riskUnverified")
+    : t("riskMissing");
+  const riskTone = riskLevel === null || riskLevel === 0 || riskLevel >= 4 ? "danger" : riskLevel >= 3 ? "warning" : "success";
+  const phaseLabel =
+    marketPhase === "internal-market" ? t("phaseInternal")
+    : marketPhase === "dex-listed" ? t("phaseDex")
+    : t("phaseUnknown");
 
   const [nav, setNav] = useState<Maybe<bigint>>();
   const [leverage, setLeverage] = useState<Maybe<bigint>>();
@@ -90,12 +118,14 @@ export default function KeelVault({ sdk: injected, context: injectedContext }: V
   const read = useCallback(
     async <T,>(functionName: string): Promise<Maybe<T>> => {
       try {
-        return (await sdk.readContract({ address: vault, abi: vaultAbi, functionName })) as T;
+        return (await sdk.readContract({
+          contract: "vault", address: context.vaultAddress, abi: vaultAbi, functionName,
+        })) as T;
       } catch {
         return undefined;
       }
     },
-    [sdk, vault]
+    [sdk, context.vaultAddress]
   );
 
   useEffect(() => {
@@ -161,8 +191,10 @@ export default function KeelVault({ sdk: injected, context: injectedContext }: V
       setNote(null);
       setBusy(key);
       try {
-        await sdk.simulateContract({ address: vault, abi: vaultAbi, functionName });
-        const hash = await sdk.writeContract({ address: vault, abi: vaultAbi, functionName });
+        const sim = await sdk.simulateContract({
+          contract: "vault", address: context.vaultAddress, abi: vaultAbi, functionName,
+        });
+        const hash = await sdk.writeContract(sim.request);
         await sdk.waitForTx(hash);
         await sdk.refetch();
       } catch (e) {
@@ -171,10 +203,12 @@ export default function KeelVault({ sdk: injected, context: injectedContext }: V
         setBusy(null);
       }
     },
-    [sdk, vault]
+    [sdk, context.vaultAddress]
   );
 
   const connected = Boolean(context.userAddress);
+  const wrongNetwork = sdk.wallet.isWrongNetwork;
+  const canWrite = connected && !wrongNetwork && actionsAvailable;
   const scheduled = requestId !== undefined && requestId > 0n;
 
   // Gauge geometry: 1.00 is liquidation, the floor sits at MIN_HEALTH_BPS, and 2.00 is the far
@@ -186,6 +220,10 @@ export default function KeelVault({ sdk: injected, context: injectedContext }: V
   };
   const hx = gaugePos(health);
   const fx = gaugePos(floor);
+
+  // The package ships inside a dark default chrome; Keel's own ground is paper, so each card
+  // states it rather than inheriting.
+  const cardSkin: React.CSSProperties = { background: PANEL, borderColor: LINE, color: INK };
 
   const stat = (label: string, value: string, hint?: string, tone?: string) => (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -201,12 +239,23 @@ export default function KeelVault({ sdk: injected, context: injectedContext }: V
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14, color: INK, background: PAPER }}>
-      <Card>
+      <Card style={cardSkin}>
         <CardHeader>
-          <CardTitle>{t("title")}</CardTitle>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <CardTitle style={{ color: INK }}>{t("title")}</CardTitle>
+            <span style={{ marginLeft: "auto", display: "inline-flex", gap: 8, flexWrap: "wrap" }}>
+              <StatusBadge tone={riskTone}>{riskLabel}</StatusBadge>
+              <StatusBadge tone={actionsAvailable ? "success" : "warning"}>{phaseLabel}</StatusBadge>
+            </span>
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.5, color: riskTone === "danger" ? RUST : MUTE }}>
+            {t("riskLine").replace("{status}", riskLabel)}
+          </div>
         </CardHeader>
         <CardContent>
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+            {riskLevel === null ? <Alert tone="danger">{t("riskIntegrationMissing")}</Alert> : null}
+
             <div style={{ fontSize: 15, color: BODY, maxWidth: "56ch", lineHeight: 1.55 }}>{t("tagline")}</div>
 
             {/* What the vault will do next, and when. This is the page's lead. */}
@@ -215,7 +264,7 @@ export default function KeelVault({ sdk: injected, context: injectedContext }: V
                 border: `1px solid ${LINE}`,
                 borderLeft: `3px solid ${COPPER}`,
                 borderRadius: 3,
-                background: PANEL,
+                background: PAPER,
                 padding: "16px 18px",
                 display: "flex",
                 flexWrap: "wrap",
@@ -224,7 +273,7 @@ export default function KeelVault({ sdk: injected, context: injectedContext }: V
               }}
             >
               {scheduled
-                ? stat(t("nextSettlement"), clock(countdown), `${t("willDo")}: ${actionLabel}`, COPPER)
+                ? stat(t("nextSettlement"), clock(countdown, t("due")), `${t("willDo")}: ${actionLabel}`, COPPER)
                 : stat(t("idle"), "—", t("nothingToDo"), MUTE)}
               {stat(t("awaitingTax"), `${dec(pending)} BNB`)}
             </div>
@@ -242,7 +291,7 @@ export default function KeelVault({ sdk: injected, context: injectedContext }: V
               {stat(t("leverage"), lev(leverage), `${t("target")} ${lev(target)}`)}
               {stat(
                 t("health"),
-                healthText(health),
+                healthText(health, t("noDebt")),
                 t("liquidatesAt").replace("{pct}", liqMove(health)),
                 health !== undefined && health <= 11000n ? RUST : SEA
               )}
@@ -279,27 +328,31 @@ export default function KeelVault({ sdk: injected, context: injectedContext }: V
         </CardContent>
       </Card>
 
-      <Card>
+      <Card style={cardSkin}>
         <CardHeader>
-          <CardTitle>{t("manualTitle")}</CardTitle>
+          <CardTitle style={{ color: INK }}>{t("manualTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div style={{ fontSize: 13, color: BODY, lineHeight: 1.55 }}>{t("manualHint")}</div>
-            {note ? <Alert>{note}</Alert> : null}
+            <div style={{ fontSize: 12, color: MUTE, lineHeight: 1.5 }}>{t("stageBoth")}</div>
+            {note ? <Alert tone="danger">{note}</Alert> : null}
             {connected ? null : <Alert>{t("connect")}</Alert>}
+            {wrongNetwork ? (
+              <Alert tone="warning">{t("wrongNetwork").replace("{chain}", sdk.wallet.requiredChainLabel)}</Alert>
+            ) : null}
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              <Button disabled={!connected || busy !== null} onClick={() => send("deployPending", "deploy")}>
+              <Button disabled={!canWrite || busy !== null} onClick={() => send("deployPending", "deploy")}>
                 {busy === "deploy" ? "…" : t("deploy")}
               </Button>
-              <Button disabled={!connected || busy !== null} onClick={() => send("harvest", "harvest")}>
+              <Button disabled={!canWrite || busy !== null} onClick={() => send("harvest", "harvest")}>
                 {busy === "harvest" ? "…" : t("harvestBtn")}
               </Button>
-              <Button disabled={!connected || busy !== null} onClick={() => send("rebalance", "rebalance")}>
+              <Button disabled={!canWrite || busy !== null} onClick={() => send("rebalance", "rebalance")}>
                 {busy === "rebalance" ? "…" : t("rebalanceBtn")}
               </Button>
               {scheduled ? null : (
-                <Button disabled={!connected || busy !== null} onClick={() => send("kickstart", "kickstart")}>
+                <Button disabled={!canWrite || busy !== null} onClick={() => send("kickstart", "kickstart")}>
                   {busy === "kickstart" ? "…" : t("kickstart")}
                 </Button>
               )}

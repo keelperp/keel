@@ -66,7 +66,7 @@ contract LeverVaultPositionTest is Test {
         assertApproxEqRel(v.nav(), 5 ether - bounty, 0.01e18, "build lost more than 1%");
     }
 
-    function test_harvestPaysHoldersSixtyAndProjectForty() public {
+    function test_harvestPaysHoldersSeventyAndProjectThirty() public {
         _tax(5 ether);
         v.deployPending();
 

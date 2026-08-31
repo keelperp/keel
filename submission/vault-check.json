@@ -1,0 +1,144 @@
+{
+  "ok": false,
+  "code": "manifest-binding/missing-test-token",
+  "error": "manifest.match.bindings must declare at least one real deployed 7777 or 8888-suffix tokenAddresses entry for Workbench/vault:e2e test coverage. Local vault:e2e --token overrides do not satisfy vault:check, and production CA restrictions belong in Workbench/registry caRestrictionMode configuration.",
+  "fixHint": "Declare at least one real deployed ERC20 test token ending in 7777 or 8888 in match.bindings[].tokenAddresses. Workbench vault:check does not accept local-only vault:e2e --token overrides as package proof. Keep the final real mainnet factoryAddress in its own production binding.",
+  "folderName": "keel",
+  "summary": {
+    "blocking": 1,
+    "warning": 0,
+    "info": 0
+  },
+  "review": {
+    "externalEndpoints": [],
+    "oracles": [],
+    "externalFrames": [],
+    "externalLinks": [],
+    "externalContracts": [],
+    "fullscreenLayouts": [],
+    "miniAppAudioAssets": [],
+    "miniApp3D": [],
+    "vaultUI3D": [],
+    "miniApp3DFonts": []
+  },
+  "agent": {
+    "verdict": "fix-blocking",
+    "nextActions": [
+      {
+        "ruleId": "manifest-binding/missing-test-token",
+        "severity": "blocking",
+        "field": "match.bindings[].tokenAddresses",
+        "fixHint": "Declare at least one real deployed ERC20 test token ending in 7777 or 8888 in match.bindings[].tokenAddresses. Workbench vault:check does not accept local-only vault:e2e --token overrides as package proof. Keep the final real mainnet factoryAddress in its own production binding."
+      }
+    ],
+    "allowedVaultFiles": [
+      "Component.tsx",
+      "manifest.json",
+      "VaultABI.ts",
+      "i18n.json"
+    ],
+    "capabilityProfiles": {
+      "three-r3f-v1": {
+        "surfaces": [
+          "vault-ui-7777",
+          "mini-app-8888"
+        ],
+        "description": "Controlled Three.js and React Three Fiber runtime for 7777 Vault UI and 8888 Mini App surfaces.",
+        "dependencies": {
+          "three": "0.185.1",
+          "@react-three/fiber": "9.7.0",
+          "@react-three/drei": "10.7.8",
+          "@react-three/postprocessing": "3.0.4"
+        },
+        "allowedImports": [
+          "three",
+          "three/addons/*",
+          "@react-three/fiber",
+          "@react-three/drei",
+          "@react-three/postprocessing"
+        ],
+        "sourceExtensions": [
+          ".ts",
+          ".tsx"
+        ],
+        "shaderExtensions": [
+          ".glsl",
+          ".vert",
+          ".frag"
+        ],
+        "assetExtensions": [
+          ".glb",
+          ".gltf",
+          ".bin",
+          ".png",
+          ".jpg",
+          ".jpeg",
+          ".webp",
+          ".avif",
+          ".ktx2",
+          ".basis",
+          ".hdr",
+          ".exr",
+          ".ttf",
+          ".otf",
+          ".woff",
+          ".woff2",
+          ".wasm"
+        ],
+        "fontExtensions": [
+          ".ttf",
+          ".otf",
+          ".woff",
+          ".woff2"
+        ],
+        "safeBrowserMembers": {
+          "window": [
+            "requestAnimationFrame",
+            "cancelAnimationFrame",
+            "devicePixelRatio",
+            "matchMedia",
+            "screen"
+          ],
+          "document": [
+            "createElement",
+            "fonts"
+          ],
+          "navigator": [
+            "hardwareConcurrency",
+            "deviceMemory"
+          ]
+        },
+        "limits": {
+          "maxFiles": 200,
+          "maxCompressedBytes": 26214400,
+          "maxUncompressedBytes": 67108864,
+          "maxAssetBytes": 33554432,
+          "maxAssetTotalBytes": 62914560,
+          "maxFontBytes": 2097152,
+          "maxFontTotalBytes": 4194304
+        }
+      }
+    },
+    "allowedMiniAppAudioExtensions": [
+      ".mp3",
+      ".wav",
+      ".ogg",
+      ".m4a",
+      ".aac"
+    ],
+    "allowedLocalRelativeImports": [
+      "./VaultABI"
+    ],
+    "packageCommand": "yarn vault:package keel"
+  },
+  "issues": [
+    {
+      "severity": "blocking",
+      "ruleId": "manifest-binding/missing-test-token",
+      "message": "manifest.match.bindings must declare at least one real deployed 7777 or 8888-suffix tokenAddresses entry for Workbench/vault:e2e test coverage. Local vault:e2e --token overrides do not satisfy vault:check, and production CA restrictions belong in Workbench/registry caRestrictionMode configuration.",
+      "fixHint": "Declare at least one real deployed ERC20 test token ending in 7777 or 8888 in match.bindings[].tokenAddresses. Workbench vault:check does not accept local-only vault:e2e --token overrides as package proof. Keep the final real mainnet factoryAddress in its own production binding.",
+      "field": "match.bindings[].tokenAddresses",
+      "required": "at least one tokenAddresses entry"
+    }
+  ]
+}

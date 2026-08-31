@@ -13,6 +13,24 @@ Flap 只接受 `yarn vault:package <folder>` 产出的 zip:包内带 format-vers
 并且至少一个 binding 需要一个真实部署的 `7777` 后缀代币供 Workbench/E2E 测试。
 **因此打包这一步必然排在合约部署之后。**
 
+## 现在的状态(2026-08-31)
+
+factory 已部署到两条链,`manifest.json` 的两个 binding 都已填真实地址:
+
+| | |
+|---|---|
+| `LeverVaultFactory`(56 与 97 同址) | `0x8666262877046df9f4B338B9D7f1a30d55688A5c` |
+| `artifactId` | 待 Workbench 分配,我们给不了 |
+| 真实 `7777` 代币 | **不存在**,且测试网上造不出来 |
+
+最后一行是 `yarn vault:package` 的硬前提。测试网无法创建金库:建仓必须闪电贷,而 BSC 测试网
+的 PancakeSwap V3 是空的(32 个 WBNB 组合 `getPool` 全返回零地址,最近 40,000 块无 `PoolCreated`),
+两个测试 USDT 的 `mint` 又都是 `Ownable` 且 owner 是他人,连池子都建不了。详见
+`../submission/UI-REQUEST.md` 与 `../AUDIT.md`。
+
+因此本目录交付的是**四个源文件**,不是 zip。真正的包必须在拿到 `artifactId` 和一个真实代币之后,
+在 Flap 模板仓库里由 `yarn vault:package` 产出。
+
 ## 部署之后怎么做
 
 1. 在 Flap 的 Vault UI 模板仓库里 scaffold 一个包:

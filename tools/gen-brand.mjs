@@ -48,6 +48,10 @@ await shoot("assets/og.png", 1200, 630, 132, 17, 13);
 // below that only the "k." survives, so the small sizes use the initial alone.
 await shoot("apple-touch-icon.png", 180, 180, 44, 6, 4);
 await shoot("assets/logo.png", 1024, 320, 150, 19, 15);
+// Submission art: Flap's package carries a square mark and a wide banner alongside the logo.
+await shoot("../submission/art/keel-square.png", 1000, 1000, 128, 17, 13);
+await shoot("../submission/art/keel-banner.png", 1500, 500, 150, 19, 15);
+await shoot("../submission/art/keel-logo-1000.png", 1000, 320, 148, 19, 15);
 
 const initial = (w, fontPx, dotPx, gapPx) => `<!doctype html><meta charset="utf-8">
 <style>
