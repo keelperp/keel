@@ -1,7 +1,7 @@
 # LeverVault — Flap 十条规则自审报告
 
 **被审对象**：`src/flap/LeverVault.sol`、`src/flap/LeverVaultFactory.sol`、`src/flap/LeverBeacon.sol`
-**日期**：2026-08-29 · **链**：BNB Chain (56) · **状态**：`NOT_DEPLOYED`,从未向任何网络广播
+**日期**：2026-08-31 · **链**：BNB Chain (56) · **状态**：factory 已上主网 `0xE7EC91f5a78c413cDF2F1140B29d51cAfFAfE535`,**未发任何代币**
 
 > 这是一份**自审**报告,不是第三方审计。反复地自己对抗自己审查不是审计,本文也不会把它叫做审计。
 
@@ -191,7 +191,19 @@ share 已被其自审标为提交阻断,本金库的 30% 更高。
 
 `registerVaultFactory` 需要 `VAULT_ADMIN_ROLE`,只有 Flap 能调。提交流程是:
 **先把 factory 部署到 BSC 主网 → 把地址交给 Flap → 由 Flap 注册**。
-本仓库当前 `NOT_DEPLOYED`,因此**尚不能提交**——不是代码没准备好,是流程上还差部署这一步。
+factory 已于 block 119,107,358 部署至 BNB Chain:
+
+| | 地址 | runtime |
+|---|---|---:|
+| `LeverVaultFactory` | `0xE7EC91f5a78c413cDF2F1140B29d51cAfFAfE535` | 6,476 |
+| `LeverBeacon` | `0xA6B787FED6b42CbC772017A3F5d60fd988A364da` | 785 |
+| `LeverVault`(implementation) | `0x8D5Ca13bf1D3DCe1f210bb3Ab733A95Da37640b2` | 19,462 |
+
+链上读回的 `beacon.owner()` 是 `0x9e27098dcD8844bcc6287a557E0b4D09C86B8a4b`,即 Flap 的 BNB Chain
+Guardian——**在 `LeverBeacon` 构造函数里就转出,部署者从未持有过升级权**。这是 Rule 009 代理豁免
+的前提,现在是链上事实而非文档声明。
+
+余下的是 Flap 侧动作:由持有 `VAULT_ADMIN_ROLE` 的账户调用 `registerVaultFactory`。
 
 ## 待处理项(部署前)
 

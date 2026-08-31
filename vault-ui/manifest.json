@@ -6,13 +6,18 @@
       {
         "chainId": 97,
         "factoryAddress": "0xREPLACE_TESTNET_FACTORY",
-        "tokenAddresses": ["0xREPLACE_REAL_7777_TESTNET_TOKEN"]
+        "tokenAddresses": [
+          "0xREPLACE_REAL_7777_TESTNET_TOKEN"
+        ]
       },
       {
         "chainId": 56,
-        "factoryAddress": "0xREPLACE_MAINNET_FACTORY"
+        "factoryAddress": "0xE7EC91f5a78c413cDF2F1140B29d51cAfFAfE535"
       }
     ]
   },
-  "i18n": ["en", "zh"]
+  "i18n": [
+    "en",
+    "zh"
+  ]
 }

@@ -1,0 +1,16 @@
+{
+  "schema": 2,
+  "chainId": "56",
+  "network": "BNB Chain mainnet",
+  "note": "Flap custom-vault side only. No token has been launched; a token is created by Flap's launcher through the VaultPortal.",
+  "deployer": "0x1544A8fCE3a3c39E0a744a13392981bEcDF014f4",
+  "txHash": "0x68fa64c513af80947b02c104d3e8d9a8b44ed03ce39e0e0763adb004ee666db0",
+  "block": 119107358,
+  "contracts": {
+    "LeverVaultFactory": "0xE7EC91f5a78c413cDF2F1140B29d51cAfFAfE535",
+    "LeverBeacon": "0xA6B787FED6b42CbC772017A3F5d60fd988A364da",
+    "LeverVaultImplementation": "0x8D5Ca13bf1D3DCe1f210bb3Ab733A95Da37640b2"
+  },
+  "beaconOwner": "0x9e27098dcD8844bcc6287a557E0b4D09C86B8a4b",
+  "beaconOwnerIs": "Flap Guardian (BNB Chain), set in LeverBeacon's constructor -- never the deployer"
+}

@@ -13,7 +13,6 @@ frontend/src/generated/
 # to anyone who finds it. They belong on disk, not in the repo.
 *.log
 .rehearsal/
-deployments/
 
 # Never commit credentials. .env.example is the template and is deliberately kept.
 .env*

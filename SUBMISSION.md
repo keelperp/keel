@@ -1,7 +1,8 @@
 # LeverVault — 提交给 Flap 的说明
 
 **版本**:factory spec `v2.2` · solc 0.8.26 / Cancun / optimizer 200 / 无 viaIR
-**状态**:代码冻结候选,`NOT_DEPLOYED`
+**状态**:factory 已部署至 BNB Chain(56)——`0xE7EC91f5a78c413cDF2F1140B29d51cAfFAfE535`
+**尚未发币**:代币由 Flap 自己的 launcher 经 VaultPortal 创建
 **自审**:见 `AUDIT.md`(十条规则逐条)。**无第三方审计。**
 
 ---
