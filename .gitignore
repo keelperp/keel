@@ -7,3 +7,15 @@ frontend/node_modules/
 frontend/dist/
 frontend/src/generated/
 .qa/
+
+# Rehearsal artefacts. These are anvil-fork run logs and manifests: they carry local
+# absolute paths, and a fork manifest stamped chainId 56 reads as a mainnet deployment
+# to anyone who finds it. They belong on disk, not in the repo.
+*.log
+.rehearsal/
+deployments/
+
+# Never commit credentials. .env.example is the template and is deliberately kept.
+.env*
+!.env.example
+.vercel
