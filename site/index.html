@@ -51,14 +51,44 @@
     <div style="display:flex;flex-direction:column;gap:26px">
       <div class="tag">keel <span class="sep" aria-hidden="true">//</span> a treasury that is a position</div>
       <h1>Tax does not go to a wallet.<br>It goes into a position.</h1>
-      <p class="lede">Every buy and sell pays 2%. That tax is levered into a 3&times; BNB long the
-        contract holds itself &mdash; no operator account and no published net asset value.
-        It moves with the market when nobody is trading, and 70% of every gain is paid to holders.</p>
+      <p class="lede">Every buy and sell pays 2%, and the contract levers it into a 3&times; BNB
+          long it holds itself. <strong style="color:var(--fg)">So the treasury moves on days
+          nobody trades.</strong> It settles every five minutes on its own, and 70% of each gain
+          reaches holders as WBNB. No operator account, no published NAV, no pause.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <a class="btn primary" href="/how-it-works/">See how it works</a>
         <a class="btn" href="/vault/">Read the vault live</a>
       </div>
     </div>
+  </div>
+</section>
+
+<section style="border-top:0;padding-top:0">
+  <div class="wrap">
+    <div class="grid g2" style="gap:0;border:1px solid var(--line);border-radius:10px;overflow:hidden">
+      <div style="padding:26px 24px;border-right:1px solid var(--line)">
+        <span class="tag">most tokens with a tax</span>
+        <ul style="list-style:none;padding:0;margin:16px 0 0;display:flex;flex-direction:column;gap:11px;color:var(--fg-tertiary)">
+          <li>The tax reaches a wallet.</li>
+          <li>What happens next is a promise: buyback, ecosystem, marketing.</li>
+          <li>The treasury is a number somebody publishes.</li>
+          <li>No trades, no income.</li>
+        </ul>
+      </div>
+      <div style="padding:26px 24px;background:var(--surface)">
+        <span class="tag">keel <span class="sep" aria-hidden="true">//</span> on chain, every step</span>
+        <ul style="list-style:none;padding:0;margin:16px 0 0;display:flex;flex-direction:column;gap:11px">
+          <li>The tax reaches a Venus position the contract holds.</li>
+          <li>What happens next is a <code class="mono" style="color:var(--accent)">constant</code> with no setter.</li>
+          <li>The treasury is a <code class="mono" style="color:var(--accent)">view</code> function you call yourself.</li>
+          <li><strong style="color:var(--fg)">It moves whenever BNB moves.</strong></li>
+        </ul>
+      </div>
+    </div>
+    <p style="margin:14px 0 0;font-size:13.5px;color:var(--fg-quaternary)">
+      The cost of that, stated here rather than in a footnote: 3&times; is liquidated by a 16.7% move
+      against it. <a href="/risks/">Read the risks</a>.
+    </p>
   </div>
 </section>
 
@@ -138,7 +168,7 @@
     <figure class="viz rise" style="margin:0">
       <div class="viz-head">
         <span class="tag">priority chain <span class="sep" aria-hidden="true">//</span> evaluated every wake</span>
-        <span class="tag">gas 1,206,637 <span class="sep" aria-hidden="true">/</span> 2,000,000 cap</span>
+        <span class="tag">gas 1.20&ndash;1.24M <span class="sep" aria-hidden="true">/</span> 2,000,000 cap</span>
       </div>
       <canvas id="chainCanvas" aria-hidden="true"></canvas>
       <figcaption>
