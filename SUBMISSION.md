@@ -83,6 +83,10 @@ marker、runtime provenance、递归文件哈希与 `qa/e2e-report.json`),**手�
 ## 待 Flap
 
 - [ ] **裁定 SB-01**(30% 收益分成)
+- [ ] **确认是否要求测试网端到端**。factory 已部署至 97(与主网同址),但该链没有任何含
+      WBNB 的 PancakeSwap V3 池(32 个组合实测全为零地址),而建仓必须闪电贷,故金库无法在
+      测试网创建。详见 AUDIT.md「为什么没有测试网端到端」。若贵方有指定的测试环境或池,
+      我们照跑。
 - [ ] 确认 `v2.2` 是提交基线(skill 内置 prelude 为 v2.1,与根目录不一致)
 - [ ] 部署后由持有 `VAULT_ADMIN_ROLE` 的账户注册 factory
 
