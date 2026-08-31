@@ -169,7 +169,7 @@ td.name { font-family: var(--mono); font-size: 13px; color: var(--fg-strong); }
 }
 .viz-head { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 12px 16px; border-bottom: 1px solid var(--line-soft); flex-wrap: wrap; }
 .viz-body { padding: 18px 16px; }
-.viz canvas { display: block; width: 100%; height: auto; }
+.viz canvas, .dial canvas { display: block; width: 100%; height: auto; }
 .viz figcaption { padding: 12px 16px 16px; font-size: 12.5px; color: var(--fg-tertiary); line-height: 1.5; border-top: 1px solid var(--line-soft); }
 
 /* ---- footer ---- */
@@ -259,3 +259,17 @@ html:not(.intro-run):not(.intro-out) #intro { display: none; }
   html.intro-run #intro, html.intro-out #intro { display: none; }
   html.intro-run main, html.intro-run header.nav { animation: none; }
 }
+
+
+/* ── the leverage dial ───────────────────────────────────────────────────── */
+.dial { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 20px; margin: 26px 0 0; }
+.dial-head { display: flex; align-items: baseline; gap: 18px 24px; flex-wrap: wrap; }
+.dial-read { display: flex; gap: 22px; margin-left: auto; flex-shrink: 0; }
+.dial-read div { text-align: right; white-space: nowrap; }
+.dial-read .k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--fg-quaternary); }
+.dial-read .v { font-family: var(--mono); font-size: 19px; font-variant-numeric: tabular-nums; color: var(--fg); margin-top: 3px; }
+.dial input[type=range] {
+  width: 100%; margin: 20px 0 4px; accent-color: var(--accent); height: 22px; background: transparent;
+}
+.dial .verdict { font-family: var(--mono); font-size: 12.5px; margin-top: 10px; }
+.dial figcaption { font-size: 13px; line-height: 1.5; color: var(--fg-quaternary); margin-top: 12px; }

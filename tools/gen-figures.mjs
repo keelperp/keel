@@ -270,4 +270,181 @@ await shoot("wallet-vs-position.png", W, 340, `<body style="padding:${PAD}px">
   </div>
 </body>`);
 
+
+/* ── second set: one visual for every section that had none ───────────────── */
+
+/* the reserve, against the two shapes it is not */
+await shoot("reserve-shapes.png", W, 400, `<body style="padding:${PAD}px">
+  <div class="lbl">where a treasury can live</div>
+  <div style="display:flex;gap:12px;margin-top:26px">
+    ${[["a multisig","an account somebody controls",`${MUTE}`,"×"],
+       ["a perp position","held at a venue, on an account",`${MUTE}`,"×"],
+       ["this vault","the contract is the borrower",`${ACC}`,"✓"]]
+      .map(([t2,s2,c,mark])=>`
+      <div class="box" style="flex:1;padding:20px 18px;border-color:${c==ACC?ACC+"66":LINE}">
+        <div style="display:flex;align-items:center;gap:9px">
+          <span class="val" style="color:${c};font-size:15px">${mark}</span>
+          <span style="font-size:16px;color:${c==ACC?FG:DIM}">${t2}</span>
+        </div>
+        <div class="cap" style="margin-top:11px;font-size:12px">${s2}</div>
+      </div>`).join("")}
+  </div>
+  <div class="cap" style="margin-top:24px">Venus holds the collateral and the contract is the borrower. There is no account in between,
+  which is also why there is nobody to ask for it back.</div>
+</body>`);
+
+/* the cadence, as a dial rather than a sentence */
+await shoot("wake-schedule.png", W, 330, `<body style="padding:${PAD}px">
+  <div class="lbl">the cadence · what wakes it</div>
+  <div style="display:flex;align-items:center;gap:0;margin-top:30px">
+    ${[["5 min","working",ACC],["5 min","working",ACC],["5 min","working",ACC],["1 hr","idle",MUTE]]
+      .map(([t2,s2,c],i)=>`
+      <div style="flex:${i===3?2:1};text-align:center;position:relative">
+        <div style="height:3px;background:${c};opacity:${c===ACC?1:.4}"></div>
+        <div class="val" style="font-size:17px;color:${c};margin-top:12px">${t2}</div>
+        <div class="cap" style="font-size:11px;margin-top:4px">${s2}</div>
+      </div>`).join("")}
+  </div>
+  <div class="cap" style="margin-top:26px">Flap's trigger service buys the next slot before the work runs, so one failed wake cannot
+  break the chain that would have retried it. When there is nothing to do it drops to hourly.</div>
+</body>`);
+
+/* what leaves and what stays */
+await shoot("gain-vs-principal.png", W, 360, `<body style="padding:${PAD}px">
+  <div class="lbl">a harvest · what leaves, what stays</div>
+  <div style="margin-top:28px;display:flex;gap:14px;align-items:stretch">
+    <div style="flex:2;border:1px solid ${ACC}55;border-radius:8px;background:${ACC}14;padding:20px">
+      <div class="lbl" style="color:${ACC}">stays</div>
+      <div style="font-size:17px;margin-top:10px">the position itself</div>
+      <div class="cap" style="margin-top:8px;font-size:12px">supply and debt both shrink only enough to free the gain</div>
+    </div>
+    <div style="flex:1;border:1px solid ${POS}66;border-radius:8px;background:${POS}14;padding:20px">
+      <div class="lbl" style="color:${POS}">leaves</div>
+      <div style="font-size:17px;margin-top:10px">the gain only</div>
+      <div class="cap" style="margin-top:8px;font-size:12px">70% holders · 30% project</div>
+    </div>
+  </div>
+  <div class="cap" style="margin-top:22px">The principal is never withdrawn. What compounds is the position; what is paid out is only
+  what the position earned since the last harvest.</div>
+</body>`);
+
+/* the bounties, as amounts rather than a paragraph */
+await shoot("bounties.png", W, 320, `<body style="padding:${PAD}px">
+  <div class="lbl">every job pays whoever does it · permissionless</div>
+  <div style="display:flex;gap:12px;margin-top:26px">
+    ${[["deployPending","25 bps","of what it deploys"],
+       ["harvest","50 bps","of the gain"],
+       ["rebalance","30 bps","of what it frees"]]
+      .map(([fn,bp,of])=>`
+      <div class="box" style="flex:1;padding:18px 16px">
+        <div class="val" style="font-size:12.5px;color:${ACC}">${fn}()</div>
+        <div class="val" style="font-size:25px;margin-top:12px">${bp}</div>
+        <div class="cap" style="font-size:11.5px;margin-top:6px">${of}</div>
+      </div>`).join("")}
+  </div>
+  <div class="cap" style="margin-top:22px">The automatic path pays no bounty at all — the trigger fee already came out of the vault.
+  Nobody has to show up, but anybody may.</div>
+</body>`);
+
+/* what running it costs */
+await shoot("running-costs.png", W, 330, `<body style="padding:${PAD}px">
+  <div class="lbl">what it costs to keep turning</div>
+  <div style="margin-top:26px;display:flex;flex-direction:column;gap:10px">
+    ${[["trigger fee","0.0002 BNB","per slot, paid to Flap's service",MUTE],
+       ["Venus borrow APR","variable","the cost of the leverage itself",WARN],
+       ["swap fee","0.05%","the deepest WBNB/USDT tier",MUTE],
+       ["bounties","25–50 bps","only on the manual path",MUTE]]
+      .map(([k,v,d2,c])=>`
+      <div style="display:flex;align-items:baseline;gap:14px;padding:12px 16px;background:${SURF};border-left:2px solid ${c}66">
+        <span style="width:170px;font-size:14px;color:${FG}">${k}</span>
+        <span class="val" style="width:120px;font-size:14px;color:${c===WARN?WARN:ACC}">${v}</span>
+        <span class="cap" style="font-size:12px">${d2}</span>
+      </div>`).join("")}
+  </div>
+</body>`);
+
+/* the readings a live vault answers */
+await shoot("live-readings.png", W, 340, `<body style="padding:${PAD}px">
+  <div class="lbl">measured on live BNB Chain state · not a simulation</div>
+  <div style="display:flex;gap:12px;margin-top:26px">
+    ${[["leverage","2.96×","target 3.00"],["health","1.208","floor 1.20"],["callback gas","1.20–1.24M","cap 2.00M"],["assertions","33 / 33",""]]
+      .map(([k,v,n2])=>`
+      <div class="box" style="flex:1;padding:18px 16px">
+        <div class="lbl">${k}</div>
+        <div class="val" style="font-size:26px;color:${POS};margin-top:10px">${v}</div>
+        ${n2?`<div class="cap" style="font-size:11px;margin-top:6px">${n2}</div>`:""}
+      </div>`).join("")}
+  </div>
+  <div class="cap" style="margin-top:24px">Each assertion is one atomic <span class="val" style="color:${ACC}">eth_call</span> with the probe
+  injected by state override — the real Venus market, the real pool depth, at the current block.</div>
+</body>`);
+
+/* the five risks, as a single board */
+await shoot("risk-board.png", W, 430, `<body style="padding:${PAD}px">
+  <div class="lbl">everything that can hurt you</div>
+  <div style="margin-top:24px;display:flex;flex-direction:column;gap:9px">
+    ${[["liquidation","BNB falls 16.7% against the position",NEG],
+       ["trust moved, not removed","the Guardian can replace the implementation",WARN],
+       ["settlement costs","the fee is paid whether or not anything happened",WARN],
+       ["leverage decays","between rebalances it drifts from target",MUTE],
+       ["dividend threshold","below 10,000 KEEL there is no share",MUTE],
+       ["unaudited","no third party has reviewed this code",NEG]]
+      .map(([k,v,c])=>`
+      <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:${SURF};border-left:3px solid ${c}">
+        <span class="val" style="width:210px;font-size:13px;color:${c}">${k}</span>
+        <span style="font-size:14px;color:${DIM}">${v}</span>
+      </div>`).join("")}
+  </div>
+</body>`);
+
+/* what the 33 assertions actually cover */
+await shoot("assertions.png", W, 350, `<body style="padding:${PAD}px">
+  <div class="lbl">33 assertions · one atomic eth_call each</div>
+  <div style="display:flex;gap:12px;margin-top:26px">
+    ${[["build","12","three tax sizes reach target leverage and hold the floor"],
+       ["harvest","10","the split, the amount freed, health after"],
+       ["settlement","11","the slot, the fee, replay refusal, the callback"]]
+      .map(([k,n2,d2])=>`
+      <div class="box" style="flex:1;padding:18px 16px">
+        <div class="val" style="font-size:30px;color:${ACC}">${n2}</div>
+        <div style="font-size:14px;margin-top:8px;color:${FG}">${k}</div>
+        <div class="cap" style="font-size:11.5px;margin-top:8px;line-height:1.45">${d2}</div>
+      </div>`).join("")}
+  </div>
+  <div class="cap" style="margin-top:24px">The forge suite adds 28 more, and the position-lifecycle group is skipped by design —
+  it needs an archive RPC that BSC does not offer for free.</div>
+</body>`);
+
+/* status, as a state rather than a sentence */
+await shoot("status.png", W, 300, `<body style="padding:${PAD}px">
+  <div class="lbl">where this is</div>
+  <div style="display:flex;gap:0;margin-top:28px;align-items:center">
+    ${[["factory deployed","done",POS],["registered by Flap","waiting",WARN],["token launched","not yet",MUTE],["vault live","not yet",MUTE]]
+      .map(([k,v,c],i)=>`
+      <div style="flex:1;position:relative">
+        <div style="height:2px;background:${c};opacity:${c===MUTE?.3:1}"></div>
+        <div style="width:9px;height:9px;border-radius:50%;background:${c};margin-top:-5.5px;margin-left:0"></div>
+        <div style="font-size:14px;margin-top:14px;color:${c===MUTE?MUTE:FG}">${k}</div>
+        <div class="val" style="font-size:11.5px;margin-top:5px;color:${c}">${v}</div>
+      </div>`).join("")}
+  </div>
+  <div class="cap" style="margin-top:26px">The factory is live on BNB Chain and its beacon is already Guardian-owned. Nothing else has
+  happened, and this page says so rather than letting an address list imply otherwise.</div>
+</body>`);
+
+/* the three calls that answer everything */
+await shoot("three-calls.png", W, 330, `<body style="padding:${PAD}px">
+  <div class="lbl">three calls answer the whole page</div>
+  <div style="margin-top:26px;display:flex;flex-direction:column;gap:12px">
+    ${[["nav()","what it is worth"],["health()","how far from liquidation"],["pendingAction()","what the next wake will do"]]
+      .map(([fn,d2],i)=>`
+      <div style="display:flex;align-items:center;gap:18px">
+        <span class="val" style="width:34px;height:34px;border:1px solid ${ACC}66;border-radius:6px;color:${ACC};display:flex;align-items:center;justify-content:center;font-size:13px">${i+1}</span>
+        <span class="val" style="width:230px;font-size:16px;color:${ACC}">${fn}</span>
+        <span style="font-size:15px;color:${DIM}">${d2}</span>
+      </div>`).join("")}
+  </div>
+  <div class="cap" style="margin-top:26px">All <span class="val" style="color:${FG}">view</span>. No key, no archive node, no indexer.</div>
+</body>`);
+
 await browser.close();

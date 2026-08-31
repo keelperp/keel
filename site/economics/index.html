@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Economics · Keel</title>
-<meta name="description" content="Where every basis point goes: 80% of tax builds the position, 20% pays holders immediately, and every gain splits 60/40 with holders always taking 1.5x the project.">
+<meta name="description" content="Where every basis point goes: 80% of tax builds the position, 20% pays holders immediately, and every gain splits 70/30 with holders always taking 2.33x the project.">
 <meta name="theme-color" content="#141414">
 <meta property="og:url" content="https://www.keelperp.fun/economics/">
 <meta property="og:site_name" content="Keel">
@@ -64,7 +64,7 @@
 
 <section style="border-top:0;padding-top:0">
   <div class="wrap">
-    <figure class="viz rise" style="margin:0">
+    <figure class="viz" style="margin:0">
       <div class="viz-head"><span class="tag">two layers <span class="sep" aria-hidden="true">//</span> tax and gain</span></div>
       <canvas id="layersCanvas" aria-hidden="true"></canvas>
       <figcaption>
@@ -109,17 +109,15 @@
 
 <section>
   <div class="wrap">
-    <div class="sec-head"><span class="tag">layer two <span class="sep" aria-hidden="true">//</span> the gain</span><h2>60 to holders, 40 to the project</h2></div>
+    <div class="sec-head"><span class="tag">layer two <span class="sep" aria-hidden="true">//</span> the gain</span><h2>70 to holders, 30 to the project</h2></div>
     <div class="grid g2">
       <div style="display:flex;flex-direction:column;gap:16px">
-        <p>Whenever the position has earned at least 0.02 BNB, a wake distributes it. Holders take
-          70%, the project takes 30%, and both numbers are Solidity
-          <code class="mono" style="color:var(--fg-strong)">constant</code>s with no setter &mdash;
-          the project cannot move its own share any more than anyone else can.</p>
+        <p>Whenever the position has earned at least 0.02 BNB, a wake distributes it. Both shares
+          are Solidity <code class="mono" style="color:var(--fg-strong)">constant</code>s with no
+          setter: the project cannot move its own share any more than anyone else can.</p>
         <p><strong style="color:var(--fg)">Holders always take 2.33&times; whatever the project
-          takes.</strong> There is no arrangement in which the project earns more without handing
-          holders one and a half times as much first. And if the position never profits, the project
-          earns nothing at all.</p>
+          takes</strong> &mdash; the project never earns more without holders earning more first,
+          and if the position never profits it earns nothing at all.</p>
       </div>
       <div class="card">
         <div class="stat"><div class="k">Holders</div><div class="v pos">70%</div><div class="n">Paid in WBNB through the token's dividend contract. Claimed, never expires.</div></div>
@@ -135,25 +133,29 @@
     <div class="sec-head">
       <span class="tag">the jobs <span class="sep" aria-hidden="true">//</span> what each pays</span>
       <h2>Every job that has to happen, pays</h2>
-      <p class="lede">There is no keeper account here, so each thing that needs doing is worth
-        someone's gas. In normal operation the trigger service does them and no bounty is charged
-        &mdash; the wake fee already came out of the treasury. These rates apply when a human steps
-        in because the schedule stopped.</p>
+      <p class="lede">There is no keeper account. Each job is worth someone's gas, so anybody can
+        do it.</p>
     </div>
-    <div class="grid g3">
-      <div class="card stat"><div class="k">Build the position</div><div class="v">25 bps</div><div class="n">Of the tax being deployed.</div></div>
-      <div class="card stat"><div class="k">Distribute a gain</div><div class="v">50 bps</div><div class="n">Of what the unwind frees.</div></div>
-      <div class="card stat"><div class="k">Rebalance</div><div class="v">30 bps</div><div class="n">Of what it frees. Flat &mdash; the rate does not change with health.</div></div>
-    </div>
-    <p style="margin-top:18px;font-size:13.5px;color:var(--fg-tertiary)">Under health 1.10 the
-      hourly cooldown is waived, so a rescue does not have to wait. The bounty itself stays at 30
-      bps &mdash; a rule that caps bleed should not also be the rule that stops someone acting.</p>
+    <figure class="fig">
+      <img src="/assets/fig/bounties.png" alt="Three bounty rates side by side: deployPending() pays 25 bps of what it deploys, harvest() pays 50 bps of the gain, rebalance() pays 30 bps of what it frees." loading="lazy" decoding="async" width="1000">
+      <figcaption>These rates are charged when a human steps in because the schedule stopped; the
+        trigger service's own wakes pay no bounty, because the wake fee already came out of the
+        treasury. The rebalance rate is flat &mdash; 30 bps whether health reads 1.30 or 1.05.</figcaption>
+    </figure>
+    <p style="margin-top:18px;font-size:13.5px;color:var(--fg-tertiary)">Under health 1.10 the hourly
+      cooldown is waived, so a rescue never waits: a rule that caps bleed should not also be the rule
+      that stops someone acting.</p>
   </div>
 </section>
 
 <section>
   <div class="wrap">
     <div class="sec-head"><span class="tag">running cost <span class="sep" aria-hidden="true">//</span> measured</span><h2>What it costs to keep turning</h2></div>
+    <figure class="fig" style="margin-top:0">
+      <img src="/assets/fig/running-costs.png" alt="Four cost lines: a 0.0002 BNB trigger fee per slot paid to Flap's service, a variable Venus borrow APR described as the cost of the leverage itself, a 0.05% swap fee on the deepest WBNB/USDT tier, and 25 to 50 bps of bounties charged only on the manual path." loading="lazy" decoding="async" width="1000">
+      <figcaption>Four lines, one of them not optional: borrowing is what makes the position 3&times;
+        at all. The rates below are the measured ones, read from the chain.</figcaption>
+    </figure>
     <div class="scroll rise" tabindex="0" role="region" aria-label="Table, scrollable">
       <table>
         <thead><tr><th>Cost</th><th class="num">Rate</th><th>Notes</th></tr></thead>
@@ -165,16 +167,25 @@
         </tbody>
       </table>
     </div>
-    <p style="margin-top:16px;font-size:13.5px;color:var(--fg-tertiary)">The carry is negative and
-      that is not a defect: a leveraged long pays to be leveraged. It means a flat market slowly
-      costs the treasury, and the position has to be right about direction to be worth holding.</p>
+    <p style="margin-top:16px;font-size:13.5px;color:var(--fg-tertiary)">Negative carry is not a
+      defect &mdash; a leveraged long pays to be leveraged. A flat market slowly costs the treasury,
+      so the position has to be right about direction to be worth holding.</p>
   </div>
 </section>
 
 <section>
   <div class="wrap narrow" style="text-align:center">
     <h2>The costs above are the honest half</h2>
-    <p class="lede" style="margin:14px auto 22px">The risks page is the other one.</p>
+    <p class="lede" style="margin:14px auto 0">The risks page is the other one. It starts here.</p>
+  </div>
+  <div class="wrap">
+    <figure class="fig">
+      <img src="/assets/fig/liquidation-distance.png" alt="A scale of BNB moves against the 3x position, running from 0% to minus 40%, with a red line at minus 16.7% labelled 'liquidated here'." loading="lazy" decoding="async" width="1000">
+      <figcaption>A 16.7% move against the position liquidates it: Venus sells the collateral and the
+        treasury is permanently smaller. Everything priced above assumes a position that survives.</figcaption>
+    </figure>
+  </div>
+  <div class="wrap narrow" style="text-align:center;margin-top:30px">
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
       <a class="btn primary" href="/risks/">Read the risks</a>
       <a class="btn" href="/verify/">Verify the numbers</a>

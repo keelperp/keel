@@ -118,3 +118,82 @@ export const C = {
   // Fixed delay rather than waiting on load: a slow asset must never hold the page behind it.
   setTimeout(lift, 1180);
 })();
+
+/**
+ * Leverage dial. The reader drags it and watches health and the distance to liquidation move
+ * together, which is the whole argument for why 3x is a ceiling rather than a preference --
+ * an argument that takes three paragraphs to write and one drag to feel.
+ *
+ * health = CF * L / (L - 1), and the liquidation drop is 1 - 1/(L * (1 - CF) + CF)... in the
+ * shape Venus actually uses: a position is liquidated once health reaches 1.00, which for a
+ * long at leverage L happens after the collateral falls by (health - 1) / health.
+ */
+export function leverageDial(root) {
+  const CF = 0.8;
+  const cv = root.querySelector("canvas");
+  const slider = root.querySelector("input[type=range]");
+  const out = {
+    lev: root.querySelector("[data-out=lev]"),
+    health: root.querySelector("[data-out=health]"),
+    drop: root.querySelector("[data-out=drop]"),
+    verdict: root.querySelector("[data-out=verdict]"),
+  };
+  if (!cv || !slider) return;
+
+  const model = (L) => {
+    const health = (CF * L) / (L - 1);
+    return { health, drop: health <= 1 ? 0 : (health - 1) / health };
+  };
+
+  const draw = (L) => {
+    const { ctx, w, h } = fitCanvas(cv, 126);
+    const { health, drop } = model(L);
+    ctx.clearRect(0, 0, w, h);
+    const padL = 8, padR = 8, trackW = w - padL - padR, y = 56;
+
+    ctx.font = C.monoSm; ctx.fillStyle = C.dim; ctx.textAlign = "left";
+    ctx.fillText("BNB against the position", padL, 20);
+    ctx.textAlign = "right"; ctx.fillText("−40%", padL + trackW, 20);
+
+    ctx.strokeStyle = C.lineSoft; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + trackW, y); ctx.stroke();
+
+    const frac = Math.min(drop / 0.4, 1);
+    const tone = health >= 1.3 ? C.positive : health >= 1.2 ? C.accent : health > 1.05 ? C.warn : C.negative;
+    ctx.strokeStyle = tone; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + trackW * frac, y); ctx.stroke();
+
+    const x = padL + trackW * frac;
+    ctx.fillStyle = tone;
+    ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.font = C.mono; ctx.textAlign = frac > 0.8 ? "right" : "left";
+    ctx.fillText(`−${(drop * 100).toFixed(1)}%`, frac > 0.8 ? x - 12 : x + 12, y - 14);
+
+    // The floor the contract enforces, drawn wherever it currently sits.
+    const floorDrop = (1.2 - 1) / 1.2, fx = padL + trackW * Math.min(floorDrop / 0.4, 1);
+    ctx.strokeStyle = C.lineSoft; ctx.setLineDash([3, 4]);
+    ctx.beginPath(); ctx.moveTo(fx, y + 14); ctx.lineTo(fx, y + 34); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = C.dim; ctx.font = C.monoSm; ctx.textAlign = "center";
+    ctx.fillText("health 1.20", fx, y + 48);
+  };
+
+  const update = () => {
+    const L = Number(slider.value) / 100;
+    const { health, drop } = model(L);
+    if (out.lev) out.lev.textContent = `${L.toFixed(2)}×`;
+    if (out.health) out.health.textContent = health.toFixed(3);
+    if (out.drop) out.drop.textContent = `−${(drop * 100).toFixed(1)}%`;
+    if (out.verdict) {
+      out.verdict.textContent =
+        L > 4.99 ? "this is the liquidation point itself"
+        : health < 1.2 ? "below the floor the contract enforces"
+        : health < 1.25 ? "exactly on the floor — where 3× sits"
+        : "inside the floor";
+      out.verdict.style.color = health < 1.2 ? "var(--negative)" : health < 1.25 ? "var(--accent)" : "var(--positive)";
+    }
+    draw(L);
+  };
+  slider.addEventListener("input", update);
+  addEventListener("resize", update);
+  update();
+}

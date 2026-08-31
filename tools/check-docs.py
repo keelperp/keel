@@ -69,6 +69,12 @@ SURFACES = ["AUDIT.md", "SUBMISSION.md", "LAUNCH.md", "vault-ui/i18n.json",
             "submission/RULES.md", "submission/SPEC-CHECK.md", "submission/UI-REQUEST.md"]
 W = re.compile(r"holders|持有者|project|项目方", re.I)
 PCT = re.compile(r"(\d{1,3})%")
+# A split written without a percent sign is still a split. Catch "60/40", and a bare number
+# sitting next to holders/project, which is how three of these reached production.
+BARE = re.compile(
+    r"(?<![\d.])(\d{2})\s*/\s*(\d{2})(?![\d.%])"
+    r"|(?<![\d.])(\d{2})\s+to\s+(?:holders|the project)"
+    r"|(?:holders|the project)[^.\n]{0,12}?(?<![\d.])(\d{2})(?![\d.%])")
 SUPERSEDED = {40, 60}          # the split before 2026-08-31; extend when it changes again
 assert not (SUPERSEDED & {holder_pct, project_pct}), \
     "a superseded value equals the current split — update SUPERSEDED in this file"
@@ -101,6 +107,12 @@ for rel in SURFACES:
         if any(frag in window for frag in ALLOWED_PHRASES):
             continue
         bad.append(f"{rel}:{line} {m.group(0)}")
+    for m in BARE.finditer(body):
+        nums = [int(g) for g in m.groups() if g]
+        hit = [n for n in nums if n in SUPERSEDED]
+        if hit and not any(f in body[max(0, m.start()-60):m.end()+40] for f in ALLOWED_PHRASES):
+            line = body[:m.start()].count(chr(10)) + 1
+            bad.append(f"{rel}:{line} '{m.group(0).strip()}' (no % sign)")
     say(not bad, f"{rel} carries no superseded share" + (f" — {bad[:3]}" if bad else ""))
 
 # The split is written in words too -- a test named ...SixtyAndProjectForty survived every

@@ -100,10 +100,14 @@
     <div class="sec-head">
       <span class="tag">measured <span class="sep" aria-hidden="true">//</span> not live</span>
       <h2>What it did on live state during testing</h2>
-      <p class="lede">These are not readings from a deployed vault. They are what the contracts
-        produced when run against BNB Chain's current state as an atomic call, at three sizes of
-        incoming tax.</p>
+      <p class="lede">Nothing is deployed. This is what the contracts did against BNB Chain's
+        current state.</p>
     </div>
+      <figure class="fig">
+        <img src="/assets/fig/live-readings.png" alt="Four readings measured on live BNB Chain state, not a simulation: leverage 2.96x against a 3.00 target, health 1.208 against the 1.20 floor, callback gas of 1.20 to 1.24 million against the 2.00 million cap, and 33 of 33 assertions passing. Each assertion is one atomic eth_call with the probe injected by state override, against the real Venus market and the real pool depth at the current block." loading="lazy" decoding="async" width="1000">
+        <figcaption>Measured at the current block, not read from a deployed vault.</figcaption>
+      </figure>
+
     <div class="scroll rise" tabindex="0" role="region" aria-label="Table, scrollable">
       <table>
         <thead><tr><th class="num">Tax batch</th><th class="num">Leverage</th><th class="num">Health</th><th class="num">Liquidates on</th><th class="num">Build cost</th></tr></thead>
@@ -114,26 +118,28 @@
         </tbody>
       </table>
     </div>
-    <p style="margin-top:16px;font-size:13.5px;color:var(--fg-tertiary)">Two liquidation numbers
-      appear on this site and they mean different things. <strong style="color:var(--fg-strong)">16.7%</strong>
-      is what the 1.20 health floor guarantees &mdash; the build is never allowed below it.
-      <strong style="color:var(--fg-strong)">17.2%</strong> is what the measured 1.208 actually
-      gives, a little above the floor. Quote the floor when you want the promise; quote the
-      measurement when you want today.</p>
+    <p style="margin-top:16px;font-size:13.5px;color:var(--fg-tertiary)">Same position at all three
+      tax sizes. <strong style="color:var(--fg-strong)">16.7%</strong> is what the 1.20 health floor
+      guarantees &mdash; the build is never allowed below it;
+      <strong style="color:var(--fg-strong)">17.2%</strong> is what the measured 1.208 gives.
+      Floor for the promise, measurement for today.</p>
   </div>
 </section>
 
 <section>
   <div class="wrap">
     <div class="sec-head"><span class="tag">the position <span class="sep" aria-hidden="true">//</span> both legs</span><h2>What the vault actually holds</h2></div>
-    <figure class="viz rise" style="margin:0">
+      <figure class="fig">
+        <img src="/assets/fig/leverage-stack.png" alt="One BNB of tax becomes 3.00 BNB supplied to Venus as vBNB against 2.00 BNB borrowed in USDT, leaving 1.00 BNB of net value at 3x exposure." loading="lazy" decoding="async" width="1000">
+        <figcaption>Per unit of net value: three units of BNB collateral on Venus, two units of USDT owed against it, and the gap between them is the treasury.</figcaption>
+      </figure>
+
+    <figure class="viz" style="margin:26px 0 0">
       <div class="viz-head"><span class="tag">supply and debt <span class="sep" aria-hidden="true">//</span> per unit of net value</span></div>
       <canvas id="posCanvas" aria-hidden="true"></canvas>
       <figcaption>
-        For every unit of net value the vault holds roughly three units of BNB collateral on Venus
-        and owes about two units of USDT against it. The gap between them is the treasury. The
-        health mark sits at 1.208, and the collateral would have to lose 16.7% of its value before
-        it reaches the liquidation line on the left.
+        The health mark sits at 1.208; the collateral has to lose 16.7% of its value to reach the
+        liquidation line on the left.
       </figcaption>
     </figure>
   </div>
