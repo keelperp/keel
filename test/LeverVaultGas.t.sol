@@ -13,6 +13,10 @@ contract LeverVaultGasTest is Test {
     address constant PROJECT = address(0xBEEF);
 
     function setUp() public {
+        // initialize() enters Venus markets, so this suite needs live BSC state. Creating the
+        // fork here instead of relying on a --fork-url flag means a plain `forge test` passes
+        // too, which is what rule 006 asks a reviewer to run.
+        vm.createSelectFork(vm.envOr("KEEL_RPC_URL", string("https://bsc-dataseed.bnbchain.org")));
         // bsc-dataseed is load balanced across nodes at different heights — five calls in
         // a row spanned 19 blocks. Forge forks at one node's height and then reads state
         // from another, so Venus's stored accrual block can be AHEAD of the fork block.

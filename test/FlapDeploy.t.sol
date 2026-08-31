@@ -7,6 +7,10 @@ contract FlapDeployTest is Test {
     LeverVault v;
 
     function setUp() public {
+        // initialize() enters Venus markets, so this suite needs live BSC state. Creating the
+        // fork here instead of relying on a --fork-url flag means a plain `forge test` passes
+        // too, which is what rule 006 asks a reviewer to run.
+        vm.createSelectFork(vm.envOr("KEEL_RPC_URL", string("https://bsc-dataseed.bnbchain.org")));
         v = new LeverVault();
         v.initialize(0xE1cE50807dcFe16774B6cc38E1c315019E977777, address(0xBEEF));
     }

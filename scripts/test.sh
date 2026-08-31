@@ -36,6 +36,9 @@ echo; echo "=== live state: 33 assertions, one atomic eth_call each ==="
 forge build --silent >/dev/null 2>&1 || true
 python3 tools/verify.py || fail=1
 
+echo; echo "=== documents vs build: every published number re-derived ==="
+python3 tools/check-docs.py || fail=1
+
 echo; echo "=== vault UI package: ABI currency and i18n coverage ==="
 node tools/check-vault-ui.mjs || fail=1
 

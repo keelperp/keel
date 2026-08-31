@@ -95,17 +95,25 @@ health 地板 1.20 对应上限 **3.00x**;**5x 算出来正好 1.00,即清算点
 | 初始化 / trigger 授权 / 重放 / 三个工作函数 revert 路径 / stipend | ✅ 13 | — |
 | `receive()` gas 预算 | ✅ 2 | ✅ |
 | 建仓到目标杠杆与健康度(三个规模) | 可选 | ✅ 12 条断言 |
-| 收割:释放额=收益、60/40 分账、健康度不降 | 可选 | ✅ 10 条断言 |
+| 收割:释放额=收益、70/30 分账、健康度不降 | 可选 | ✅ 10 条断言 |
 | 自动结算:买时间片、授权、重放、回调 gas | 可选 | ✅ 11 条断言 |
 | 假 vault / 出身校验(自建版) | — | ✅ `tools/e2e.py` |
 
 ```
 $ bash scripts/test.sh
-  9 passed   offline: schema, factory guards, beacon ownership
+ 13 passed   offline: schema, factory guards, beacon ownership
  13 passed   forked:  authorization, guards, receive stipend
   2 passed   forked:  receive gas budget (rule 005)
+      skipped forked:  position lifecycle — needs an archive RPC, see below
  33 passed   live:    build / harvest / automatic settlement
+  8 passed   vault UI: ABI currency and i18n coverage
+             sizes:   all deployable contracts within EIP-170
+$ echo $?
+0
 ```
+
+裸 `forge test`(不带 `--fork-url`)同样退出 0:需要主网状态的套件在自己的 `setUp` 里
+`vm.createSelectFork`,不依赖命令行参数。共 29 个测试通过、1 个按设计跳过。
 
 ---
 
@@ -124,10 +132,14 @@ revert `math error`。
 | 合约 | runtime | 余量 |
 |---|---:|---:|
 | `LeverVault` | 19,462 | 5,114 |
-| `LeverVaultFactory` | 5,173 | 19,403 |
+| `LeverVaultFactory` | 6,476 | 18,100 |
 | `LeverBeacon` | 785 | 23,791 |
 
-`LeverVaultFactory` 的 initcode 为 26,963 字节,在 EIP-3860 的 49,152 之内。
+`LeverVaultFactory` 的 initcode 为 27,668 字节,在 EIP-3860 的 49,152 之内。
+
+三个测试探针 `FlapProbe`(30,081)、`KeelProbe`(27,451)、`KeelE2E`(46,100)超过 24,576。它们由
+`eth_call` state override 注入,永不部署,因此不受 EIP-170 约束;`scripts/test.sh` 的尺寸门
+对它们放行、对任何可部署合约失败。
 
 ---
 
