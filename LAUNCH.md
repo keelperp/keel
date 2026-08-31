@@ -51,7 +51,7 @@
 | `migratorType` | `V2_MIGRATOR` (1) | 硬 · taxed V3 只能迁到 Uniswap V2 fork |
 | `commissionReceiver` | `address(0)` | 决 · 本 factory 不触碰 commission,不与 Flap 机制竞争 |
 | `vaultFactory` | 部署后填 | 待 |
-| `vaultData` | `abi.encode(部署者钱包)` | 决 · 项目方地址默认取部署者钱包,收 40% 收益份额,**发币后不可改** |
+| `vaultData` | `abi.encode(部署者钱包)` | 决 · 项目方地址默认取部署者钱包,收 30% 收益份额,**发币后不可改** |
 | `quoteAmt` | **待定** | 待 · 你自己的首笔买入 |
 | `salt` | 挖 `7777` 后缀 | 硬 · 从高偏移开始搜,低位 salt 已被占 |
 
@@ -98,7 +98,7 @@ deflationBps         0
 lpBps                0                       (四路和 = 10000)
 minimumShareBalance  10_000e18               低于此持仓无分红份额
 vaultFactory         <部署后填>
-vaultData            abi.encode(部署者钱包)   收 40% 收益份额
+vaultData            abi.encode(部署者钱包)   收 30% 收益份额
 quoteAmt             <待定:你的首笔买入>
 salt                 <挖 7777 后缀,从高偏移开始>
 meta                 <待定:图标与描述>
@@ -113,6 +113,6 @@ meta                 <待定:图标与描述>
 
 ## 金库这一侧的常数（同样不可改）
 
-`TARGET_LEVERAGE` 3x · `MIN_HEALTH_BPS` 12000 · `PROJECT_SHARE_BPS` 4000(项目方 40% /
-持有者 60%) · 结算间隔 5 分钟 / 空闲 1 小时 · 赏金 25/50/30 bps · 紧急线 health 1.10。
+`TARGET_LEVERAGE` 3x · `MIN_HEALTH_BPS` 12000 · `PROJECT_SHARE_BPS` 3000(项目方 30% /
+持有者 70%) · 结算间隔 5 分钟 / 空闲 1 小时 · 赏金 25/50/30 bps · 紧急线 health 1.10。
 全部 `constant`,无 setter,改只能重新部署并请 Flap 重新注册。

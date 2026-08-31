@@ -108,7 +108,7 @@ contract LeverVaultFactory is VaultFactoryBaseV2 {
 
     function vaultDataSchema() public pure override returns (VaultDataSchema memory schema) {
         schema.description = "Trading tax is levered into a 3x BNB long the vault holds on Venus. Gains are settled "
-            "automatically every 5 minutes: 60% to holders as WBNB dividends, 40% to the project.";
+            "automatically every 5 minutes: 70% to holders as WBNB dividends, 30% to the project.";
         FieldDescriptor[] memory f = new FieldDescriptor[](1);
         f[0].name = "project";
         f[0].fieldType = "address";

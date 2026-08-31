@@ -92,9 +92,9 @@ for tax, gain in ((5, 1), (20, 4)):
     net = k["toHolders"] + k["toProject"]
     ratio = freed / k["gain"]
     check(f"gain {gain} BNB — frees the gain and no more", 0.98 <= ratio <= 1.02, f"{ratio:.3f}x")
-    check(f"gain {gain} BNB — holders get 60%", abs(k["toHolders"] / net - 0.60) < 0.005,
+    check(f"gain {gain} BNB — holders get 70%", abs(k["toHolders"] / net - 0.70) < 0.005,
           f"{k['toHolders'] / net * 100:.1f}%")
-    check(f"gain {gain} BNB — project gets 40%", abs(k["toProject"] / net - 0.40) < 0.005,
+    check(f"gain {gain} BNB — project gets 30%", abs(k["toProject"] / net - 0.30) < 0.005,
           f"{k['toProject'] / net * 100:.1f}%")
     check(f"gain {gain} BNB — health holds after the unwind", k["health"] / 10000 >= 1.20,
           f"{k['health'] / 10000:.3f}")

@@ -6,19 +6,25 @@
 <title>Economics · Keel</title>
 <meta name="description" content="Where every basis point goes: 80% of tax builds the position, 20% pays holders immediately, and every gain splits 60/40 with holders always taking 1.5x the project.">
 <meta name="theme-color" content="#141414">
-<meta property="og:url" content="https://keel-site-zeta.vercel.app/economics/">
+<meta property="og:url" content="https://www.keelperp.fun/economics/">
 <meta property="og:site_name" content="Keel">
 <meta property="og:locale" content="en_US">
 <meta property="og:title" content="Economics · Keel">
-<meta property="og:image" content="https://keel-site-zeta.vercel.app/assets/og.png">
+<meta property="og:image" content="https://www.keelperp.fun/assets/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Keel: tax goes into a position, not a wallet">
+<meta property="og:image:alt" content="Keel — the wordmark, white on near-black">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@keel_perp">
+<meta name="twitter:creator" content="@keel_perp">
 <meta property="og:type" content="website">
 <meta property="og:description" content="Two layers of money, four constants nobody can move, and what each job pays the caller.">
-<link rel="canonical" href="https://keel-site-zeta.vercel.app/economics/">
+<link rel="canonical" href="https://www.keelperp.fun/economics/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
 <link rel="mask-icon" href="/favicon.svg" color="#e0894a">
 <link rel="stylesheet" href="/assets/base.css">
 </head>
@@ -60,7 +66,7 @@
       <figcaption>
         The tax layer on top: 2% per trade splits 80% into the vault and 20% straight to holders,
         with nothing withheld for the project. The gain layer beneath it, fed by the position rather
-        than by any trade: 60% to holders, 40% to the project, and zero whenever the position has
+        than by any trade: 70% to holders, 30% to the project, and zero whenever the position has
         not profited.
       </figcaption>
     </figure>
@@ -93,18 +99,18 @@
     <div class="grid g2">
       <div style="display:flex;flex-direction:column;gap:16px">
         <p>Whenever the position has earned at least 0.02 BNB, a wake distributes it. Holders take
-          60%, the project takes 40%, and both numbers are Solidity
+          70%, the project takes 30%, and both numbers are Solidity
           <code class="mono" style="color:var(--fg-strong)">constant</code>s with no setter &mdash;
           the project cannot move its own share any more than anyone else can.</p>
-        <p><strong style="color:var(--fg)">Holders always take 1.5&times; whatever the project
+        <p><strong style="color:var(--fg)">Holders always take 2.33&times; whatever the project
           takes.</strong> There is no arrangement in which the project earns more without handing
           holders one and a half times as much first. And if the position never profits, the project
           earns nothing at all.</p>
       </div>
       <div class="card">
-        <div class="stat"><div class="k">Holders</div><div class="v pos">60%</div><div class="n">Paid in WBNB through the token's dividend contract. Claimed, never expires.</div></div>
+        <div class="stat"><div class="k">Holders</div><div class="v pos">70%</div><div class="n">Paid in WBNB through the token's dividend contract. Claimed, never expires.</div></div>
         <hr style="border:0;border-top:1px solid var(--line-soft);margin:18px 0">
-        <div class="stat"><div class="k">Project</div><div class="v">40%</div><div class="n">To the address written into the vault at creation. No setter.</div></div>
+        <div class="stat"><div class="k">Project</div><div class="v">30%</div><div class="n">To the address written into the vault at creation. No setter.</div></div>
       </div>
     </div>
   </div>

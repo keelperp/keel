@@ -4,21 +4,27 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Keel · Tax goes into a position, not a wallet</title>
-<meta name="description" content="A BNB Chain token whose trading tax is levered into a 3x BNB long the contract holds itself. It settles every five minutes on its own, and pays 60% of every gain to holders.">
+<meta name="description" content="A BNB Chain token whose trading tax is levered into a 3x BNB long the contract holds itself. It settles every five minutes on its own, and pays 70% of every gain to holders.">
 <meta name="theme-color" content="#141414">
-<meta property="og:url" content="https://keel-site-zeta.vercel.app/">
+<meta property="og:url" content="https://www.keelperp.fun/">
 <meta property="og:site_name" content="Keel">
 <meta property="og:locale" content="en_US">
 <meta property="og:title" content="Keel · Tax does not go to a wallet. It goes into a position.">
-<meta property="og:description" content="Trading tax becomes a leveraged BNB position the contract holds itself. Settles every five minutes. 60% of every gain to holders.">
-<meta property="og:image" content="https://keel-site-zeta.vercel.app/assets/og.png">
+<meta property="og:description" content="Trading tax becomes a leveraged BNB position the contract holds itself. Settles every five minutes. 70% of every gain to holders.">
+<meta property="og:image" content="https://www.keelperp.fun/assets/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Keel: tax goes into a position, not a wallet">
+<meta property="og:image:alt" content="Keel — the wordmark, white on near-black">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@keel_perp">
+<meta name="twitter:creator" content="@keel_perp">
 <meta property="og:type" content="website">
-<link rel="canonical" href="https://keel-site-zeta.vercel.app/">
+<link rel="canonical" href="https://www.keelperp.fun/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
 <link rel="mask-icon" href="/favicon.svg" color="#e0894a">
 <link rel="stylesheet" href="/assets/base.css">
 </head>
@@ -47,7 +53,7 @@
       <h1>Tax does not go to a wallet.<br>It goes into a position.</h1>
       <p class="lede">Every buy and sell pays 2%. That tax is levered into a 3&times; BNB long the
         contract holds itself &mdash; no operator account and no published net asset value.
-        It moves with the market when nobody is trading, and 60% of every gain is paid to holders.</p>
+        It moves with the market when nobody is trading, and 70% of every gain is paid to holders.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <a class="btn primary" href="/how-it-works/">See how it works</a>
         <a class="btn" href="/vault/">Read the vault live</a>
@@ -82,7 +88,7 @@
       <div class="stat card"><div class="k">Leverage</div><div class="v">2.96&times;</div><div class="n">Measured on live BNB Chain state, three sizes.</div></div>
       <div class="stat card"><div class="k">Health</div><div class="v pos">1.208</div><div class="n">Liquidated only by a 16.7% move against it.</div></div>
       <div class="stat card"><div class="k">Settles every</div><div class="v">5 min</div><div class="n">By Flap's trigger service. Nobody presses anything.</div></div>
-      <div class="stat card"><div class="k">Of every gain</div><div class="v">60%</div><div class="n">To holders as WBNB. Constant, no setter.</div></div>
+      <div class="stat card"><div class="k">Of every gain</div><div class="v">70%</div><div class="n">To holders as WBNB. Constant, no setter.</div></div>
     </div>
   </div>
 </section>
@@ -158,7 +164,7 @@
         <tbody>
           <tr><td class="name">TARGET_LEVERAGE</td><td class="num">3&times;</td><td>The exposure the vault builds toward. Venus's 80% collateral factor makes 3&times; the ceiling a 1.20 health floor can hold.</td></tr>
           <tr><td class="name">MIN_HEALTH_BPS</td><td class="num">12000</td><td>The floor the build may never breach. Debt is capped by this, not by Venus’s own limit.</td></tr>
-          <tr><td class="name">PROJECT_SHARE_BPS</td><td class="num">4000</td><td>The project's share of a gain. Holders take the other 60%, always 1.5&times; the project.</td></tr>
+          <tr><td class="name">PROJECT_SHARE_BPS</td><td class="num">3000</td><td>The project's share of a gain. Holders take the other 70%, always 2.33&times; the project.</td></tr>
           <tr><td class="name">Settlement interval</td><td class="num">5 min</td><td>One hour when the last wake found nothing to do.</td></tr>
         </tbody>
       </table>

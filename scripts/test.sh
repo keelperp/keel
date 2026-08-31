@@ -30,6 +30,10 @@ else
 fi
 
 echo; echo "=== live state: 33 assertions, one atomic eth_call each ==="
+# verify.py reads the probe's bytecode straight out of out/. A forked forge run can still be
+# flushing artefacts when it starts, which once produced four failures against a contract that
+# had already been changed correctly. Build explicitly first so the artefact is never behind.
+forge build --silent >/dev/null 2>&1 || true
 python3 tools/verify.py || fail=1
 
 echo; echo "=== vault UI package: ABI currency and i18n coverage ==="
@@ -39,7 +43,7 @@ echo; echo "=== sizes (EIP-170) ==="
 # forge prints sizes with thousands separators, so "30,081"+0 evaluates to 30 and the old
 # gate waved every oversized contract through. Strip the commas before comparing. Test-only
 # probes are allowed to be huge: they are injected by eth_call state override, never deployed.
-forge build --sizes | awk -F'|' '
+{ forge build --sizes || true; } | awk -F'|' '
   /^\|/ {
     name = $2; size = $3
     gsub(/[ \t]/, "", name); gsub(/[ ,\t]/, "", size)

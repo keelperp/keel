@@ -81,9 +81,9 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
     uint256 public constant HARVEST_BOUNTY_BPS = 50;
     uint256 public constant REBALANCE_BOUNTY_BPS = 30;
     uint256 public constant MIN_DEPLOY = 0.01 ether;
-    /// @notice Of every harvest, after the caller's bounty: 40% to the project, 60% to
+    /// @notice Of every harvest, after the caller's bounty: 30% to the project, 70% to
     ///         holders. Constant — nobody can move it, including the project.
-    uint256 public constant PROJECT_SHARE_BPS = 4000;
+    uint256 public constant PROJECT_SHARE_BPS = 3000;
 
     /// @notice Flap's trigger service on BNB Chain. It calls `trigger()` on a schedule,
     ///         which is why holders never have to press anything.
@@ -709,7 +709,7 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
 
         m[4].name = "harvest";
         m[4].description =
-            "Distribute the position's gain: 60% to holders as WBNB dividends, 40% to the project. Anyone may call; pays 0.5% to the caller.";
+            "Distribute the position's gain: 70% to holders as WBNB dividends, 30% to the project. Anyone may call; pays 0.5% to the caller.";
         m[4].outputs = _one("bounty", "uint256", "BNB paid to the caller");
         m[4].isWriteMethod = true;
 

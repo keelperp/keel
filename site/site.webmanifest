@@ -1,0 +1,14 @@
+{
+  "name": "Keel",
+  "short_name": "Keel",
+  "description": "A BNB Chain token whose trading tax is levered into a 3x BNB long the contract holds itself.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#141414",
+  "theme_color": "#141414",
+  "icons": [
+    { "src": "/favicon-32.png", "sizes": "32x32", "type": "image/png" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

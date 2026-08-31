@@ -46,7 +46,7 @@ health 地板 1.20 对应上限 **3.00x**;**5x 算出来正好 1.00,即清算点
 且发币后不可修复。零税代币同理,金库会被创建然后永远收不到钱。两者都在发币前一步拦掉。
 
 ### 分账不可变
-`PROJECT_SHARE_BPS = 4000`,持有者 60% / 项目方 40%,均为 `constant`,**无 setter**。
+`PROJECT_SHARE_BPS = 3000`,持有者 70% / 项目方 30%,均为 `constant`,**无 setter**。
 项目方无法移动自己那份。赏金、滑点余量、路由费率档、结算间隔同样全部是常数。
 
 ---
@@ -56,7 +56,7 @@ health 地板 1.20 对应上限 **3.00x**;**5x 算出来正好 1.00,即清算点
 | 规则 | 结论 | 依据 |
 |---|---|---|
 | **001** Base / UI schema / Guardian / No-DoS | ✅ | 继承 `VaultBaseV2`;`vaultUISchema()` 覆盖全部 6 个用户可见方法,且**名字逐个与编译期 selector 比对**(`test_everySchemaMethodNameResolvesToARealSelector`);合约无任何 role-gated 函数,故不存在可把 Guardian 锁在门外的角色。Guardian 的权限是它所有的 beacon。 |
-| **002** Factory / commission | ⚠️ 见 SB-01 | **spec `v2.2`**。 `LeverVaultFactory` 继承 `VaultFactoryBaseV2`;`newVault` 拒绝一切非 VaultPortal 调用并逐项校验参数(5 个 revert 全部有测试);`vaultDataSchema()` 与 `newVault` 的 `vaultData` ABI 一致(一个 address);`isQuoteTokenSupported` 只认原生 BNB;发币校验走 v2.2 的 `_validateBeforeLaunch`——**v2.2 已废弃 `onBeforeNewTokenV6WithVault`,基类对它直接 revert,写在旧钩子上的守卫会静默失效**;有回归测试钉死这一点。`commissionReceiver` 是**发币参数**不是 factory 字段,commissionBps 由 launcher 按税率内部计算,本 factory 不触碰。**但 40% 的项目方分成需要 Flap 书面接受,见 SB-01。** |
+| **002** Factory / commission | ⚠️ 见 SB-01 | **spec `v2.2`**。 `LeverVaultFactory` 继承 `VaultFactoryBaseV2`;`newVault` 拒绝一切非 VaultPortal 调用并逐项校验参数(5 个 revert 全部有测试);`vaultDataSchema()` 与 `newVault` 的 `vaultData` ABI 一致(一个 address);`isQuoteTokenSupported` 只认原生 BNB;发币校验走 v2.2 的 `_validateBeforeLaunch`——**v2.2 已废弃 `onBeforeNewTokenV6WithVault`,基类对它直接 revert,写在旧钩子上的守卫会静默失效**;有回归测试钉死这一点。`commissionReceiver` 是**发币参数**不是 factory 字段,commissionBps 由 launcher 按税率内部计算,本 factory 不触碰。**但 30% 的项目方分成需要 Flap 书面接受,见 SB-01。** |
 | **003** 公平性 / 三明治 | ✅ | 三个工作函数全部无许可。**没有任何特权角色能改滑点、路由、时机或触发条件**——它们全是 `constant`。自动路径不付赏金(触发费已从金库出),手动路径付固定 bps,内部人相对机器人无任何结构性优势。 |
 | **004** 字面量错误 / 双语 | ✅ | **零 custom error**;全部 revert 为 `require()` + `unicode` 中英内联字面量。开发期违反过此条,已全部替换。 |
 | **005** `receive()` gas | ✅ | 冷 **57,433** / 热 **9,133**,上限 1,000,000。另有测试证明 1 wei 与 0 value 均不 revert,以及在 **2,300 gas stipend** 下对已知发送方仍然成功。 |
@@ -154,20 +154,20 @@ Venus 的 ResilientOracle 一次 `getUnderlyingPrice` 要 **26,308** gas(它要�
 
 ## 提交阻断项
 
-### SB-01 — 项目方 40% 分成需要 Flap 书面接受
+### SB-01 — 项目方 30% 分成需要 Flap 书面接受
 
 Flap 对 factory commission 的推荐在 2% 税率下约为 **3%**。参考实现 ShiftVault 的 30% project
-share 已被其自审标为提交阻断,本金库的 40% 更高。
+share 已被其自审标为提交阻断,本金库的 30% 更高。
 
 **这是两层不同的钱。** Flap 的 commission 抽的是税——用户交易产生的、本该进金库的钱;
-本金库**从税里抽 0%**,收到的税 100% 进仓位。项目方的 40% 分的是仓位在市场上赚到的收益,
+本金库**从税里抽 0%**,收到的税 100% 进仓位。项目方的 30% 分的是仓位在市场上赚到的收益,
 那笔钱在建仓前不存在,不来自任何用户,仓位不赚钱时项目方收入为零。
 
 | | 税这一层 | 收益这一层 |
 |---|---|---|
 | Flap commission 推荐(2% 税下) | ~3% | — |
-| 本金库项目方 | **0%** | 40% |
-| 本金库持有者 | — | **60%** |
+| 本金库项目方 | **0%** | 30% |
+| 本金库持有者 | — | **70%** |
 
 请求理由:不与 commission 机制竞争(`commissionReceiver` 本 factory 不触碰);只在创造之后
 分配,不在流转中抽取;与持有者严格同向且持有者恒为 1.5 倍。完整论证见 `SUBMISSION.md`。

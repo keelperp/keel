@@ -89,8 +89,8 @@ contract LeverVaultPositionTest is Test {
         assertApproxEqRel(freed, gain, 0.02e18, "harvest must free the gain, no more");
         assertEq(bounty, freed * 50 / 10_000, "harvest bounty is 0.5%");
         uint256 net = freed - bounty;
-        assertApproxEqAbs(toProject, net * 4000 / 10_000, 2, "project share must be 40%");
-        assertApproxEqAbs(toHolders, net - net * 4000 / 10_000, 2, "holder share must be 60%");
+        assertApproxEqAbs(toProject, net * 3000 / 10_000, 2, "project share must be 30%");
+        assertApproxEqAbs(toHolders, net - net * 3000 / 10_000, 2, "holder share must be 70%");
 
         assertGe(v.healthBps(), 12_000, "harvest must not breach the health floor");
         vm.expectRevert(bytes(unicode"LeverVault: no gain to harvest yet / 暂无可分配的收益"));
