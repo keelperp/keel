@@ -145,6 +145,34 @@ for (const [w, h, label] of [[1440, 900, "desktop"], [390, 844, "mobile"]]) {
     });
 
     const tag = `${path}`;
+    // The gate judged visibility with getBoundingClientRect, which an overlay on top of the page
+    // does not affect at all. An opening animation that never lifts would leave the site blank
+    // and every existing check green, so this waits past its duration and asserts it is gone.
+    await page.waitForTimeout(1700);
+    const opening = await page.evaluate(() => {
+      const el = document.getElementById("intro");
+      if (!el) return { present: false, blocking: false };
+      const cs = getComputedStyle(el);
+      const r = el.getBoundingClientRect();
+      return {
+        present: true,
+        blocking: cs.display !== "none" && cs.visibility !== "hidden" &&
+                  parseFloat(cs.opacity) > 0.01 && r.width > 0 && r.height > 0,
+      };
+    });
+    say(!opening.blocking, `${tag} the opening has lifted and is not covering the page`);
+
+    const figs = await page.evaluate(() => [...document.images].map((i) => ({
+      src: new URL(i.currentSrc || i.src, location.href).pathname,
+      ok: i.complete && i.naturalWidth > 0,
+      alt: (i.getAttribute("alt") ?? "").trim().length,
+      hidden: i.closest("[aria-hidden='true']") !== null,
+    })));
+    const broken = figs.filter((f) => !f.ok);
+    say(broken.length === 0, `${tag} ${figs.length} image(s) all decoded${broken.length ? ` — broken: ${broken[0].src}` : ""}`);
+    const unlabelled = figs.filter((f) => f.alt === 0 && !f.hidden);
+    say(unlabelled.length === 0, `${tag} every content image has alt text${unlabelled.length ? ` — missing on ${unlabelled[0].src}` : ""}`);
+
     say(errors.length === 0, `${tag} no console errors${errors.length ? ": " + errors[0].slice(0, 90) : ""}`);
     say(geo.h1Visible && geo.h1Top >= geo.navBottom - 1, `${tag} h1 clears the sticky nav (h1 top ${Math.round(geo.h1Top)}, nav bottom ${Math.round(geo.navBottom)})`);
     say(geo.overflowX <= 1, `${tag} no horizontal scroll (${geo.overflowX}px)`);
@@ -167,6 +195,20 @@ for (const [w, h, label] of [[1440, 900, "desktop"], [390, 844, "mobile"]]) {
     await page.close();
   }
   await ctx.close();
+}
+
+console.log("\n=== site-wide ===");
+{
+  const seen = new Set();
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  for (const path of PAGES) {
+    const page = await ctx.newPage();
+    await page.goto(base + path, { waitUntil: "networkidle" });
+    for (const src of await page.evaluate(() => [...document.images].map((i) => new URL(i.src, location.href).pathname))) seen.add(src);
+    await page.close();
+  }
+  await ctx.close();
+  say(seen.size >= 10, `${seen.size} distinct images across the site (minimum 10)`);
 }
 
 await browser.close();

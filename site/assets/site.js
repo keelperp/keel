@@ -95,3 +95,26 @@ export const C = {
   mono: '11px "Geist Mono", ui-monospace, monospace',
   monoSm: '10px "Geist Mono", ui-monospace, monospace',
 };
+
+/* The opening. It is opt-in from script, so a reader without JS gets the page with no overlay
+   at all rather than a black screen that never lifts. It also runs once per session: a reader
+   moving between pages should not sit through it five times. */
+(function opening() {
+  const root = document.documentElement;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let seen = false;
+  try { seen = sessionStorage.getItem("keel.intro") === "1"; } catch { seen = false; }
+  if (reduce || seen) return;
+  try { sessionStorage.setItem("keel.intro", "1"); } catch { /* private mode: show it, once */ }
+  root.classList.add("intro-run");
+  const lift = () => {
+    root.classList.add("intro-out");
+    setTimeout(() => {
+      root.classList.remove("intro-run", "intro-out");
+      const el = document.getElementById("intro");
+      if (el) el.remove();
+    }, 560);
+  };
+  // Fixed delay rather than waiting on load: a slow asset must never hold the page behind it.
+  setTimeout(lift, 1180);
+})();

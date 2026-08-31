@@ -31,6 +31,10 @@
 <link rel="stylesheet" href="/assets/base.css">
 </head>
 <body>
+<div id="intro" aria-hidden="true">
+  <div class="mark">keel<span class="dot"></span></div>
+  <div class="rule"></div>
+</div>
 <header class="nav">
   <nav class="wrap nav-in" aria-label="Main">
     <a class="brand" href="/">keel<span>.</span></a>
@@ -72,6 +76,11 @@
 <section>
   <div class="wrap">
     <div class="sec-head"><span class="tag">the panel <span class="sep" aria-hidden="true">//</span> what will be here</span><h2>Six readings, all views</h2></div>
+      <figure class="fig rise">
+        <img src="/assets/fig/verify-surface.png" alt="The view functions a reader can call themselves: nav, leverage, health, pendingAction and the project share constant." loading="lazy" decoding="async" width="1000">
+        <figcaption>Every number on this page comes from one of these calls.</figcaption>
+      </figure>
+
     <div class="grid g3">
       <div class="card stat"><div class="k">nav()</div><div class="v" id="f-nav">&mdash;</div><div class="n">Treasury value in BNB. Supply minus debt, priced by the Venus oracle.</div></div>
       <div class="card stat"><div class="k">currentLeverage()</div><div class="v" id="f-lev">&mdash;</div><div class="n">BNB exposure over net value.</div></div>
