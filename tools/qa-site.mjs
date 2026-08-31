@@ -162,12 +162,41 @@ for (const [w, h, label] of [[1440, 900, "desktop"], [390, 844, "mobile"]]) {
     });
     say(!opening.blocking, `${tag} the opening has lifted and is not covering the page`);
 
-    const figs = await page.evaluate(() => [...document.images].map((i) => ({
-      src: new URL(i.currentSrc || i.src, location.href).pathname,
-      ok: i.complete && i.naturalWidth > 0,
-      alt: (i.getAttribute("alt") ?? "").trim().length,
-      hidden: i.closest("[aria-hidden='true']") !== null,
-    })));
+    const figs = await page.evaluate(() => [...document.images].map((i) => {
+      const r = i.getBoundingClientRect();
+      // Walk the ancestors: an image is invisible if anything above it is, and the element
+      // that hides it is usually a wrapper rather than the image.
+      let opacity = 1, node = i;
+      while (node && node !== document.documentElement) {
+        const cs = getComputedStyle(node);
+        if (cs.display === "none" || cs.visibility === "hidden") { opacity = 0; break; }
+        opacity = Math.min(opacity, parseFloat(cs.opacity || "1"));
+        node = node.parentElement;
+      }
+      return {
+        src: new URL(i.currentSrc || i.src, location.href).pathname,
+        ok: i.complete && i.naturalWidth > 0,
+        alt: (i.getAttribute("alt") ?? "").trim().length,
+        hidden: i.closest("[aria-hidden='true']") !== null,
+        visible: opacity > 0.05 && r.width > 0 && r.height > 0,
+        opacity: opacity.toFixed(2),
+        width: Math.round(r.width),
+        // A figure authored at 1000px is meant to run its column. Compare against the column
+        // rather than against a pixel count, or every mobile render reads as squeezed.
+        wide: (i.getAttribute("width") ?? "") === "1000",
+        fill: (() => {
+          const col = i.closest(".wrap") ?? i.parentElement;
+          const cw = col ? col.getBoundingClientRect().width : 0;
+          return cw > 0 ? r.width / cw : 1;
+        })(),
+      };
+    }));
+    const invisible = figs.filter((f) => !f.visible);
+    say(invisible.length === 0,
+      `${tag} every image is actually visible${invisible.length ? ` — ${invisible[0].src} at opacity ${invisible[0].opacity}` : ""}`);
+    const squeezed = figs.filter((f) => f.wide && f.fill < 0.85);
+    say(squeezed.length === 0,
+      `${tag} every full-width figure fills its column${squeezed.length ? ` — ${squeezed[0].src} at ${Math.round(squeezed[0].fill * 100)}% of it` : ""}`);
     const broken = figs.filter((f) => !f.ok);
     say(broken.length === 0, `${tag} ${figs.length} image(s) all decoded${broken.length ? ` — broken: ${broken[0].src}` : ""}`);
     const unlabelled = figs.filter((f) => f.alt === 0 && !f.hidden);
@@ -195,6 +224,21 @@ for (const [w, h, label] of [[1440, 900, "desktop"], [390, 844, "mobile"]]) {
     await page.close();
   }
   await ctx.close();
+}
+
+console.log("\n=== source rules ===");
+{
+  const { readFile } = await import("node:fs/promises");
+  const offenders = [];
+  for (const path of PAGES) {
+    const file = join(ROOT, path === "/" ? "index.html" : path.replace(/^\/|\/$/g, "") + "/index.html");
+    const html = await readFile(file, "utf8");
+    for (const m of html.matchAll(/<figure[^>]*class="([^"]*)"/g)) {
+      if (/\bfig\b/.test(m[1]) && /\brise\b/.test(m[1])) offenders.push(path);
+    }
+  }
+  say(offenders.length === 0,
+    `no figure depends on the scroll reveal to be visible${offenders.length ? ` — ${offenders[0]}` : ""}`);
 }
 
 console.log("\n=== site-wide ===");

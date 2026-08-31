@@ -89,10 +89,6 @@
         </ul>
       </div>
     
-      <figure class="fig rise">
-        <img src="/assets/fig/wallet-vs-position.png" alt="A two column comparison: on the left, tax reaching a wallet and a treasury somebody publishes; on the right, tax reaching a Venus position the contract holds and a treasury anyone can read." loading="lazy" decoding="async" width="1000">
-        <figcaption>The same 2% either way. What differs is who ends up holding it.</figcaption>
-      </figure>
 </div>
     <p style="margin:14px 0 0;font-size:13.5px;color:var(--fg-quaternary)">
       The cost of that, stated here rather than in a footnote: 3&times; is liquidated by a 16.7% move
@@ -138,7 +134,7 @@
       <span class="tag">the argument <span class="sep" aria-hidden="true">//</span> where tax goes</span>
       <h2>Tax has to go somewhere</h2>
     </div>
-      <figure class="fig rise">
+      <figure class="fig">
         <img src="/assets/fig/tax-route.png" alt="Where each 2% of tax goes: 80% into the vault to build the leveraged position, 20% straight to holders, with burn and liquidity both at zero." loading="lazy" decoding="async" width="1000">
         <figcaption>Fixed at launch and summing to 10000 bps. Burning and liquidity are set to zero, so only two legs are drawn.</figcaption>
       </figure>
@@ -179,7 +175,7 @@
         schedule, and each wake picks a single job by priority &mdash; because a callback has a
         2,000,000 gas ceiling and a build already costs 1.2 million of it.</p>
     </div>
-      <figure class="fig rise">
+      <figure class="fig">
         <img src="/assets/fig/priority-chain.png" alt="The five branches evaluated on every wake, in order: rescue, deploy, harvest, rebalance, or book the next slot and stop." loading="lazy" decoding="async" width="1000">
         <figcaption>One job per wake. The first branch that is true wins, and the vault stops there.</figcaption>
       </figure>
@@ -207,7 +203,7 @@
       <span class="tag">what is fixed <span class="sep" aria-hidden="true">//</span> constants with no setter</span>
       <h2>Four numbers nobody can move</h2>
     </div>
-      <figure class="fig rise">
+      <figure class="fig">
         <img src="/assets/fig/constants.png" alt="The four constants with no setter: 3x target leverage, 1.20 health floor, 30% project share, five minute trigger interval." loading="lazy" decoding="async" width="1000">
         <figcaption>Declared <code class="mono">constant</code>. There is no setter, no role and no governance path to any of them.</figcaption>
       </figure>
