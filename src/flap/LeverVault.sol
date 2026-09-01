@@ -93,7 +93,7 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
     /// @notice Cadence when the last wake found nothing. Checking every 5 minutes forever
     ///         would spend the treasury on trigger fees during a quiet market.
     uint64 public constant IDLE_INTERVAL = 1 hours;
-    /// @dev Rule 008 caps a callback at 2,000,000 gas. A build measures ~1.7M, so the
+    /// @dev Rule 008 caps a callback at 2,000,000 gas. A build measures 1.20-1.24M, so the
     ///      schedule is bought FIRST and the work is attempted second, inside a try —
     ///      a failed job must never break the chain that would have retried it.
     uint256 internal constant WORK_GAS_FLOOR = 1_800_000;
@@ -446,8 +446,8 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
 
         uint8 action = _pickAction();
 
-        // Buy the next slot before doing the work. A build costs ~1.7M gas against a 2M
-        // cap; if it reverted after scheduling, the chain would still be alive to retry.
+        // Buy the next slot before doing the work. A build measures 1.20-1.24M gas against
+        // the 2M cap; if it reverted after scheduling, the chain would still be alive to retry.
         _schedule(action == 0 ? IDLE_INTERVAL : TRIGGER_INTERVAL);
 
         if (action != 0 && gasleft() >= WORK_GAS_FLOOR) {

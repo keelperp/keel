@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Risks · Keel</title>
-<meta name="description" content="A 3x position is liquidated by a 16.7% move. Leverage decays in a flat market. Venus and PancakeSwap are dependencies. The contracts are unaudited.">
+<meta name="description" content="A 3x position is liquidated by a 16.7% move. Leverage decays in a flat market. Venus and PancakeSwap are dependencies. The contracts are not audited by a third party.">
 <meta name="theme-color" content="#141414">
 <meta property="og:url" content="https://www.keelperp.fun/risks/">
 <meta property="og:site_name" content="Keel">
@@ -56,7 +56,7 @@
       <div class="card" style="border-color:rgba(217,180,91,0.45);margin-top:6px">
         <p style="color:var(--warn);font-size:19px;font-weight:600;margin:0">Read these first</p>
         <p style="margin-top:10px;font-size:14.5px"><strong style="color:var(--fg)">The contracts
-          are unaudited</strong>, and <strong style="color:var(--fg)">Flap's Guardian can replace
+          have no third-party security audit</strong>, and <strong style="color:var(--fg)">Flap's Guardian can replace
           the implementation</strong> through the beacon this vault runs behind &mdash; the single largest trust assumption in the design.</p>
       </div>
     </div>
@@ -83,7 +83,7 @@
   <div class="wrap">
     <div class="sec-head"><span class="tag">the list <span class="sep" aria-hidden="true">//</span> worst first</span><h2>Everything that can hurt you</h2></div>
       <figure class="fig">
-        <img src="/assets/fig/risk-board.png" alt="Six risks ranked worst first: liquidation if BNB falls 16.7% against the position; trust moved, not removed, because the Guardian can replace the implementation; settlement costs, the fee paid whether or not anything happened; leverage decay between rebalances; the dividend threshold, below 10,000 KEEL there is no share; and unaudited, no third party has reviewed the code. The dependency list and the liveness risk are not on the board." loading="lazy" decoding="async" width="1000">
+        <img src="/assets/fig/risk-board.png" alt="Six risks ranked worst first: liquidation if BNB falls 16.7% against the position; trust moved, not removed, because the Guardian can replace the implementation; settlement costs, the fee paid whether or not anything happened; leverage decay between rebalances; the dividend threshold, below 10,000 KEEL there is no share; and no third-party security audit, no third party has reviewed the code. The dependency list and the liveness risk are not on the board." loading="lazy" decoding="async" width="1000">
       </figure>
 
     <div class="grid g2">
@@ -119,9 +119,10 @@
           this vault.</p>
       </div>
       <div class="card" style="border-color:rgba(217,180,91,0.4)">
-        <h3 style="color:var(--warn)">The contracts are unaudited</h3>
-        <p style="margin-top:10px">Reviewed adversarially and checked rule by rule against Flap's
-          specification. Not an audit.</p>
+        <h3 style="color:var(--warn)">No third-party security audit</h3>
+        <p style="margin-top:10px">Submitted to Flap for review and checked rule by rule
+            against their specification. That is a compliance review, not a security audit, and no
+            third party has audited this code.</p>
       </div>
     </div>
 
@@ -183,11 +184,11 @@
       <a href="https://x.com/keel_perp" target="_blank" rel="noopener noreferrer">X &middot; @keel_perp</a></div>
     <div><p class="foot-h">Status</p>
       <span style="color:var(--positive)">Factory live</span>
-      <span style="display:block;color:var(--fg-quaternary);padding-top:3px">No token yet &middot; unaudited</span></div>
+      <span style="display:block;color:var(--fg-quaternary);padding-top:3px">No token yet &middot; submitted for review</span></div>
   </div>
   <div class="wrap" style="margin-top:30px;padding-top:18px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--fg-quaternary)">
     A 3&times; position is liquidated by a 16.7% move against it. Venus and PancakeSwap are
-    dependencies. The contracts are unaudited.
+    dependencies. Submitted to Flap for review; no third-party security audit.
   </div>
 </footer>
 <script type="module">

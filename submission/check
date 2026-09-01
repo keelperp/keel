@@ -59,6 +59,13 @@ said=$(cast call "$FACTORY" 'vaultDataSchema()((string,(string,string,string,uin
 [ "$said" = "$want" ] && ok "on-chain schema says ${said}% to the project, matching PROJECT_SHARE_BPS=$bps" \
                       || no "on-chain schema says ${said}% but PROJECT_SHARE_BPS=$bps means ${want}%"
 
+echo; echo "=== flash pool and swap pool are different tiers ==="
+flashfee=$(cast call 0x36696169C63e42cd08ce11f5deeBbCeBae652050 'fee()(uint24)' --rpc-url "$RPC" 2>/dev/null)
+swapfee=$(grep -oE 'SWAP_FEE = [0-9]+' src/flap/LeverVault.sol | grep -oE '[0-9]+')
+[ -n "$flashfee" ] && [ "$flashfee" != "$swapfee" ] \
+  && ok "flash pool is fee tier $flashfee, swaps use $swapfee — a pool is locked inside its own flash callback" \
+  || no "flash and swap would use the same tier ($flashfee) — the callback would revert LOK"
+
 echo; echo "=== quote asset ==="
 q=$(cast call "$FACTORY" 'isQuoteTokenSupported(address)(bool)' 0x0000000000000000000000000000000000000000 --rpc-url "$RPC" 2>/dev/null)
 [ "$q" = "true" ] && ok "native BNB is supported as quote" || no "native BNB reported as $q"

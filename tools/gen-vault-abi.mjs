@@ -19,6 +19,7 @@ const USED = new Set([
   "totalReceived", "totalDeployed", "costBasis", "unrealisedGain", "positionUsd",
   "nextSettlementIn", "pendingAction", "pendingRequestId", "needsRebalance",
   "TARGET_LEVERAGE", "MIN_HEALTH_BPS", "PROJECT_SHARE_BPS",
+  "DEPLOY_BOUNTY_BPS", "HARVEST_BOUNTY_BPS", "REBALANCE_BOUNTY_BPS",
   "deployPending", "harvest", "rebalance", "kickstart",
 ]);
 

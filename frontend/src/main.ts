@@ -132,7 +132,7 @@ async function render() {
        stale and it cannot be switched off.</p>
        <h2>What can go wrong</h2>
        <p class="sub">A 3× position is liquidated by a 16.7% move against it. Venus and PancakeSwap
-       are dependencies. The contracts are unaudited.</p>`,
+       are dependencies. Submitted to Flap for review; no third-party security audit.</p>`,
       route
     );
   } else {

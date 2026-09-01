@@ -4,6 +4,32 @@
 export const vaultAbi = [
   {
     "type": "function",
+    "name": "DEPLOY_BOUNTY_BPS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "HARVEST_BOUNTY_BPS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "MIN_HEALTH_BPS",
     "inputs": [],
     "outputs": [
@@ -18,6 +44,19 @@ export const vaultAbi = [
   {
     "type": "function",
     "name": "PROJECT_SHARE_BPS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "REBALANCE_BOUNTY_BPS",
     "inputs": [],
     "outputs": [
       {

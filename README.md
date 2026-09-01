@@ -82,7 +82,7 @@ with one swap. Cost drops to 0.089% and the loop cap falls from 18 to 3.
 
 The flash pool must be a **different fee tier from the swap pool**: a V3 pool is locked for the
 duration of its own flash callback, so borrowing and swapping in the same pool reverts `LOK`.
-Flash runs on the 0.01% tier, swaps on the deep 0.05% tier.
+Flash runs on the 0.05% WBNB/USDT pool (`FLASH_POOL.fee()` is `500` on chain); swaps route through the 0.01% tier (`SWAP_FEE = 100`).
 
 ### Rebalance bounty — `tools/bounty.py`
 
@@ -233,4 +233,4 @@ rewrite so deep links survive a hard refresh in production — `vite preview` hi
 
 ## Not done yet
 
-- No audit. Repeated adversarial self-review is not an audit.
+- No third-party security audit. Submitted to Flap for review; repeated adversarial self-review is not an audit.

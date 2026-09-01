@@ -12,12 +12,14 @@
  * the checker does not: that VaultABI.ts is a faithful slice of the forge output, and that the
  * two locales stay in step.
  */
+
 // Gate: every name the Vault UI component calls must exist in the generated ABI, and the
 // generated ABI must match what forge just built. A drift here ships a button that reverts.
 import { readFileSync, existsSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { execFileSync } from "node:child_process";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const UI = join(ROOT, "vault-ui");
@@ -62,4 +64,17 @@ const raw = JSON.stringify(man);
 if (raw.includes("REPLACE")) {
   console.log("  NOTE  manifest still has REPLACE placeholders — fill them after the factory is deployed");
 }
+// The currency check above reads out/ and trusts it; it once passed against an artefact 22
+// hours older than the source. Rather than detect staleness -- a timestamp lies after a touch,
+// and keccak is not in node's crypto -- build first, so the artefact it reads is by
+// construction the one this source produces.
+try {
+  execFileSync("forge", ["build", "--silent"], { cwd: ROOT, stdio: "pipe" });
+  console.log("  PASS  contracts rebuilt, so the ABI comparison above ran against this source");
+} catch (e) {
+  const out = (e.stderr?.toString() || e.stdout?.toString() || e.message).trim().split("\n").slice(-3).join(" ");
+  console.log(`  FAIL  forge build failed, so the artefact may not match the source: ${out.slice(0, 140)}`);
+  fail = 1;
+}
+
 process.exit(fail);

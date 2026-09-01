@@ -13,6 +13,10 @@
  * file travels with the package so the stacks below name faces and fall back to system ones, and
  * the component makes no outbound request of any kind. A number that has not loaded renders as an
  * em dash and never as a zero, so an empty read can never be mistaken for an empty vault.
+ *
+ * Every number that describes the rules — the revenue split and the three caller bounties — is
+ * read from the contract, never written here. A vault redeployed with different constants shows
+ * its own numbers without this file changing.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -59,6 +63,18 @@ function healthText(v: Maybe<bigint>, noDebt: string): string {
 function liqMove(v: Maybe<bigint>): string {
   if (v === undefined || v > 10n ** 9n || v <= 10000n) return "—";
   return `${((1 - 10000 / Number(v)) * 100).toFixed(1)}%`;
+}
+
+/** Bare bps, for copy that already says "bps". */
+function bps(v: Maybe<bigint>): string {
+  return v === undefined ? "—" : v.toString();
+}
+
+/** bps as a percentage, trailing zeros trimmed: 2000 -> "20%", 2550 -> "25.5%". */
+function pct(v: Maybe<bigint>): string {
+  if (v === undefined) return "—";
+  const p = Number(v) / 100;
+  return `${Number.isInteger(p) ? p.toString() : p.toFixed(2).replace(/0+$/, "").replace(/\.$/, "")}%`;
 }
 
 function clock(s: Maybe<number>, due: string): string {
@@ -109,6 +125,10 @@ export default function KeelVault(_props: VaultComponentProps) {
   const [pending, setPending] = useState<Maybe<bigint>>();
   const [toHolders, setToHolders] = useState<Maybe<bigint>>();
   const [toProject, setToProject] = useState<Maybe<bigint>>();
+  const [projectShare, setProjectShare] = useState<Maybe<bigint>>();
+  const [deployBounty, setDeployBounty] = useState<Maybe<bigint>>();
+  const [harvestBounty, setHarvestBounty] = useState<Maybe<bigint>>();
+  const [rebalanceBounty, setRebalanceBounty] = useState<Maybe<bigint>>();
   const [action, setAction] = useState<Maybe<number>>();
   const [requestId, setRequestId] = useState<Maybe<bigint>>();
   const [countdown, setCountdown] = useState<Maybe<number>>();
@@ -131,7 +151,7 @@ export default function KeelVault(_props: VaultComponentProps) {
   useEffect(() => {
     let live = true;
     (async () => {
-      const [n, l, tg, h, f, p, th, tp, a, rid, secs] = await Promise.all([
+      const [n, l, tg, h, f, p, th, tp, ps, db, hb, rb, a, rid, secs] = await Promise.all([
         read<bigint>("nav"),
         read<bigint>("currentLeverage"),
         read<bigint>("TARGET_LEVERAGE"),
@@ -140,6 +160,10 @@ export default function KeelVault(_props: VaultComponentProps) {
         read<bigint>("pendingRevenue"),
         read<bigint>("totalHarvested"),
         read<bigint>("totalToProject"),
+        read<bigint>("PROJECT_SHARE_BPS"),
+        read<bigint>("DEPLOY_BOUNTY_BPS"),
+        read<bigint>("HARVEST_BOUNTY_BPS"),
+        read<bigint>("REBALANCE_BOUNTY_BPS"),
         read<number>("pendingAction"),
         read<bigint>("pendingRequestId"),
         read<bigint>("nextSettlementIn"),
@@ -153,6 +177,10 @@ export default function KeelVault(_props: VaultComponentProps) {
       setPending(p);
       setToHolders(th);
       setToProject(tp);
+      setProjectShare(ps);
+      setDeployBounty(db);
+      setHarvestBounty(hb);
+      setRebalanceBounty(rb);
       setAction(a === undefined ? undefined : Number(a));
       setRequestId(rid);
       setCountdown(secs === undefined ? undefined : Number(secs));
@@ -206,6 +234,9 @@ export default function KeelVault(_props: VaultComponentProps) {
     [sdk, context.vaultAddress]
   );
 
+  // The split is derived, never typed. Holders take whatever the project's constant leaves.
+  const holderShare = projectShare === undefined ? undefined : 10_000n - projectShare;
+
   const connected = Boolean(context.userAddress);
   const wrongNetwork = sdk.wallet.isWrongNetwork;
   const canWrite = connected && !wrongNetwork && actionsAvailable;
@@ -237,8 +268,33 @@ export default function KeelVault(_props: VaultComponentProps) {
     </div>
   );
 
+  // One manual call: the button, and directly under it what calling it pays. A rate that has not
+  // loaded prints an em dash inside the sentence rather than a zero bounty.
+  const job = (key: string, label: string, onClick: () => void, bounty: string, tone?: string) => (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <Button disabled={!canWrite || busy !== null} onClick={onClick} style={{ width: "100%" }}>
+        {busy === key ? "…" : label}
+      </Button>
+      <div style={{ fontFamily: MONO, fontSize: 11, lineHeight: 1.45, color: tone ?? COPPER }}>{bounty}</div>
+    </div>
+  );
+
+  // The floor is what bounds the position, so the move that liquidates it derives from the
+  // floor rather than from wherever the position happens to sit right now.
+  const levText = lev(target);
+  const floorLiq = liqMove(floor);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14, color: INK, background: PAPER }}>
+      <div style={{ border: `1px solid ${RUST}`, borderLeft: `3px solid ${RUST}`, borderRadius: 8,
+                    background: "#fdf6f3", padding: "14px 16px" }}>
+        <div style={{ fontFamily: MONO, fontSize: 12.5, color: RUST, fontWeight: 600, lineHeight: 1.45 }}>
+          {t("topWarning").replace("{lev}", levText)}
+        </div>
+        <div style={{ fontSize: 12.5, color: BODY, lineHeight: 1.6, marginTop: 8 }}>
+          {t("topBody").replace("{pct}", floorLiq)}
+        </div>
+      </div>
       <Card style={cardSkin}>
         <CardHeader>
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
@@ -279,6 +335,7 @@ export default function KeelVault(_props: VaultComponentProps) {
             </div>
 
             <div style={{ fontSize: 13, color: BODY, lineHeight: 1.55 }}>{t("auto")}</div>
+            <div style={{ fontSize: 12, color: MUTE, lineHeight: 1.5 }}>{t("autoNoBounty")}</div>
 
             <div
               style={{
@@ -323,7 +380,9 @@ export default function KeelVault(_props: VaultComponentProps) {
               {stat(t("paidHolders"), `${dec(toHolders)} BNB`, undefined, SEA)}
               {stat(t("paidProject"), `${dec(toProject)} BNB`)}
             </div>
-            <div style={{ fontSize: 12, color: MUTE, lineHeight: 1.5 }}>{t("split")}</div>
+            <div style={{ fontSize: 12, color: MUTE, lineHeight: 1.5 }}>
+              {t("split").replace("{holders}", pct(holderShare)).replace("{project}", pct(projectShare))}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -335,30 +394,92 @@ export default function KeelVault(_props: VaultComponentProps) {
         <CardContent>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div style={{ fontSize: 13, color: BODY, lineHeight: 1.55 }}>{t("manualHint")}</div>
+
+            {/* The two facts a community taking this over has to be told outright: nobody's
+                permission is required, and the contract pays whoever does the work. */}
+            <div
+              style={{
+                border: `1px solid ${LINE}`,
+                borderLeft: `3px solid ${COPPER}`,
+                borderRadius: 3,
+                background: PAPER,
+                padding: "12px 14px",
+                fontSize: 13,
+                color: BODY,
+                lineHeight: 1.55,
+              }}
+            >
+              {t("permissionless")}
+            </div>
+
             <div style={{ fontSize: 12, color: MUTE, lineHeight: 1.5 }}>{t("stageBoth")}</div>
             {note ? <Alert tone="danger">{note}</Alert> : null}
             {connected ? null : <Alert>{t("connect")}</Alert>}
             {wrongNetwork ? (
               <Alert tone="warning">{t("wrongNetwork").replace("{chain}", sdk.wallet.requiredChainLabel)}</Alert>
             ) : null}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              <Button disabled={!canWrite || busy !== null} onClick={() => send("deployPending", "deploy")}>
-                {busy === "deploy" ? "…" : t("deploy")}
-              </Button>
-              <Button disabled={!canWrite || busy !== null} onClick={() => send("harvest", "harvest")}>
-                {busy === "harvest" ? "…" : t("harvestBtn")}
-              </Button>
-              <Button disabled={!canWrite || busy !== null} onClick={() => send("rebalance", "rebalance")}>
-                {busy === "rebalance" ? "…" : t("rebalanceBtn")}
-              </Button>
-              {scheduled ? null : (
-                <Button disabled={!canWrite || busy !== null} onClick={() => send("kickstart", "kickstart")}>
-                  {busy === "kickstart" ? "…" : t("kickstart")}
-                </Button>
+
+            {/* The consequence sits against the buttons, not only at the foot of the card. */}
+            <div
+              style={{
+                border: `1px solid ${RUST}`,
+                borderLeft: `3px solid ${RUST}`,
+                borderRadius: 3,
+                background: PAPER,
+                padding: "12px 14px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: MONO,
+                  fontSize: 10.5,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: RUST,
+                }}
+              >
+                {t("beforeYouPress")}
+              </div>
+              <div style={{ fontSize: 12.5, color: RUST, lineHeight: 1.5 }}>{t("warnLiquidation").replace("{lev}", levText).replace("{pct}", floorLiq)}</div>
+              <div style={{ fontSize: 12.5, color: RUST, lineHeight: 1.5 }}>{t("warnUnaudited")}</div>
+              <div style={{ fontSize: 12.5, color: RUST, lineHeight: 1.5 }}>{t("warnRevert")}</div>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                gap: 12,
+                alignItems: "start",
+              }}
+            >
+              {job(
+                "deploy",
+                t("deploy"),
+                () => send("deployPending", "deploy"),
+                t("bountyDeploy").replace("{bps}", bps(deployBounty))
               )}
+              {job(
+                "harvest",
+                t("harvestBtn"),
+                () => send("harvest", "harvest"),
+                t("bountyHarvest").replace("{bps}", bps(harvestBounty))
+              )}
+              {job(
+                "rebalance",
+                t("rebalanceBtn"),
+                () => send("rebalance", "rebalance"),
+                t("bountyRebalance").replace("{bps}", bps(rebalanceBounty))
+              )}
+              {scheduled
+                ? null
+                : job("kickstart", t("kickstart"), () => send("kickstart", "kickstart"), t("bountyNone"), MUTE)}
             </div>
             <div style={{ fontSize: 12, color: RUST, lineHeight: 1.5, borderTop: `1px solid ${LINE}`, paddingTop: 12 }}>
-              {t("risk")}
+              {t("risk").replace("{lev}", levText).replace("{pct}", floorLiq)}
             </div>
           </div>
         </CardContent>

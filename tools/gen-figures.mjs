@@ -388,7 +388,7 @@ await shoot("risk-board.png", W, 430, `<body style="padding:${PAD}px">
        ["settlement costs","the fee is paid whether or not anything happened",WARN],
        ["leverage decays","between rebalances it drifts from target",MUTE],
        ["dividend threshold","below 10,000 KEEL there is no share",MUTE],
-       ["unaudited","no third party has reviewed this code",NEG]]
+       ["no security audit","submitted to Flap for review; no third party has reviewed this code",NEG]]
       .map(([k,v,c])=>`
       <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:${SURF};border-left:3px solid ${c}">
         <span class="val" style="width:210px;font-size:13px;color:${c}">${k}</span>
