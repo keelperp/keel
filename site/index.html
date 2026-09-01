@@ -53,12 +53,11 @@
 <section>
   <div class="wrap">
     <div style="display:flex;flex-direction:column;gap:26px">
-      <div class="tag">keel <span class="sep" aria-hidden="true">//</span> a treasury that is a position</div>
+      <div class="tag">keel <span class="sep" aria-hidden="true">//</span> the treasury is a position</div>
       <h1>Tax does not go to a wallet.<br>It goes into a position.</h1>
-      <p class="lede">Every buy and sell pays 2%, and the contract levers it into a 3&times; BNB
-          long it holds itself. <strong style="color:var(--fg)">So the treasury moves on days
-          nobody trades.</strong> It settles every five minutes on its own, and 70% of each gain
-          reaches holders as WBNB. No operator account, no published NAV, no pause.</p>
+      <p class="lede">Every buy and sell pays 2%, and it becomes a 3&times; BNB long the contract
+          holds itself. <strong style="color:var(--fg)">So the treasury moves on days nobody
+          trades.</strong> No operator account, no published NAV, no pause.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <a class="btn primary" href="/how-it-works/">See how it works</a>
         <a class="btn" href="/vault/">Read the vault live</a>
@@ -69,30 +68,9 @@
 
 <section style="border-top:0;padding-top:0">
   <div class="wrap">
-    <div class="grid g2" style="gap:0;border:1px solid var(--line);border-radius:10px;overflow:hidden">
-      <div style="padding:26px 24px;border-right:1px solid var(--line)">
-        <span class="tag">most tokens with a tax</span>
-        <ul style="list-style:none;padding:0;margin:16px 0 0;display:flex;flex-direction:column;gap:11px;color:var(--fg-tertiary)">
-          <li>The tax reaches a wallet.</li>
-          <li>What happens next is a promise: buyback, ecosystem, marketing.</li>
-          <li>The treasury is a number somebody publishes.</li>
-          <li>No trades, no income.</li>
-        </ul>
-      </div>
-      <div style="padding:26px 24px;background:var(--surface)">
-        <span class="tag">keel <span class="sep" aria-hidden="true">//</span> on chain, every step</span>
-        <ul style="list-style:none;padding:0;margin:16px 0 0;display:flex;flex-direction:column;gap:11px">
-          <li>The tax reaches a Venus position the contract holds.</li>
-          <li>What happens next is a <code class="mono" style="color:var(--accent)">constant</code> with no setter.</li>
-          <li>The treasury is a <code class="mono" style="color:var(--accent)">view</code> function you call yourself.</li>
-          <li><strong style="color:var(--fg)">It moves whenever BNB moves.</strong></li>
-        </ul>
-      </div>
-    
-</div>
-    <p style="margin:14px 0 0;font-size:13.5px;color:var(--fg-quaternary)">
-      The cost of that, stated here rather than in a footnote: 3&times; is liquidated by a 16.7% move
-      against it. <a href="/risks/">Read the risks</a>.
+    <p style="margin:0;font-size:13.5px;color:var(--fg-quaternary)">
+      Stated here, not in a footnote: a 16.7% move against 3&times; liquidates it.
+      <a href="/risks/">Read the risks.</a>
     </p>
   </div>
 </section>
@@ -101,13 +79,12 @@
   <div class="wrap">
     <figure class="viz" style="margin:0">
       <div class="viz-head">
-        <span class="tag">settlement clock <span class="sep" aria-hidden="true">//</span> five minute cycle</span>
+        <span class="tag">settlement clock <span class="sep" aria-hidden="true">//</span> five minutes</span>
         <span class="tag" id="clockState" aria-hidden="true">five-minute cycle</span>
       </div>
       <canvas id="heroCanvas" aria-hidden="true"></canvas>
       <figcaption>
-        Five minutes, then one job, picked by priority. Under the track: the supply leg at three
-        times net value, the debt leg beneath it, health 1.208, Venus liquidation at 1.00.
+        Five minutes, then one job by priority. The supply leg stands at three times net value with the debt leg beneath it; health 1.208, and Venus liquidates at 1.00.
       </figcaption>
     </figure>
   </div>
@@ -116,10 +93,10 @@
 <section>
   <div class="wrap">
     <div class="grid g4">
-      <div class="stat card"><div class="k">Leverage</div><div class="v">2.96&times;</div><div class="n">Measured on live BNB Chain state, three sizes.</div></div>
-      <div class="stat card"><div class="k">Health</div><div class="v pos">1.208</div><div class="n">Liquidated only by a 16.7% move against it.</div></div>
-      <div class="stat card"><div class="k">Settles every</div><div class="v">5 min</div><div class="n">By Flap's trigger service. Nobody presses anything.</div></div>
-      <div class="stat card"><div class="k">Of every gain</div><div class="v">70%</div><div class="n">To holders as WBNB. Constant, no setter.</div></div>
+      <div class="stat card"><div class="k">Leverage</div><div class="v">2.96&times;</div><div class="n">Measured on chain, three sizes.</div></div>
+      <div class="stat card"><div class="k">Health</div><div class="v pos">1.208</div><div class="n">16.7% against it liquidates.</div></div>
+      <div class="stat card"><div class="k">Settles every</div><div class="v">5 min</div><div class="n">Flap's trigger. Nobody presses.</div></div>
+      <div class="stat card"><div class="k">Every gain</div><div class="v">70%</div><div class="n">Paid as WBNB.</div></div>
     </div>
   </div>
 </section>
@@ -127,23 +104,20 @@
 <section>
   <div class="wrap">
     <div class="sec-head">
-      <span class="tag">the argument <span class="sep" aria-hidden="true">//</span> where tax goes</span>
+      <span class="tag">the tax <span class="sep" aria-hidden="true">//</span> where it goes</span>
       <h2>Tax has to go somewhere</h2>
-      <p class="lede">Most of it reaches a wallet, and what happens next is off-chain and
-        unverifiable. This tax becomes a 3&times; BNB long on Venus that the contract borrows and
-        holds itself &mdash; not a buyback, not stablecoins sitting still.</p>
+      <p class="lede">Most tax reaches a wallet on a promise: buyback, ecosystem, marketing.
+        No trades, no income.</p>
     </div>
       <figure class="fig">
-        <img src="/assets/fig/tax-route.png" alt="Where each 2% of tax goes: 80% into the vault to build the leveraged position, 20% straight to holders, with burn and liquidity both at zero." loading="lazy" decoding="async" width="1000">
-        <figcaption>Fixed at launch and summing to 10000 bps. Burning and liquidity are set to zero, so only two legs are drawn.</figcaption>
+        <img src="/assets/fig/tax-route.png" alt="Where each 2% of tax goes, fixed at launch and summing to 10000 bps: 80% into the vault, where it becomes a 3x BNB long the contract holds; 20% straight to holders, paid at once; burn 0% and liquidity 0%, which is why only two legs are drawn. Not a buyback, not stablecoins sitting still." loading="lazy" decoding="async" width="1000">
       </figure>
 
       <figure class="viz" style="margin:26px 0 0">
         <div class="viz-head"><span class="tag">tax split <span class="sep" aria-hidden="true">//</span> 2% per trade</span></div>
         <canvas id="splitCanvas" aria-hidden="true"></canvas>
         <figcaption>
-          The same two legs, moving: 80% streams into the vault and becomes leveraged position,
-          20% reaches holders at once through the token's own dividend contract.
+          Holders are paid by the token's own dividend contract.
         </figcaption>
       </figure>
   </div>
@@ -152,27 +126,23 @@
 <section>
   <div class="wrap">
     <div class="sec-head">
-      <span class="tag">the loop <span class="sep" aria-hidden="true">//</span> one job per wake</span>
-      <h2>It settles itself, and only does one thing at a time</h2>
-      <p class="lede">No keeper account. Flap's trigger service wakes the vault, and one wake does
-        one job &mdash; the callback ceiling is 2,000,000 gas and a build already spends 1.2 million
-        of it.</p>
+      <span class="tag">the loop <span class="sep" aria-hidden="true">//</span> one job</span>
+      <h2>It settles itself, one job at a time</h2>
+      <p class="lede">No keeper account.</p>
     </div>
       <figure class="fig">
-        <img src="/assets/fig/priority-chain.png" alt="The five branches evaluated on every wake, in order: rescue, deploy, harvest, rebalance, or book the next slot and stop." loading="lazy" decoding="async" width="1000">
-        <figcaption>One job per wake. The first branch that is true wins, and the vault stops there.</figcaption>
+        <img src="/assets/fig/priority-chain.png" alt="Every wake, the first true branch wins and the vault stops there: health under 1.10 rescues by shrinking both legs; pending of 0.01 BNB or more deploys, building toward 3x; a gain of 0.02 BNB or more harvests, 70/30, paid in WBNB; leverage outside 5% rebalances back to target; none of the above books the next slot and stops. Woken every five minutes by Flap's trigger service, spending 1.20 to 1.24M gas against a 2,000,000 cap, which is why one wake does one job." loading="lazy" decoding="async" width="1000">
       </figure>
 
     <figure class="viz" style="margin:0">
       <div class="viz-head">
-        <span class="tag">priority chain <span class="sep" aria-hidden="true">//</span> evaluated every wake</span>
+        <span class="tag">priority chain <span class="sep" aria-hidden="true">//</span> every wake</span>
         <span class="tag">gas 1.20&ndash;1.24M <span class="sep" aria-hidden="true">/</span> 2,000,000 cap</span>
       </div>
       <canvas id="chainCanvas" aria-hidden="true"></canvas>
       <figcaption>
-        Under health 1.10 the vault deleverages at once and the hourly cooldown is waived. With
-        nothing to do it books the next wake an hour out instead of five minutes, so a quiet market
-        does not spend the treasury on trigger fees.
+        Under 1.10 the hourly cooldown is waived; the idle hour stops a quiet market spending the
+        treasury on trigger fees.
       </figcaption>
     </figure>
   </div>
@@ -181,32 +151,20 @@
 <section>
   <div class="wrap">
     <div class="sec-head">
-      <span class="tag">what is fixed <span class="sep" aria-hidden="true">//</span> constants with no setter</span>
+      <span class="tag">what is fixed <span class="sep" aria-hidden="true">//</span> no setter</span>
       <h2>Four numbers nobody can move</h2>
     </div>
       <figure class="fig">
-        <img src="/assets/fig/constants.png" alt="The four constants with no setter: 3x target leverage, 1.20 health floor, 30% project share, five minute trigger interval." loading="lazy" decoding="async" width="1000">
-        <figcaption>Declared <code class="mono">constant</code>. There is no setter, no role and no governance path to any of them.</figcaption>
+        <img src="/assets/fig/constants.png" alt="The four constants, with no setter, no role and no governance path to any of them: TARGET_LEVERAGE 3x, MIN_HEALTH_BPS 12000 for a health floor of 1.20, PROJECT_SHARE_BPS 3000 for a 30% project share, leaving holders 70% of every gain, always 2.33 times the project's share, and TRIGGER_INTERVAL five minutes, stretched to one hour after a wake that found nothing to do." loading="lazy" decoding="async" width="1000">
+        <figcaption>Declared <code class="mono">constant</code>&mdash;MIN_HEALTH_BPS 12000, PROJECT_SHARE_BPS 3000. The 1.20 floor, not Venus's 80% collateral factor, caps what a build may borrow.</figcaption>
       </figure>
 
-    <div class="scroll rise" tabindex="0" role="region" aria-label="Table, scrollable">
-      <table>
-        <thead><tr><th>Constant</th><th class="num">Value</th><th>What it decides</th></tr></thead>
-        <tbody>
-          <tr><td class="name">TARGET_LEVERAGE</td><td class="num">3&times;</td><td>Venus's 80% collateral factor makes 3&times; the ceiling a 1.20 health floor can hold.</td></tr>
-          <tr><td class="name">MIN_HEALTH_BPS</td><td class="num">12000</td><td>Caps the debt a build may take on &mdash; this floor, not Venus’s own limit.</td></tr>
-          <tr><td class="name">PROJECT_SHARE_BPS</td><td class="num">3000</td><td>The project's share of a gain; holders take the other 70%, always 2.33&times; it.</td></tr>
-          <tr><td class="name">Settlement interval</td><td class="num">5 min</td><td>One hour when the last wake found nothing to do.</td></tr>
-        </tbody>
-      </table>
-    </div>
     <div class="card" style="margin-top:16px;border-color:rgba(217,180,91,0.4)">
-      <h3 style="color:var(--warn)">But the implementation itself can be replaced</h3>
-      <p style="margin-top:10px;font-size:14.5px">The vault runs behind a beacon proxy owned by
-        Flap's Guardian, and that upgrade path is the emergency mechanism &mdash; it is why the
-        vault ships no emergency-withdraw function. An upgrade can change every constant above,
-        add a pause, or add a withdrawal. <a href="/risks/">The project's largest trust
-        assumption</a>, and not ours to remove.</p>
+      <h3 style="color:var(--warn)">But the implementation can be replaced</h3>
+      <p style="margin-top:10px;font-size:14.5px">Flap's Guardian owns the beacon proxy. That
+        upgrade path is the emergency mechanism&mdash;why no emergency-withdraw exists&mdash;and
+        it can change every constant above, add a pause, add a withdrawal. <a href="/risks/">The
+        largest trust assumption</a>, not ours to remove.</p>
     </div>
   </div>
 </section>
@@ -218,10 +176,9 @@
       <h2>The reserve is not in anyone's account</h2>
     </div>
       <figure class="fig">
-        <img src="/assets/fig/reserve-shapes.png" alt="Three places a treasury can live: a multisig somebody controls, a perp position held at a venue on an account, and this vault, where Venus holds the collateral and the contract itself is the borrower." loading="lazy" decoding="async" width="1000">
-        <figcaption>A keeper-run reserve is worth whatever its operator publishes, and buying pauses
-          when that reading goes stale. Here it is <code class="mono">nav()</code>, a view over chain
-          state that cannot go stale, and if the operator vanishes the position stays where it is.</figcaption>
+        <img src="/assets/fig/reserve-shapes.png" alt="Three places a treasury can live: a multisig somebody controls, a perp position held at a venue on an account, and this vault, where Venus holds the collateral and the contract itself is the borrower, with no account in between and nobody to ask for it back. Here the reserve is nav(), a view over chain state, so if the operator vanishes the position stays where it is." loading="lazy" decoding="async" width="1000">
+        <figcaption>A keeper-run reserve is worth what its operator publishes, and buying pauses
+          when that reading goes stale. <code class="mono">nav()</code> cannot go stale.</figcaption>
       </figure>
   </div>
 </section>
@@ -229,13 +186,11 @@
 <section>
   <div class="wrap narrow" style="text-align:center">
     <h2>Everything on this page can be checked</h2>
-    <p class="lede" style="margin:14px auto 0">Sixty-nine assertions against the contracts and BNB
-      Chain as it stands. One command.</p>
   </div>
   <div class="wrap">
     <figure class="fig">
-      <img src="/assets/fig/three-calls.png" alt="Three view calls answer the whole page: nav() for what it is worth, health() for how far it is from liquidation, pendingAction() for what the next wake will do. All view: no key, no archive node, no indexer." loading="lazy" decoding="async" width="1000">
-      <figcaption style="margin:0 auto;text-align:center">Nobody publishes these numbers, so nobody can stop publishing them.</figcaption>
+      <img src="/assets/fig/three-calls.png" alt="Three view calls answer the whole page: nav() for what it is worth, health() for how far it is from liquidation, pendingAction() for what the next wake will do. All view: no key, no archive node, no indexer. The sixty-nine assertions run against these live contracts and BNB Chain as it stands." loading="lazy" decoding="async" width="1000">
+      <figcaption style="margin:0 auto;text-align:center">Sixty-nine assertions, one command. Nobody publishes these numbers, so nobody can stop publishing them.</figcaption>
     </figure>
   </div>
   <div class="wrap narrow" style="text-align:center">

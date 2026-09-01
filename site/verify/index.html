@@ -57,56 +57,44 @@ pre.code .g { color: var(--positive); }
 <section>
   <div class="wrap">
     <div style="display:flex;flex-direction:column;gap:20px">
-      <div class="tag">verify <span class="sep" aria-hidden="true">//</span> nothing here is on our word</div>
+      <div class="tag">verify <span class="sep" aria-hidden="true">//</span> not our word</div>
       <h1>Every number, reproducible</h1>
-      <p class="lede">Sixty-nine checks run, thirty-three of them against BNB Chain as it stands. No private key, no
-        archive node, nothing broadcast. If a number on this site is wrong, this is how you catch
-        it.</p>
+      <p class="lede">Sixty-nine checks. No key, no archive node, nothing broadcast.</p>
     </div>
   </div>
 </section>
 
 <section style="border-top:0;padding-top:0">
   <div class="wrap">
-    <pre class="code rise"><span class="c"># the whole suite</span>
-<span class="k">forge build</span> &amp;&amp; <span class="k">bash scripts/test.sh</span>
+    <pre class="code rise"><span class="k">forge build</span> &amp;&amp; <span class="k">bash scripts/test.sh</span>
 
-<span class="g">  13 passed</span>   <span class="c">offline: schema, factory guards, launch validation, v2.2 baseline</span>
-<span class="g">  13 passed</span>   <span class="c">forked:  authorization, guards, receive stipend</span>
-<span class="g">   2 passed</span>   <span class="c">forked:  receive gas budget (rule 005)</span>
-<span class="g">  33 passed</span>   <span class="c">live:    build / harvest / automatic settlement</span>
-<span class="g">   8 passed</span>   <span class="c">vault UI: ABI currency and i18n coverage</span>
-             <span class="c">sizes:   all within limit</span></pre>
+<span class="g">  69 passed</span>   <span class="c">13 offline, 15 forked, 33 live, 8 vault UI</span>
+             <span class="c">sizes within limit</span></pre>
   </div>
 </section>
 
 <section>
   <div class="wrap">
     <div class="sec-head">
-      <span class="tag">the method <span class="sep" aria-hidden="true">//</span> why not a fork</span>
-      <h2>The position checks run as one atomic call</h2>
+      <span class="tag">method <span class="sep" aria-hidden="true">//</span> not a fork</span>
+      <h2>One atomic call</h2>
     </div>
       <figure class="fig">
         <img src="/assets/fig/verify-surface.png" alt="The view functions a reader can call themselves: nav, leverage, health, pendingAction and the project share constant." loading="lazy" decoding="async" width="1000">
-        <figcaption>All view functions. Call them against the chain and you have priced the treasury yourself.</figcaption>
+        <figcaption>All view. Price the treasury.</figcaption>
       </figure>
 
     <div class="grid g2">
       <div style="display:flex;flex-direction:column;gap:16px">
-        <p>Exercising the position takes about fifty seconds of wall clock through Venus and
-          PancakeSwap. BNB Chain's public nodes prune state after roughly ninety-six seconds and
-          there is no free archive node, so a forked suite dies partway through with
-          <code class="mono neg">missing trie node</code> &mdash; confirmed against both a direct
-          fork and a local anvil cache.</p>
-        <p>So those checks run as a single <code class="mono" style="color:var(--accent)">eth_call</code>
-          with the probe's bytecode injected by state override.</p>
+        <p>The position takes ~50s through Venus and PancakeSwap; BNB Chain prunes at ~96s, no free archive, so a fork dies mid-run on
+          <code class="mono neg">missing trie node</code> &mdash; direct fork and anvil alike.</p>
+        <p>Instead: one <code class="mono" style="color:var(--accent)">eth_call</code>, probe bytecode injected by state override.</p>
       </div>
       <div class="card">
-        <p style="font-size:19px;font-weight:600;color:var(--fg);margin:0">Why it beats a fork here</p>
-        <ul style="margin:12px 0 0;padding-left:18px;color:var(--fg-body);font-size:14.5px;line-height:1.65">
-          <li style="margin-bottom:8px">Runs against <strong style="color:var(--fg)">current state</strong>, not a historical snapshot.</li>
-          <li style="margin-bottom:8px">Atomic, so mid-run drift cannot pollute it. A fork against a load-balanced RPC can &mdash; five calls in a row spanned 19 blocks.</li>
-          <li>Needs nothing but a public node. No archive, no key.</li>
+        <ul style="margin:0;padding-left:18px;color:var(--fg-body);font-size:14.5px;line-height:1.65">
+          <li style="margin-bottom:8px">Current state, not a snapshot.</li>
+          <li style="margin-bottom:8px">Atomic. Five calls on a load-balanced RPC spanned 19 blocks.</li>
+          <li>Public node only.</li>
         </ul>
       </div>
     </div>
@@ -115,22 +103,22 @@ pre.code .g { color: var(--positive); }
 
 <section>
   <div class="wrap">
-    <div class="sec-head"><span class="tag">coverage <span class="sep" aria-hidden="true">//</span> what the 69 cover</span><h2>What is actually asserted</h2></div>
+    <div class="sec-head"><span class="tag">coverage <span class="sep" aria-hidden="true">//</span> all 69</span><h2>What is asserted</h2></div>
       <figure class="fig" style="margin-bottom:22px">
         <img src="/assets/fig/assertions.png" alt="Three cards for the groups that run live against the chain: build with 12 assertions, harvest with 10, settlement with 11. A note underneath reads that the forge suite adds 28 more and the position-lifecycle group is skipped by design because it needs an archive RPC that BNB Chain does not offer for free." loading="lazy" decoding="async" width="1000">
-        <figcaption>The three groups that run live, one atomic <code class="mono">eth_call</code> each; the table adds the other thirty-six.</figcaption>
+        <figcaption>One <code class="mono">eth_call</code> per live group.</figcaption>
       </figure>
     <div class="scroll rise" tabindex="0" role="region" aria-label="Table, scrollable">
       <table>
         <thead><tr><th>Area</th><th class="num">Checks</th><th>Examples</th></tr></thead>
         <tbody>
-          <tr><td class="name">Build</td><td class="num">12</td><td>Leverage in band, health above the floor, cost under 1%, receive() under the gas cap &mdash; at three sizes.</td></tr>
-          <tr><td class="name">Harvest</td><td class="num">10</td><td>Frees the gain and no more, 60/40 exact, health holds, a second harvest is refused.</td></tr>
-          <tr><td class="name">Settlement</td><td class="num">11</td><td>Buys a real slot from the trigger service, refuses impostors and replays, fits the 2M callback cap.</td></tr>
-          <tr><td class="name">Authorization</td><td class="num">13</td><td>Trigger sender, request id, self-only calls, initialize once, the 2,300-gas stipend guard.</td></tr>
-          <tr><td class="name">Factory &amp; schema</td><td class="num">13</td><td>Portal-only creation, launch validation, beacon ownership, every schema name resolves to a real selector.</td></tr>
-          <tr><td class="name">receive() gas</td><td class="num">2</td><td>Cold and warm paths against Flap's 1,000,000 cap; never reverts.</td></tr>
-          <tr><td class="name">Vault UI</td><td class="num">8</td><td>Generated ABI is current, both locales cover the same keys.</td></tr>
+          <tr><td class="name">Build</td><td class="num">12</td><td>Leverage in band, health above floor, cost &lt;1%, receive() gas cap, three sizes.</td></tr>
+          <tr><td class="name">Harvest</td><td class="num">10</td><td>Gain only, 60/40 exact, health holds, no second harvest.</td></tr>
+          <tr><td class="name">Settlement</td><td class="num">11</td><td>Real trigger slot, impostors and replays refused, 2M callback cap.</td></tr>
+          <tr><td class="name">Authorization</td><td class="num">13</td><td>Trigger sender, request id, self-only, initialize once, 2,300-gas stipend.</td></tr>
+          <tr><td class="name">Factory &amp; schema</td><td class="num">13</td><td>Portal-only creation, launch validation, beacon ownership, schema names map to selectors, v2.2 baseline.</td></tr>
+          <tr><td class="name">receive() gas</td><td class="num">2</td><td>Cold and warm under Flap's 1,000,000 cap, never reverts, rule 005.</td></tr>
+          <tr><td class="name">Vault UI</td><td class="num">8</td><td>ABI current, locales in sync.</td></tr>
         </tbody>
       </table>
     </div>
@@ -139,20 +127,16 @@ pre.code .g { color: var(--positive); }
 
 <section>
   <div class="wrap">
-    <div class="sec-head"><span class="tag">once deployed <span class="sep" aria-hidden="true">//</span> read it directly</span><h2>Three calls that answer everything</h2></div>
+    <div class="sec-head"><span class="tag">once deployed <span class="sep" aria-hidden="true">//</span> read</span><h2>Three calls answer everything</h2></div>
       <figure class="fig" style="margin-bottom:22px">
         <img src="/assets/fig/three-calls.png" alt="A numbered list of three view calls: nav() for what the treasury is worth, health() for how far the position is from liquidation, pendingAction() for what the next wake will do. Underneath: all view, no key, no archive node, no indexer." loading="lazy" decoding="async" width="1000">
-        <figcaption>None of it depends on anyone publishing anything &mdash; these read Venus and the trigger service directly, in whatever block you call them.</figcaption>
+        <figcaption>Reads Venus and the trigger service.</figcaption>
       </figure>
-    <pre class="code rise"><span class="c"># what the treasury is worth, right now</span>
-cast call $VAULT <span class="k">"nav()(uint256)"</span> --rpc-url https://bsc-dataseed.bnbchain.org
-
-<span class="c"># how far the position is from liquidation (10000 = liquidated)</span>
-cast call $VAULT <span class="k">"healthBps()(uint256)"</span> --rpc-url https://bsc-dataseed.bnbchain.org
-
-<span class="c"># what the next wake will do, and when</span>
-cast call $VAULT <span class="k">"pendingAction()(uint8)"</span> --rpc-url https://bsc-dataseed.bnbchain.org
-cast call $VAULT <span class="k">"nextSettlementIn()(uint256)"</span> --rpc-url https://bsc-dataseed.bnbchain.org</pre>
+    <pre class="code rise">export ETH_RPC_URL=https://bsc-dataseed.bnbchain.org
+cast call $VAULT <span class="k">"nav()(uint256)"</span>
+cast call $VAULT <span class="k">"healthBps()(uint256)"</span>        <span class="c"># 10000 = liquidated</span>
+cast call $VAULT <span class="k">"pendingAction()(uint8)"</span>
+cast call $VAULT <span class="k">"nextSettlementIn()(uint256)"</span></pre>
   </div>
 </section>
 
@@ -161,7 +145,7 @@ cast call $VAULT <span class="k">"nextSettlementIn()(uint256)"</span> --rpc-url 
     <h2>Not deployed yet</h2>
     <figure class="fig" style="align-items:center;margin:22px 0 26px">
       <img src="/assets/fig/status.png" alt="A four step progress line: factory deployed, marked done; registered by Flap, marked waiting; token launched, not yet; vault live, not yet. A note reads that the factory is live on BNB Chain with its beacon already Guardian-owned, and nothing else has happened." loading="lazy" decoding="async" width="1000">
-      <figcaption>The factory is live on BNB Chain and no token has been launched; when one exists, its addresses appear here and on the vault page.</figcaption>
+      <figcaption>Factory live on BNB Chain, no token yet; Guardian can replace the implementation. Addresses land here.</figcaption>
     </figure>
     <a class="btn" href="/vault/">The vault</a>
   </div>

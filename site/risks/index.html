@@ -52,15 +52,12 @@
     <div style="display:flex;flex-direction:column;gap:20px">
       <div class="tag">risks <span class="sep" aria-hidden="true">//</span> read before buying</div>
       <h1>What can go wrong</h1>
-      <p class="lede">Nothing is deployed yet. When it is, it will be beta software holding real
-        money, and the numbers that argue against this design are on this page rather than in a
-        footnote.</p>
+      <p class="lede">No token is deployed yet. When one is, it is beta software holding real money.</p>
       <div class="card" style="border-color:rgba(217,180,91,0.45);margin-top:6px">
-        <p style="color:var(--warn);font-size:19px;font-weight:600;margin:0">Two things to read before anything else</p>
+        <p style="color:var(--warn);font-size:19px;font-weight:600;margin:0">Read these first</p>
         <p style="margin-top:10px;font-size:14.5px"><strong style="color:var(--fg)">The contracts
           are unaudited</strong>, and <strong style="color:var(--fg)">Flap's Guardian can replace
-          the implementation</strong> through the beacon this vault runs behind. Everything else on
-          this page is downstream of those two.</p>
+          the implementation</strong> through the beacon this vault runs behind &mdash; the single largest trust assumption in the design.</p>
       </div>
     </div>
   </div>
@@ -74,12 +71,9 @@
       </div>
       <canvas id="liqCanvas" aria-hidden="true"></canvas>
       <figcaption>
-        How far BNB has to fall before each leverage target is liquidated on Venus, at its 80%
-        collateral factor. The four rows read: 2x at health 1.600 surviving a 37.5% drop; 3x, the level
-        this vault builds, at health 1.200 surviving 16.7%; 4x at health 1.067 surviving only 6.3%;
-        and 5x at health 1.000, where the position is already at the
-        liquidation point before the price has moved at all, which is why this vault
-        hard-codes 3x rather than offering 5x with a warning.
+        How far BNB must fall before each leverage is liquidated on Venus, at its 80%
+        collateral factor. This vault hard-codes 3&times;: health 1.200, liquidated by a 16.7%
+        drop. 5&times; starts at the liquidation point.
       </figcaption>
     </figure>
   </div>
@@ -89,64 +83,52 @@
   <div class="wrap">
     <div class="sec-head"><span class="tag">the list <span class="sep" aria-hidden="true">//</span> worst first</span><h2>Everything that can hurt you</h2></div>
       <figure class="fig">
-        <img src="/assets/fig/risk-board.png" alt="Six risks ranked worst first: liquidation if BNB falls 16.7% against the position; trust moved, not removed, because the Guardian can replace the implementation; settlement costs, paid whether or not anything happened; leverage decay between rebalances; the dividend threshold, below 10,000 KEEL there is no share; and unaudited, no third party has reviewed the code." loading="lazy" decoding="async" width="1000">
-        <figcaption>The whole board, worst first, including the dividend floor of 10,000 KEEL. The dependency list and the liveness risk are below it, not on it.</figcaption>
+        <img src="/assets/fig/risk-board.png" alt="Six risks ranked worst first: liquidation if BNB falls 16.7% against the position; trust moved, not removed, because the Guardian can replace the implementation; settlement costs, the fee paid whether or not anything happened; leverage decay between rebalances; the dividend threshold, below 10,000 KEEL there is no share; and unaudited, no third party has reviewed the code. The dependency list and the liveness risk are not on the board." loading="lazy" decoding="async" width="1000">
       </figure>
 
     <div class="grid g2">
       <div class="card" style="border-color:rgba(217,106,106,0.4)">
         <h3 style="color:var(--negative)">A 16.7% move liquidates the position</h3>
-        <p style="margin-top:10px">Liquidated, not "may be affected by volatility": Venus sells the
-          collateral, and the treasury is permanently smaller.</p>
+        <p style="margin-top:10px">Venus sells the collateral; the treasury is permanently smaller.</p>
       </div>
       <div class="card" style="border-color:rgba(217,180,91,0.4)">
         <h3 style="color:var(--warn)">Flap's Guardian can replace the implementation</h3>
-        <p style="margin-top:10px">Flap's Guardian owns the beacon this vault runs behind, and that
-          upgrade path <em style="font-style:normal;color:var(--fg-strong)">is</em> the emergency
-          mechanism &mdash; the reason the vault ships no emergency-withdraw of its own. The single
-          largest trust assumption in the design.</p>
+        <p style="margin-top:10px">That beacon upgrade <em style="font-style:normal;color:var(--fg-strong)">is</em>
+          the emergency mechanism, so the vault ships no emergency-withdraw of its own.</p>
       </div>
       <div class="card">
-        <h3>We are not trustless. We changed who you trust.</h3>
-        <p style="margin-top:10px">Venus for the borrow, PancakeSwap for the trade, Flap's trigger
-          service for the wake. Any of them failing reaches the treasury. Better than one operator's
-          private key; not the absence of one.</p>
+        <h3>Trust moved, not removed</h3>
+        <p style="margin-top:10px">Venus lends, PancakeSwap trades, Flap's service wakes; any failure
+          reaches the treasury. If it stops, anyone may restart the chain &mdash; nobody is
+          <em style="font-style:normal;color:var(--fg-strong)">obliged</em> to, and a failed trigger
+          is recorded as failed.</p>
       </div>
       <div class="card">
-        <h3>Settlement costs the treasury while nothing happens</h3>
-        <p style="margin-top:10px">0.0002 BNB per wake, work or no work. An empty wake books the next
-          one an hour out instead of five minutes: slower bleed, not no bleed. A token nobody trades
-          spends its own treasury staying awake.</p>
+        <h3>Settlement costs</h3>
+        <p style="margin-top:10px">0.0002 BNB per wake, paid out of the treasury whether or not there was work &mdash; a token nobody trades spends its own treasury staying awake; an empty
+          wake books the next an hour out, not five minutes.</p>
       </div>
       <div class="card">
         <h3>Leverage decays</h3>
-        <p style="margin-top:10px">A 3&times; position loses value in a choppy market even if BNB
-          ends where it started, and the carry is <span class="mono neg">&minus;4.87%</span> a year
-          before any price move. Arithmetic, not a bug.</p>
+        <p style="margin-top:10px">A choppy market bleeds a 3&times; position even if BNB ends flat;
+          carry alone is <span class="mono neg">&minus;4.87%</span> a year.</p>
       </div>
       <div class="card">
-        <h3>Every step needs someone to show up</h3>
-        <p style="margin-top:10px">Flap's service wakes the vault; if it stops, anyone may restart the
-          chain, and both paths pay. But nobody is <em style="font-style:normal;color:var(--fg-strong)">obliged</em>
-          to appear, and a trigger call that fails is recorded as failed.</p>
-      </div>
-      <div class="card">
-        <h3>Dividends have a holding threshold</h3>
-        <p style="margin-top:10px">A balance under 10,000 KEEL earns no dividend share at all. That
-          rule belongs to Flap's dividend contract, not to this vault.</p>
+        <h3>Dividends need 10,000 KEEL</h3>
+        <p style="margin-top:10px">Below that, no share. Flap's dividend contract sets the floor, not
+          this vault.</p>
       </div>
       <div class="card" style="border-color:rgba(217,180,91,0.4)">
         <h3 style="color:var(--warn)">The contracts are unaudited</h3>
-        <p style="margin-top:10px">Reviewed adversarially against themselves many times, and checked
-          rule by rule against Flap's specification. That is not an audit and we will not call it one.</p>
+        <p style="margin-top:10px">Reviewed adversarially and checked rule by rule against Flap's
+          specification. Not an audit.</p>
       </div>
     </div>
 
       <figure class="fig">
         <img src="/assets/fig/liquidation-distance.png" alt="A track from 0% to minus 40% of BNB moving against the position, with a red line drawn at minus 16.7% labelled liquidated here." loading="lazy" decoding="async" width="1000">
-        <figcaption>The worst outcome, to scale. The vault deleverages on its own once health falls
-          under 1.10, and waives its cooldown to do it &mdash; but a fast enough move does not wait
-          for a five-minute wake.</figcaption>
+        <figcaption>It deleverages itself under health 1.10, cooldown waived &mdash; a fast move
+          does not wait for the five-minute wake.</figcaption>
       </figure>
   </div>
 </section>
@@ -155,41 +137,37 @@
   <div class="wrap">
     <div class="sec-head"><span class="tag">what is fixed <span class="sep" aria-hidden="true">//</span> and therefore unfixable</span><h2>Four things nobody can change after launch</h2></div>
       <figure class="fig">
-        <img src="/assets/fig/why-three.png" alt="Health at each leverage under Venus's 80% collateral factor: 1.60 at 2x, 1.20 at 3x, 1.07 at 4x, and 1.00 at 5x, which is liquidation itself." loading="lazy" decoding="async" width="1000">
-        <figcaption>Health is <code class="mono">CF &times; L / (L &minus; 1)</code>. At Venus's 0.80, five times is not aggressive &mdash; it is the liquidation point.</figcaption>
-      </figure>
+        <img src="/assets/fig/why-three.png" alt="Health is CF times L divided by L minus 1. Under Venus's 0.80 collateral factor that is 1.60 at 2x, 1.20 at 3x, 1.07 at 4x, and 1.00 at 5x, which is liquidation itself rather than an aggressive setting; the floor MIN_HEALTH_BPS = 12000 is a constant, not an operating rule." loading="lazy" decoding="async" width="1000">
+      <figcaption>2&times; survives a 37.5% fall in the collateral, 3&times; 16.7%, 4&times; only 6.3%.</figcaption></figure>
 
     <div class="scroll rise" tabindex="0" role="region" aria-label="Table, scrollable">
       <table>
         <thead><tr><th>Fixed at launch</th><th>Consequence</th></tr></thead>
         <tbody>
-          <tr><td class="name">The project address</td><td>Receives 30% of every gain, forever. The vault has no setter.</td></tr>
-          <tr><td class="name">The tax split</td><td>80 / 20 is written into the token. It cannot be retuned later.</td></tr>
+          <tr><td class="name">The project address</td><td>Receives 30% of every gain, forever. No setter.</td></tr>
+          <tr><td class="name">The tax split</td><td>80 / 20, written into the token.</td></tr>
           <tr><td class="name">Tax rate and duration</td><td>2% for 100 years.</td></tr>
-          <tr><td class="name">The dividend threshold</td><td>Decides who is eligible to be paid, for the life of the token.</td></tr>
+          <tr><td class="name">The dividend threshold</td><td>10,000 KEEL, for the life of the token.</td></tr>
         </tbody>
       </table>
     </div>
-    <p style="margin-top:16px;font-size:13.5px;color:var(--fg-tertiary)">This cuts both ways: nobody
-      can quietly raise the project's share, and nobody can fix a number that turns out to be wrong.
-      Changing any of them means a new token.</p>
+    <p style="margin-top:16px;font-size:13.5px;color:var(--fg-tertiary)">Nobody can raise the
+      project's share, or fix a wrong number; changing one means a new token.</p>
   </div>
 </section>
 
 <section>
   <div class="wrap narrow" style="text-align:center">
     <h2>Everything above is checkable</h2>
-    <p class="lede" style="margin:14px auto 0">Including the numbers that make this look worse.</p>
   </div>
   <div class="wrap">
       <figure class="fig">
         <img src="/assets/fig/assertions.png" alt="Three cards for the assertion groups that run live against the chain: build with 12, harvest with 10, settlement with 11, making 33, one atomic eth_call each. A note underneath reads that the forge suite adds 28 more and the position-lifecycle group is skipped by design because it needs an archive RPC that BSC does not offer for free." loading="lazy" decoding="async" width="1000">
-        <figcaption>Thirty-three assertions run against the live chain, one atomic <code class="mono">eth_call</code> each, and the forge suite adds 28 more.</figcaption>
       </figure>
       <figure class="fig">
-        <img src="/assets/fig/beacon-guardian.png" alt="Who can change what: the project, deployer and holders can change nothing, because every value is a constant with no setter; the Flap Guardian owns the beacon and can replace the implementation." loading="lazy" decoding="async" width="1000">
-        <figcaption>An upgrade can change every constant this site quotes, add a pause, or add a
-          withdrawal. Stated rather than left out &mdash; the deployer never held it.</figcaption>
+        <img src="/assets/fig/beacon-guardian.png" alt="Who can change what: the project, deployer and holders can change nothing, because every value is a constant with no setter; the Flap Guardian owns the beacon, transferred in the constructor, and can replace the implementation. The deployer never held it." loading="lazy" decoding="async" width="1000">
+        <figcaption>An upgrade can change every constant quoted here, add a pause, or add a
+          withdrawal.</figcaption>
       </figure>
     <div style="text-align:center;margin-top:32px"><a class="btn primary" href="/verify/">How to verify</a></div>
   </div>

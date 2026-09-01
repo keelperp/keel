@@ -52,11 +52,10 @@
 <section>
   <div class="wrap">
     <div style="display:flex;flex-direction:column;gap:20px">
-      <div class="tag">the vault <span class="sep" aria-hidden="true">//</span> read it in your own block</div>
+      <div class="tag">the vault <span class="sep" aria-hidden="true">//</span> read it yourself</div>
       <h1>Nobody publishes this number</h1>
-      <p class="lede">Everything below is a view over Venus. When the vault is live this page reads
-        it from the chain each time you load it &mdash; and so can you, with one
-        <code class="mono">cast call</code>.</p>
+      <p class="lede">Views over Venus, read from the chain on load. One
+        <code class="mono">cast call</code> gets the same.</p>
     </div>
   </div>
 </section>
@@ -66,32 +65,30 @@
     <div id="liveState" class="card rise" style="border-color:rgba(217,180,91,0.4);display:flex;flex-direction:column;gap:12px">
       <div class="tag" style="color:var(--warn)">status <span class="sep" aria-hidden="true">//</span> not deployed</div>
       <p style="color:var(--warn);font-size:19px;font-weight:600;margin:0">There is nothing to read yet</p>
-      <p style="font-size:14.5px">No contract has been broadcast to any network, so this page shows
-        nothing rather than showing a demo. When the vault is live, the panel below fills from the
-        chain and the addresses appear here.</p>
+      <p style="font-size:14.5px">Nothing broadcast on any network. The panel stays empty rather than
+        demo; at deploy it fills from the chain, addresses here.</p>
     </div>
   </div>
 </section>
 
 <section>
   <div class="wrap">
-    <div class="sec-head"><span class="tag">the panel <span class="sep" aria-hidden="true">//</span> what will be here</span><h2>Six readings, all views</h2></div>
+    <div class="sec-head"><span class="tag">the panel <span class="sep" aria-hidden="true">//</span> what fills</span><h2>Six readings, all views</h2></div>
       <figure class="fig">
-        <img src="/assets/fig/verify-surface.png" alt="The view functions a reader can call themselves: nav, leverage, health, pendingAction and the project share constant." loading="lazy" decoding="async" width="1000">
-        <figcaption>Every number on this page comes from one of these calls.</figcaption>
+        <img src="/assets/fig/verify-surface.png" alt="The view functions a reader can call themselves against the deployed vault, with no wallet and no write: nav, leverage, health, pendingAction and the project share constant. Each one is a plain eth_call, so the page and the reader get the same answer in the same block." loading="lazy" decoding="async" width="1000">
+        <figcaption>Every number here is one of these calls.</figcaption>
       </figure>
 
     <div class="grid g3">
-      <div class="card stat"><div class="k">nav()</div><div class="v" id="f-nav">&mdash;</div><div class="n">Treasury value in BNB. Supply minus debt, priced by the Venus oracle.</div></div>
+      <div class="card stat"><div class="k">nav()</div><div class="v" id="f-nav">&mdash;</div><div class="n">Treasury BNB: supply minus debt, Venus oracle priced.</div></div>
       <div class="card stat"><div class="k">currentLeverage()</div><div class="v" id="f-lev">&mdash;</div><div class="n">BNB exposure over net value.</div></div>
       <div class="card stat"><div class="k">healthBps()</div><div class="v" id="f-health">&mdash;</div><div class="n">10000 is the Venus liquidation point.</div></div>
-      <div class="card stat"><div class="k">pendingRevenue()</div><div class="v" id="f-pending">&mdash;</div><div class="n">Tax that has arrived and is not yet in the position.</div></div>
-      <div class="card stat"><div class="k">nextSettlementIn()</div><div class="v" id="f-next">&mdash;</div><div class="n">Seconds until the next wake.</div></div>
+      <div class="card stat"><div class="k">pendingRevenue()</div><div class="v" id="f-pending">&mdash;</div><div class="n">Tax arrived, not yet in the position.</div></div>
+      <div class="card stat"><div class="k">nextSettlementIn()</div><div class="v" id="f-next">&mdash;</div><div class="n">Seconds to the next wake.</div></div>
       <div class="card stat"><div class="k">totalHarvested()</div><div class="v" id="f-paid">&mdash;</div><div class="n">Lifetime BNB paid to holders as WBNB.</div></div>
     </div>
-    <p style="margin-top:18px;font-size:13.5px;color:var(--fg-tertiary)">An em dash means the value
-      has not loaded, not that it is zero. On a page where people decide how much to put in, those
-      are different things.</p>
+    <p style="margin-top:18px;font-size:13.5px;color:var(--fg-tertiary)">An em dash means not loaded,
+      not zero.</p>
   </div>
 </section>
 
@@ -99,30 +96,24 @@
   <div class="wrap">
     <div class="sec-head">
       <span class="tag">measured <span class="sep" aria-hidden="true">//</span> not live</span>
-      <h2>What it did on live state during testing</h2>
-      <p class="lede">Nothing is deployed. This is what the contracts did against BNB Chain's
-        current state.</p>
+      <h2>What it did on live state</h2>
     </div>
       <figure class="fig">
-        <img src="/assets/fig/live-readings.png" alt="Four readings measured on live BNB Chain state, not a simulation: leverage 2.96x against a 3.00 target, health 1.208 against the 1.20 floor, callback gas of 1.20 to 1.24 million against the 2.00 million cap, and 33 of 33 assertions passing. Each assertion is one atomic eth_call with the probe injected by state override, against the real Venus market and the real pool depth at the current block." loading="lazy" decoding="async" width="1000">
-        <figcaption>Measured at the current block, not read from a deployed vault.</figcaption>
+        <img src="/assets/fig/live-readings.png" alt="Four readings measured on live BNB Chain state, not a simulation: leverage 2.96x against a 3.00 target, health 1.208 against the 1.20 floor, callback gas of 1.20 to 1.24 million against the 2.00 million cap, and 33 of 33 assertions passing. The build is never allowed below the 1.20 floor. Each assertion is one atomic eth_call with the probe injected by state override, against the real Venus market and the real pool depth at the current block." loading="lazy" decoding="async" width="1000">
+        <figcaption>Measured against BNB Chain's state at the current block. Nothing is deployed. People size a position against this panel, so a value that has not loaded shows a dash and never a zero.</figcaption>
       </figure>
 
     <div class="scroll rise" tabindex="0" role="region" aria-label="Table, scrollable">
       <table>
-        <thead><tr><th class="num">Tax batch</th><th class="num">Leverage</th><th class="num">Health</th><th class="num">Liquidates on</th><th class="num">Build cost</th></tr></thead>
+        <thead><tr><th class="num">Tax (BNB)</th><th class="num">Leverage</th><th class="num">Health</th><th class="num">Liquidates on</th><th class="num">Build cost</th></tr></thead>
         <tbody>
-          <tr><td class="num">1 BNB</td><td class="num">2.960&times;</td><td class="num pos">1.208</td><td class="num">&minus;17.2%</td><td class="num pos">0.12%</td></tr>
-          <tr><td class="num">5 BNB</td><td class="num">2.960&times;</td><td class="num pos">1.208</td><td class="num">&minus;17.2%</td><td class="num pos">0.13%</td></tr>
-          <tr><td class="num">20 BNB</td><td class="num">2.960&times;</td><td class="num pos">1.208</td><td class="num">&minus;17.2%</td><td class="num pos">0.18%</td></tr>
+          <tr><td class="num">1</td><td class="num">2.960&times;</td><td class="num pos">1.208</td><td class="num">&minus;17.2%</td><td class="num pos">0.12%</td></tr>
+          <tr><td class="num">5</td><td class="num">2.960&times;</td><td class="num pos">1.208</td><td class="num">&minus;17.2%</td><td class="num pos">0.13%</td></tr>
+          <tr><td class="num">20</td><td class="num">2.960&times;</td><td class="num pos">1.208</td><td class="num">&minus;17.2%</td><td class="num pos">0.18%</td></tr>
         </tbody>
       </table>
     </div>
-    <p style="margin-top:16px;font-size:13.5px;color:var(--fg-tertiary)">Same position at all three
-      tax sizes. <strong style="color:var(--fg-strong)">16.7%</strong> is what the 1.20 health floor
-      guarantees &mdash; the build is never allowed below it;
-      <strong style="color:var(--fg-strong)">17.2%</strong> is what the measured 1.208 gives.
-      Floor for the promise, measurement for today.</p>
+    <p style="margin-top:16px;font-size:13.5px;color:var(--fg-tertiary)">Same position at all three sizes. The 1.20 floor guarantees the <strong style="color:var(--fg-strong)">BNB collateral</strong> can fall <strong style="color:var(--fg-strong)">16.7%</strong> before liquidation, and the build is never allowed below it; measured 1.208 gives <strong style="color:var(--fg-strong)">17.2%</strong>.</p>
   </div>
 </section>
 
@@ -130,16 +121,15 @@
   <div class="wrap">
     <div class="sec-head"><span class="tag">the position <span class="sep" aria-hidden="true">//</span> both legs</span><h2>What the vault actually holds</h2></div>
       <figure class="fig">
-        <img src="/assets/fig/leverage-stack.png" alt="One BNB of tax becomes 3.00 BNB supplied to Venus as vBNB against 2.00 BNB borrowed in USDT, leaving 1.00 BNB of net value at 3x exposure." loading="lazy" decoding="async" width="1000">
-        <figcaption>Per unit of net value: three units of BNB collateral on Venus, two units of USDT owed against it, and the gap between them is the treasury.</figcaption>
+        <img src="/assets/fig/leverage-stack.png" alt="Per unit of net value: one BNB of tax becomes 3.00 BNB supplied to Venus as vBNB against 2.00 BNB borrowed in USDT, leaving 1.00 BNB of net value at 3x exposure. Three units of BNB collateral, two units of USDT owed against it, and the gap between them is the treasury." loading="lazy" decoding="async" width="1000">
+        <figcaption>The gap is the treasury.</figcaption>
       </figure>
 
     <figure class="viz" style="margin:26px 0 0">
-      <div class="viz-head"><span class="tag">supply and debt <span class="sep" aria-hidden="true">//</span> per unit of net value</span></div>
+      <div class="viz-head"><span class="tag">supply and debt <span class="sep" aria-hidden="true">//</span> per unit</span></div>
       <canvas id="posCanvas" aria-hidden="true"></canvas>
       <figcaption>
-        The health mark sits at 1.208; the collateral has to lose 16.7% of its value to reach the
-        liquidation line on the left.
+        Health 1.208. The line at left is where the <strong>collateral</strong> has lost 16.7% of its value &mdash; not the position.
       </figcaption>
     </figure>
   </div>
@@ -158,7 +148,7 @@
       <span style="display:block;color:var(--fg-quaternary);padding-top:3px">No token yet &middot; unaudited</span></div>
   </div>
   <div class="wrap" style="margin-top:30px;padding-top:18px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--fg-quaternary)">
-    A 3&times; position is liquidated by a 16.7% move against it. Venus and PancakeSwap are
+    A 3&times; position is liquidated once its BNB collateral falls 16.7%. Venus and PancakeSwap are
     dependencies. The contracts are unaudited.
   </div>
 </footer>

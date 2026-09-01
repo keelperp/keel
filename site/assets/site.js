@@ -197,3 +197,62 @@ export function leverageDial(root) {
   addEventListener("resize", update);
   update();
 }
+
+/**
+ * The build, as a sequence rather than four boxes. Venus checks collateral before the borrowed
+ * funds become collateral, so the four steps have to happen inside one transaction -- which is
+ * a thing to watch happen, not a thing to read about.
+ */
+export function buildSequence(cv) {
+  const STEPS = [
+    { t: "flash", d: "borrow WBNB from the V3 pool", c: () => C.accent },
+    { t: "supply", d: "into Venus as collateral", c: () => C.positive },
+    { t: "borrow", d: "USDT against it", c: () => C.negative },
+    { t: "repay", d: "swap back, close the flash", c: () => C.accent },
+  ];
+  const PERIOD = 1.35;
+  animate(cv, (t) => {
+    const { ctx, w, h } = fitCanvas(cv, 168);
+    ctx.clearRect(0, 0, w, h);
+    const padL = 10, padR = 10, trackW = w - padL - padR;
+    const y = 96, cell = trackW / STEPS.length;
+    const phase = (t / PERIOD) % (STEPS.length + 0.8);
+
+    ctx.strokeStyle = C.lineSoft; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + trackW, y); ctx.stroke();
+
+    STEPS.forEach((s, i) => {
+      const cx = padL + cell * (i + 0.5);
+      const active = phase >= i && phase < i + 1;
+      const done = phase >= i + 1;
+      const grow = active ? Math.min((phase - i) * 1.6, 1) : done ? 1 : 0;
+      const col = done || active ? s.c() : C.lineSoft;
+
+      if (i > 0 && (done || active)) {
+        const px = padL + cell * (i - 0.5);
+        ctx.strokeStyle = STEPS[i - 1].c(); ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(px + 20, y);
+        ctx.lineTo(px + 20 + (cx - px - 40) * (active ? grow : 1), y); ctx.stroke();
+      }
+      ctx.fillStyle = col; ctx.globalAlpha = done || active ? 1 : 0.35;
+      ctx.beginPath(); ctx.arc(cx, y, active ? 6 + grow * 3 : 6, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+
+      ctx.textAlign = "center"; ctx.font = C.mono;
+      ctx.fillStyle = done || active ? C.fg : C.dim;
+      ctx.fillText(s.t, cx, y - 24);
+      ctx.font = C.monoSm; ctx.fillStyle = C.dim;
+      const words = s.d.split(" "); let line = "", ly = y + 26;
+      words.forEach((word) => {
+        if ((line + word).length > 20) { ctx.fillText(line, cx, ly); line = word + " "; ly += 14; }
+        else line += word + " ";
+      });
+      ctx.fillText(line.trim(), cx, ly);
+    });
+
+    ctx.textAlign = "left"; ctx.font = C.monoSm; ctx.fillStyle = C.dim;
+    ctx.fillText("one transaction", padL, 24);
+    ctx.textAlign = "right";
+    ctx.fillText("Venus checks collateral before the borrowed funds become collateral", padL + trackW, 24);
+  });
+}

@@ -53,11 +53,9 @@
 <section>
   <div class="wrap">
     <div style="display:flex;flex-direction:column;gap:20px">
-      <div class="tag">economics <span class="sep" aria-hidden="true">//</span> two layers of money</div>
+      <div class="tag">economics <span class="sep" aria-hidden="true">//</span> two layers</div>
       <h1>Nothing is taken from the tax</h1>
-      <p class="lede">There are two separate pools here and they are worth keeping apart. The tax is
-        money a trade produced. The gain is money the position earned in the market &mdash; it did
-        not exist before the position did, and it comes out of nobody's pocket.</p>
+      <p class="lede">The gain comes out of nobody's pocket.</p>
     </div>
   </div>
 </section>
@@ -68,10 +66,8 @@
       <div class="viz-head"><span class="tag">two layers <span class="sep" aria-hidden="true">//</span> tax and gain</span></div>
       <canvas id="layersCanvas" aria-hidden="true"></canvas>
       <figcaption>
-        The tax layer on top: 2% per trade splits 80% into the vault and 20% straight to holders,
-        with nothing withheld for the project. The gain layer beneath it, fed by the position rather
-        than by any trade: 70% to holders, 30% to the project, and zero whenever the position has
-        not profited.
+        Tax: 2% a trade &mdash; 80% vault, 20% holders, none to the project. Gain: 70% holders,
+        30% project, zero unless it profits.
       </figcaption>
     </figure>
   </div>
@@ -81,29 +77,29 @@
   <div class="wrap">
     <div class="sec-head"><span class="tag">layer one <span class="sep" aria-hidden="true">//</span> the tax</span><h2>2% per trade, split four ways</h2></div>
       <figure class="fig">
-        <img src="/assets/fig/wallet-vs-position.png" alt="A two column comparison: on the left, tax reaching a wallet and a treasury somebody publishes; on the right, tax reaching a Venus position the contract holds and a treasury anyone can read." loading="lazy" decoding="async" width="1000">
-        <figcaption>The same 2% either way. What differs is who ends up holding it.</figcaption>
+        <img src="/assets/fig/wallet-vs-position.png" alt="A two column comparison of the same 2% tax either way: on the left, tax reaching a wallet and a treasury somebody publishes; on the right, tax reaching a Venus position the contract holds and a treasury anyone can read." loading="lazy" decoding="async" width="1000">
+        <figcaption>What differs is who holds it.</figcaption>
       </figure>
 
       <figure class="fig">
-        <img src="/assets/fig/split-70-30.png" alt="Every harvest splits 70% to holders as WBNB dividends and 30% to the project." loading="lazy" decoding="async" width="1000">
-        <figcaption>Holders take 2.33&times; whatever the project takes, on every harvest, forever.</figcaption>
+        <img src="/assets/fig/split-70-30.png" alt="Every harvest splits 70% to holders as WBNB dividends and 30% to the project — a fixed ratio, so the project never earns more without holders earning more first." loading="lazy" decoding="async" width="1000">
+        <figcaption>The gain is money the position earned in the market &mdash; it did not exist before the position did, so it comes out of nobody's pocket. Holders take 2.33&times; whatever the project takes, on every harvest, forever.</figcaption>
       </figure>
 
     <div class="scroll rise" tabindex="0" role="region" aria-label="Table, scrollable">
       <table>
         <thead><tr><th>Share</th><th class="num">Bps</th><th>Goes to</th></tr></thead>
         <tbody>
-          <tr><td class="name">mktBps</td><td class="num" style="color:var(--accent)">8000</td><td>The vault. Becomes leveraged position.</td></tr>
-          <tr><td class="name">dividendBps</td><td class="num pos">2000</td><td>Holders, immediately, through the token's dividend contract.</td></tr>
+          <tr><td class="name">mktBps</td><td class="num" style="color:var(--accent)">8000</td><td>The vault.</td></tr>
+          <tr><td class="name">dividendBps</td><td class="num pos">2000</td><td>Holders, immediately.</td></tr>
           <tr><td class="name">deflationBps</td><td class="num">0</td><td>Nothing burned.</td></tr>
           <tr><td class="name">lpBps</td><td class="num">0</td><td>Nothing to liquidity.</td></tr>
-          <tr><td class="name">project</td><td class="num pos">0</td><td>The project takes nothing from this layer.</td></tr>
+          <tr><td class="name">project</td><td class="num pos">0</td><td>Nothing.</td></tr>
         </tbody>
       </table>
     </div>
-    <p style="margin-top:16px;font-size:13.5px;color:var(--fg-tertiary)">The four must sum to 10000
-      and the token enforces it. They are set once at launch and cannot be changed afterwards.</p>
+    <p style="margin-top:16px;font-size:13.5px;color:var(--fg-tertiary)">The token enforces the
+      sum: 10000, set at launch, never changeable.</p>
   </div>
 </section>
 
@@ -112,17 +108,13 @@
     <div class="sec-head"><span class="tag">layer two <span class="sep" aria-hidden="true">//</span> the gain</span><h2>70 to holders, 30 to the project</h2></div>
     <div class="grid g2">
       <div style="display:flex;flex-direction:column;gap:16px">
-        <p>Whenever the position has earned at least 0.02 BNB, a wake distributes it. Both shares
-          are Solidity <code class="mono" style="color:var(--fg-strong)">constant</code>s with no
-          setter: the project cannot move its own share any more than anyone else can.</p>
-        <p><strong style="color:var(--fg)">Holders always take 2.33&times; whatever the project
-          takes</strong> &mdash; the project never earns more without holders earning more first,
-          and if the position never profits it earns nothing at all.</p>
+        <p>Above 0.02 BNB of gain, a wake distributes it. Both shares are Solidity
+          <code class="mono" style="color:var(--fg-strong)">constant</code>s, no setter.</p>
       </div>
       <div class="card">
-        <div class="stat"><div class="k">Holders</div><div class="v pos">70%</div><div class="n">Paid in WBNB through the token's dividend contract. Claimed, never expires.</div></div>
+        <div class="stat"><div class="k">Holders</div><div class="v pos">70%</div><div class="n">WBNB through the dividend contract. Claimed, never expires.</div></div>
         <hr style="border:0;border-top:1px solid var(--line-soft);margin:18px 0">
-        <div class="stat"><div class="k">Project</div><div class="v">30%</div><div class="n">To the address written into the vault at creation. No setter.</div></div>
+        <div class="stat"><div class="k">Project</div><div class="v">30%</div><div class="n">Written into the vault at creation. No setter.</div></div>
       </div>
     </div>
   </div>
@@ -132,19 +124,15 @@
   <div class="wrap">
     <div class="sec-head">
       <span class="tag">the jobs <span class="sep" aria-hidden="true">//</span> what each pays</span>
-      <h2>Every job that has to happen, pays</h2>
-      <p class="lede">There is no keeper account. Each job is worth someone's gas, so anybody can
-        do it.</p>
+      <h2>Every job pays</h2>
     </div>
     <figure class="fig">
-      <img src="/assets/fig/bounties.png" alt="Three bounty rates side by side: deployPending() pays 25 bps of what it deploys, harvest() pays 50 bps of the gain, rebalance() pays 30 bps of what it frees." loading="lazy" decoding="async" width="1000">
-      <figcaption>These rates are charged when a human steps in because the schedule stopped; the
-        trigger service's own wakes pay no bounty, because the wake fee already came out of the
-        treasury. The rebalance rate is flat &mdash; 30 bps whether health reads 1.30 or 1.05.</figcaption>
+      <img src="/assets/fig/bounties.png" alt="Three bounty rates side by side: deployPending() pays 25 bps of what it deploys, harvest() pays 50 bps of the gain, rebalance() pays 30 bps of what it frees — flat, 30 bps whether health reads 1.30 or 1.05. The trigger service's own wakes pay no bounty, because the wake fee already came out of the treasury." loading="lazy" decoding="async" width="1000">
+      <figcaption>No keeper account &mdash; each job is worth someone's gas, but only when a human
+        steps in after the schedule stops. Rebalance pays 30 bps at any health.</figcaption>
     </figure>
     <p style="margin-top:18px;font-size:13.5px;color:var(--fg-tertiary)">Under health 1.10 the hourly
-      cooldown is waived, so a rescue never waits: a rule that caps bleed should not also be the rule
-      that stops someone acting.</p>
+      cooldown is waived: a rescue never waits.</p>
   </div>
 </section>
 
@@ -152,37 +140,36 @@
   <div class="wrap">
     <div class="sec-head"><span class="tag">running cost <span class="sep" aria-hidden="true">//</span> measured</span><h2>What it costs to keep turning</h2></div>
     <figure class="fig" style="margin-top:0">
-      <img src="/assets/fig/running-costs.png" alt="Four cost lines: a 0.0002 BNB trigger fee per slot paid to Flap's service, a variable Venus borrow APR described as the cost of the leverage itself, a 0.05% swap fee on the deepest WBNB/USDT tier, and 25 to 50 bps of bounties charged only on the manual path." loading="lazy" decoding="async" width="1000">
-      <figcaption>Four lines, one of them not optional: borrowing is what makes the position 3&times;
-        at all. The rates below are the measured ones, read from the chain.</figcaption>
+      <img src="/assets/fig/running-costs.png" alt="Four cost lines: a 0.0002 BNB trigger fee per slot paid to Flap's service, charged every five minutes when there is work and once an hour when there is not; a variable Venus borrow APR, the cost of the leverage itself, which moves with utilisation; a 0.05% swap fee on PancakeSwap V3's deepest WBNB/USDT tier, where the build's one flash-funded swap runs; and 25 to 50 bps of bounties charged only on the manual path. The 3x carry is three units of supply yield minus two units of borrow." loading="lazy" decoding="async" width="1000">
+      <figcaption>Borrowing isn't optional: it makes the position 3&times;. Rates below are
+        measured on-chain.</figcaption>
     </figure>
     <div class="scroll rise" tabindex="0" role="region" aria-label="Table, scrollable">
       <table>
         <thead><tr><th>Cost</th><th class="num">Rate</th><th>Notes</th></tr></thead>
         <tbody>
-          <tr><td class="name">Trigger fee</td><td class="num">0.0002 BNB</td><td>Per wake. Five minutes when there is work, one hour when there is not.</td></tr>
-          <tr><td class="name">Build slippage</td><td class="num pos">0.12&ndash;0.18%</td><td>One flash-funded swap through PancakeSwap V3's deep tier.</td></tr>
-          <tr><td class="name">Venus borrow</td><td class="num">2.62% APR</td><td>On the USDT leg. Read from the chain, moves with utilisation.</td></tr>
-          <tr><td class="name">3&times; carry</td><td class="num neg">&minus;4.87% / yr</td><td>Three units of supply yield minus two units of borrow, before any price move.</td></tr>
+          <tr><td class="name">Trigger fee</td><td class="num">0.0002 BNB</td><td>Per wake.</td></tr>
+          <tr><td class="name">Build slippage</td><td class="num pos">0.12&ndash;0.18%</td><td>One flash-funded swap.</td></tr>
+          <tr><td class="name">Venus borrow</td><td class="num">2.62% APR</td><td>USDT leg.</td></tr>
+          <tr><td class="name">3&times; carry</td><td class="num neg">&minus;4.87%/yr</td><td>Before any price move.</td></tr>
         </tbody>
       </table>
     </div>
     <p style="margin-top:16px;font-size:13.5px;color:var(--fg-tertiary)">Negative carry is not a
-      defect &mdash; a leveraged long pays to be leveraged. A flat market slowly costs the treasury,
-      so the position has to be right about direction to be worth holding.</p>
+      defect: a leveraged long pays to be leveraged. A flat market drains the treasury, so
+      direction has to be right.</p>
   </div>
 </section>
 
 <section>
   <div class="wrap narrow" style="text-align:center">
     <h2>The costs above are the honest half</h2>
-    <p class="lede" style="margin:14px auto 0">The risks page is the other one. It starts here.</p>
   </div>
   <div class="wrap">
     <figure class="fig">
       <img src="/assets/fig/liquidation-distance.png" alt="A scale of BNB moves against the 3x position, running from 0% to minus 40%, with a red line at minus 16.7% labelled 'liquidated here'." loading="lazy" decoding="async" width="1000">
-      <figcaption>A 16.7% move against the position liquidates it: Venus sells the collateral and the
-        treasury is permanently smaller. Everything priced above assumes a position that survives.</figcaption>
+      <figcaption>A 16.7% move against the position liquidates it: Venus sells the collateral, the
+        treasury permanently smaller. Everything above assumes a position that survives.</figcaption>
     </figure>
   </div>
   <div class="wrap narrow" style="text-align:center;margin-top:30px">

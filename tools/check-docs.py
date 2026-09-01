@@ -92,8 +92,12 @@ ALLOWED_PHRASES = (
     "share of each harvest as 40%",
     "Receives 40% of every harvest",
     "40% in the schema",
-    # the liquidation chart's x-axis is a BNB drawdown scale
+    # the liquidation chart's x-axis is a BNB drawdown scale, in the canvas and in the alt
+    # text that describes the same picture
     'fillText("40%"',
+    "minus 40%",
+    "to minus 40%",
+    "0% to minus 40",
 )
 
 for rel in SURFACES:

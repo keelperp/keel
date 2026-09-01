@@ -54,9 +54,8 @@
   <div class="wrap">
     <div style="display:flex;flex-direction:column;gap:20px">
       <div class="tag">how it works <span class="sep" aria-hidden="true">//</span> trade to dividend</div>
-      <h1>Six steps, and every one is on chain</h1>
-      <p class="lede">Nothing here happens in a backend. Each step below names the contract that
-        does it and the number it produced when measured against live BNB Chain state.</p>
+      <h1>Six steps, every one on chain</h1>
+      <p class="lede">Measured against live BNB Chain state.</p>
     </div>
   </div>
 </section>
@@ -69,13 +68,7 @@
         <span class="tag" id="pipeStage" aria-hidden="true">six stages</span>
       </div>
       <canvas id="pipeCanvas" aria-hidden="true"></canvas>
-      <figcaption>
-        A single trade's tax travelling the whole path. It leaves the trade as token, accrues
-        inside the token contract until Flap's processor converts a batch to BNB, lands in the
-        vault where a two-store receive books it, waits for the next five-minute wake, is built
-        into a 3&times; long with one flash-funded swap, and finally returns as a gain that splits
-        70/30 between holders and the project.
-      </figcaption>
+      <figcaption>One trade's 2%, end to end.</figcaption>
     </figure>
   </div>
 </section>
@@ -84,14 +77,12 @@
   <div class="wrap">
     <div class="sec-head"><span class="tag">step 1 <span class="sep" aria-hidden="true">//</span> the trade</span><h2>2% leaves the trade as token</h2></div>
       <figure class="fig">
-        <img src="/assets/fig/leverage-stack.png" alt="One BNB of tax becomes 3.00 BNB supplied to Venus against 2.00 BNB of debt, leaving 1.00 BNB of net value at 3x exposure." loading="lazy" decoding="async" width="1000">
-        <figcaption>One BNB of tax, at target. Three supplied, two owed, one of net value carrying 3&times; exposure.</figcaption>
+        <img src="/assets/fig/leverage-stack.png" alt="One BNB of tax becomes 3.00 BNB supplied to Venus against 2.00 BNB of debt, leaving 1.00 BNB of net value at 3x exposure. Buy or sell, the token withholds 2%, and at this point it is still token, not money: it sits inside the token contract, and nothing has reached the vault yet." loading="lazy" decoding="async" width="1000">
+        <figcaption>One BNB of tax, at target.</figcaption>
       </figure>
 
     <div class="grid g2">
-      <p>Buy or sell, the token withholds 2%. At this point it is still token, not money, and it
-        sits inside the token contract. Nothing has reached the vault yet.</p>
-      <div class="card"><div class="stat"><div class="k">Buy / sell tax</div><div class="v">200 / 200 bps</div><div class="n">Symmetric, and fixed for 100 years at launch.</div></div></div>
+      <div class="card"><div class="stat"><div class="k">Buy / sell tax</div><div class="v">200 / 200 bps</div><div class="n">Symmetric, fixed for 100 years.</div></div></div>
     </div>
   </div>
 </section>
@@ -99,17 +90,15 @@
 <section>
   <div class="wrap">
     <div class="sec-head"><span class="tag">step 2 <span class="sep" aria-hidden="true">//</span> conversion</span><h2>Flap converts a batch to BNB</h2></div>
-      <figure class="fig">
-        <img src="/assets/fig/flash-sequence.png" alt="The four steps of building the position in one transaction: flash WBNB, supply to Venus, borrow USDT, swap and repay." loading="lazy" decoding="async" width="1000">
-        <figcaption>Venus checks collateral before the borrowed funds become collateral, so the flash loan is the only ordering that opens the position at all.</figcaption>
+      <figure class="viz" style="margin:26px 0 0">
+        <div class="viz-head"><span class="tag">the build <span class="sep" aria-hidden="true">//</span> one transaction</span></div>
+        <canvas id="seqCanvas" aria-hidden="true"></canvas>
+        <figcaption>Collateral is checked at the borrow: only this ordering opens the position.</figcaption>
       </figure>
 
     <div class="grid g2">
-      <p>Accrued tax is liquidated when it crosses a threshold set at launch, not on every trade.
-        That batching is why the vault's <code class="mono">receive()</code> has to be almost free:
-        Flap forwards with a plain call, and if that call ever ran out of gas or reverted, tax
-        collection for the token would break permanently.</p>
-      <div class="card"><div class="stat"><div class="k">receive() gas</div><div class="v">9,133</div><div class="n">Warm path. 57,433 cold. The protocol cap is 1,000,000.</div></div></div>
+      <p>Batched at a launch-set threshold, not every trade.</p>
+      <div class="card"><div class="stat"><div class="k">receive() gas</div><div class="v">9,133</div><div class="n">Two stores, warm; 57,433 cold, cap 1,000,000. A revert breaks tax collection permanently.</div></div></div>
     </div>
   </div>
 </section>
@@ -118,14 +107,13 @@
   <div class="wrap">
     <div class="sec-head"><span class="tag">step 3 <span class="sep" aria-hidden="true">//</span> the wake</span><h2>The vault wakes on a schedule</h2></div>
     <figure class="fig" style="margin-top:0">
-      <img src="/assets/fig/wake-schedule.png" alt="A timeline of three five-minute working slots followed by a one-hour idle slot, with the note that the next slot is bought before the work runs and that the cadence drops to hourly when there is nothing to do." loading="lazy" decoding="async" width="1000">
-      <figcaption>Every five minutes with work to do, hourly without. The job itself runs inside a
-        <code class="mono">try</code>, so a failure costs one slot rather than the chain.</figcaption>
+      <img src="/assets/fig/wake-schedule.png" alt="A timeline of three five-minute working slots followed by a one-hour idle slot, with the note that the next slot is bought before the work runs and that the cadence drops to hourly when there is nothing to do. The job itself runs inside a try, so a failure costs one slot rather than the chain." loading="lazy" decoding="async" width="1000">
+      <figcaption>A failure costs one slot, not the chain.</figcaption>
     </figure>
     <div class="grid g3" style="margin-top:22px">
-      <div class="card stat"><div class="k">Per wake</div><div class="v">0.0002 BNB</div><div class="n">The service's quoted fee, paid out of undeployed revenue.</div></div>
-      <div class="card stat"><div class="k">Callback gas</div><div class="v">1,206,637</div><div class="n">Against a hard 2,000,000 cap. 40% headroom.</div></div>
-      <div class="card stat"><div class="k">If the chain stops</div><div class="v">kickstart()</div><div class="n">Permissionless. Anyone can restart settlement.</div></div>
+      <div class="card stat"><div class="k">Per wake</div><div class="v">0.0002 BNB</div><div class="n">Quoted fee, from undeployed revenue.</div></div>
+      <div class="card stat"><div class="k">Callback gas</div><div class="v">1,206,637</div><div class="n">Hard cap 2,000,000; 40% headroom.</div></div>
+      <div class="card stat"><div class="k">If the chain stops</div><div class="v">kickstart()</div><div class="n">Permissionless: anyone can restart it.</div></div>
     </div>
   </div>
 </section>
@@ -135,33 +123,23 @@
     <div class="sec-head">
       <span class="tag">step 4 <span class="sep" aria-hidden="true">//</span> the build</span>
       <h2>One flash loan, one swap, three passes</h2>
-      <p class="lede">Venus checks collateral at the instant of the borrow, before the proceeds
-        become collateral. So a loop can only take the sliver its current collateral supports, and
-        those passes converge slowly &mdash; eighteen swaps to reach 3&times;. A flash loan reverses
-        the order: supply first, borrow second.</p>
     </div>
     <figure class="viz" style="margin:0 0 20px">
-      <div class="viz-head"><span class="tag">loop versus flash <span class="sep" aria-hidden="true">//</span> cost to reach 3x</span></div>
+      <div class="viz-head"><span class="tag">loop versus flash</span></div>
       <canvas id="buildCanvas" aria-hidden="true"></canvas>
-      <figcaption>
-        Two ways to reach the same position. The loop path takes eighteen swaps and costs 0.30%,
-        each pass limited to what the collateral already posted can support. The flash path supplies
-        the borrowed collateral first and repays from the position it just built: one swap, three
-        passes, and a measured cost of 0.12&ndash;0.18% depending on size.
-      </figcaption>
+      <figcaption>The same position, two ways.</figcaption>
     </figure>
     <div class="scroll rise" tabindex="0" role="region" aria-label="Table, scrollable">
       <table>
         <thead><tr><th>Path</th><th class="num">Swaps</th><th class="num">Cost</th><th>Why</th></tr></thead>
         <tbody>
-          <tr><td class="name">Loop</td><td class="num">18</td><td class="num neg">0.30%</td><td>Converges at cf/health = 0.667 per pass. Measured before the flash path replaced it.</td></tr>
-          <tr><td class="name">Flash</td><td class="num pos">1</td><td class="num pos">0.12&ndash;0.18%</td><td>Supply first, borrow second, repay from the position. Measured at 1, 5 and 20 BNB.</td></tr>
+          <tr><td class="name">Loop</td><td class="num">18</td><td class="num neg">0.30%</td><td>cf/health 0.667 per pass.</td></tr>
+          <tr><td class="name">Flash</td><td class="num pos">1</td><td class="num pos">0.12&ndash;0.18%</td><td>Supply first, borrow second. At 1, 5, 20 BNB.</td></tr>
         </tbody>
       </table>
     </div>
-    <p style="margin-top:16px;font-size:13.5px;color:var(--fg-tertiary)">The flash pool must be a
-      different fee tier from the swap pool. A V3 pool is locked for the duration of its own flash
-      callback, so borrowing and swapping in the same pool reverts <code class="mono">LOK</code>.</p>
+    <p style="margin-top:16px;font-size:13.5px;color:var(--fg-tertiary)">Flash and swap must use
+      different fee tiers, or the pool reverts <code class="mono">LOK</code>.</p>
   </div>
 </section>
 
@@ -169,14 +147,13 @@
   <div class="wrap">
     <div class="sec-head"><span class="tag">step 5 <span class="sep" aria-hidden="true">//</span> the position</span><h2>3&times; is the ceiling, not a choice</h2></div>
     <figure class="fig" style="margin-top:0">
-      <img src="/assets/fig/why-three.png" alt="Health at four leverage targets against Venus's 0.80 collateral factor: 2x is health 1.60 and comfortable, 3x is 1.20 and exactly the floor, 4x is 1.07 and below the floor, 5x is 1.00, which is liquidation itself." loading="lazy" decoding="async" width="1000">
-      <figcaption>Health is <code class="mono">supply &times; CF / debt</code> and Venus liquidates at
-        1.00, so the target alone fixes it: 5&times; liquidates on arrival. The build caps debt by the
-        3&times; health floor, not by what Venus would lend.</figcaption>
+      <img src="/assets/fig/why-three.png" alt="Health at four leverage targets against Venus's 0.80 collateral factor: 2x is health 1.60 and comfortable, 3x is 1.20 and exactly the floor, 4x is 1.07 and below the floor, 5x is 1.00, which is liquidation itself, so 5x liquidates on arrival. The build caps debt by the 3x health floor, not by what Venus would lend." loading="lazy" decoding="async" width="1000">
+      <figcaption>Health is <code class="mono">supply &times; CF / debt</code>; Venus liquidates at
+        1.00.</figcaption>
     </figure>
     <div class="scroll" tabindex="0" role="region" aria-label="Table, scrollable" style="margin-top:22px">
       <table>
-        <thead><tr><th class="num">Target</th><th class="num">Health</th><th class="num">Liquidates on</th></tr></thead>
+        <thead><tr><th class="num">Target</th><th class="num">Health</th><th class="num">Liquidating move</th></tr></thead>
         <tbody>
           <tr><td class="num">2.00&times;</td><td class="num pos">1.600</td><td class="num pos">&minus;37.5%</td></tr>
           <tr><td class="num">3.00&times;</td><td class="num pos">1.200</td><td class="num pos">&minus;16.7%</td></tr>
@@ -185,8 +162,6 @@
         </tbody>
       </table>
     </div>
-    <p style="margin-top:16px;font-size:13.5px;color:var(--fg-tertiary)">The last column is the move
-      that ends the position: at the 3&times; target, 16.7% against you.</p>
   </div>
 </section>
 
@@ -194,31 +169,27 @@
   <div class="wrap">
     <div class="sec-head"><span class="tag">step 6 <span class="sep" aria-hidden="true">//</span> the payout</span><h2>A gain leaves, the principal stays</h2></div>
     <figure class="fig" style="margin-top:0">
-      <img src="/assets/fig/gain-vs-principal.png" alt="Two panels of a harvest: what stays is the position itself, supply and debt shrinking only enough to free the gain; what leaves is the gain only, split 70% to holders and 30% to the project." loading="lazy" decoding="async" width="1000">
-      <figcaption>The unwind takes the gain and nothing else, so health
-        <em style="font-style:normal;color:var(--positive)">rises</em> rather than falls &mdash; the
-        position ends smaller relative to its collateral.</figcaption>
+      <img src="/assets/fig/gain-vs-principal.png" alt="Two panels of a harvest: what stays is the position itself, supply and debt shrinking only enough to free the gain; what leaves is the gain only, split 70% to holders and 30% to the project, paid in WBNB through the token's own dividend contract." loading="lazy" decoding="async" width="1000">
+      <figcaption>The gain leaves and splits 70/30, holders to project.</figcaption>
     </figure>
     <div class="grid g3" style="margin-top:22px">
-      <div class="card stat"><div class="k">Harvest threshold</div><div class="v">0.02 BNB</div><div class="n">A wake distributes once the position has gained at least this much.</div></div>
-      <div class="card stat"><div class="k">Freed vs gained</div><div class="v pos">1.00&times;</div><div class="n">Measured at 1, 3 and 4 BNB of gain.</div></div>
+      <div class="card stat"><div class="k">Harvest threshold</div><div class="v">0.02 BNB</div><div class="n">Distributed at this gain.</div></div>
+      <div class="card stat"><div class="k">Freed vs gained</div><div class="v pos">1.00&times;</div><div class="n">At 1, 3, 4 BNB.</div></div>
       <div class="card stat"><div class="k">Health after</div><div class="v pos">1.290</div><div class="n">Up from 1.208, not down.</div></div>
     </div>
-    <p style="margin-top:18px;font-size:13.5px;color:var(--fg-tertiary)">Paid in WBNB through the
-      token's own dividend contract. Flap's dividends are claimed, not pushed &mdash; call
-      <code class="mono">withdrawDividends()</code>; they never expire. Below Flap's dividend
-      threshold a holding earns no share, and that rule is Flap's, not ours.</p>
+    <p style="margin-top:18px;font-size:13.5px;color:var(--fg-tertiary)">Dividends are claimed, not
+      pushed: call <code class="mono">withdrawDividends()</code>; they never expire. Under 10,000 KEEL,
+      no share: Flap's rule, not ours.</p>
   </div>
 </section>
 
 <section>
   <div class="wrap">
-    <div class="sec-head"><span class="tag">before you decide <span class="sep" aria-hidden="true">//</span> the whole list</span><h2>Now read what can go wrong</h2></div>
+    <div class="sec-head"><span class="tag">before you decide <span class="sep" aria-hidden="true">//</span> the list</span><h2>Now read what can go wrong</h2></div>
     <figure class="fig" style="margin-top:0">
-      <img src="/assets/fig/risk-board.png" alt="Six rows of what can hurt a holder: liquidation if BNB falls 16.7% against the position; trust moved, not removed, because the Guardian can replace the implementation; settlement costs, since the wake fee is paid whether or not anything happened; leverage decays between rebalances; no dividend share below 10,000 KEEL; and unaudited, because no third party has reviewed the code." loading="lazy" decoding="async" width="1000">
-      <figcaption>Six of them, and none is a footnote: a 16.7% move liquidates the 3&times; position,
-        Flap's Guardian can replace the implementation behind the beacon, and no third party has
-        reviewed this code.</figcaption>
+      <img src="/assets/fig/risk-board.png" alt="Six rows of what can hurt a holder: liquidation if BNB falls 16.7% against the position; trust moved, not removed, because the Guardian can replace the implementation behind the beacon; settlement costs, since the wake fee is paid whether or not anything happened; leverage decays between rebalances; no dividend share below 10,000 KEEL; and unaudited, because no third party has reviewed the code." loading="lazy" decoding="async" width="1000">
+      <figcaption>Six risks, none a footnote: a 16.7% move liquidates the 3&times; position, the
+        Guardian can replace the implementation, and the code is unaudited.</figcaption>
     </figure>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:24px">
       <a class="btn primary" href="/risks/">Risks</a>
@@ -248,6 +219,8 @@
 </footer>
 
 <script type="module">
+  import { buildSequence } from "/assets/site.js";
+  buildSequence(document.getElementById("seqCanvas"));
 import { fitCanvas, animate, C } from "/assets/site.js";
 
 /* ── the six-stage path a single tax payment travels ──────────────────────── */
