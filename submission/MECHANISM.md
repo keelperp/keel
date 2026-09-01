@@ -32,10 +32,16 @@ collateral already supports: the vault flash-borrows WBNB from `FLASH_POOL`
 `0x36696169C63e42cd08ce11f5deeBbCeBae652050` (PancakeSwap V3 WBNB/USDT 0.05%), supplies it as
 collateral **first**, borrows USDT against the enlarged collateral **second**, and swaps that USDT
 back to WBNB through the separate 0.01% tier (`SWAP_FEE` 100) to repay the flash in the same
-transaction; that swap goes out with `amountOutMinimum: 0` and `sqrtPriceLimitX96: 0`, because this
-contract has no slippage tolerance of any kind, and what bounds the build instead is the flash
-itself — the callback requires `got >= owed` and reverts the whole transaction if the swap came back
-too short to repay it. `TARGET_LEVERAGE` 3e18 is a ceiling, not a preference: health is
+transaction; that build swap alone goes out with `amountOutMinimum: 0` and `sqrtPriceLimitX96: 0`,
+deliberately, because what bounds the build is the flash itself — the callback requires
+`got >= owed` and reverts the whole transaction if the swap came back too short to repay it, which
+is a strictly tighter bound on the same quantity than any price floor would be. Every swap on the
+exit path is floored instead: `_sellBnb` and `_buyBnb` pass `_floor(amountIn, pxIn, pxOut)` as
+`amountOutMinimum`, valuing the input in units of the output at Venus's ResilientOracle — the same
+price that decides whether this position is liquidated — less `MAX_SWAP_SLIP_BPS` **300**, 3%, so a
+harvest or rebalance whose swap lands more than 3% under the oracle reverts with PancakeSwap's `Too
+little received`; 3% is deliberately loose, and it bounds what a sandwich can take rather than
+preventing one. `TARGET_LEVERAGE` 3e18 is a ceiling, not a preference: health is
 `CF*L/(L-1)`, so at Venus's mainnet collateral factor of 0.80 a 3x long sits at exactly 1.20 — which is
 `MIN_HEALTH_BPS` — and 5x is exactly 1.00, which is liquidation, not aggression; the build therefore
 caps debt at `navUsd * cf / (MIN_HEALTH_BPS - cf)` and then takes 97% of that, landing just under
@@ -272,21 +278,36 @@ Every job the trigger service can do, a stranger can also do, at a rate nobody c
 | `harvest()` | `HARVEST_BOUNTY_BPS` 50 = **0.5%** | the BNB the unwind actually frees | gain `< MIN_HARVEST` (0.02 BNB), or the dividend token is not WBNB |
 | `rebalance()` | `REBALANCE_BOUNTY_BPS` 30 = **0.3%** | the BNB the unwind actually frees | leverage is inside the band, or the cooldown has not expired |
 
-All three are `constant`, which is the substance of the Rule 003 claim: there is no slippage
-parameter, no routing parameter, no timing parameter and no trigger an insider could tune in their
-own favour, because there is nothing to tune — nothing, that is, short of the Guardian replacing the
-implementation behind the beacon. The route, the fee tier, the flash pool, the health floor and all
-three bounties are compile-time values.
+All three are `constant`, which is the substance of the Rule 003 claim: the slippage floor, the
+route, the timing and the trigger condition are none of them tunable, so there is nothing an insider
+could move in their own favour — nothing, that is, short of the Guardian replacing the
+implementation behind the beacon. The route, the fee tier, the flash pool, the health floor, the swap
+floor `MAX_SWAP_SLIP_BPS` and all three bounties are compile-time values.
 
-The slippage half of that is a cost, not a virtue, and it should be read as one. `_swap` submits
-`amountOutMinimum: 0` and `sqrtPriceLimitX96: 0`: this contract carries no slippage tolerance at all,
-tuned or `constant`, so nothing inside the swap rejects a bad fill. Exactly one path compensates. The
-build's flash callback requires `got >= owed` and reverts the entire transaction if the swap returns
-too little to repay the flash, which bounds how far a build can be pushed. The unwind has no such
-floor: `_shrinkBy` repays `pay = min(usdt, debt - debtTarget)` out of whatever the swap actually
-returned, and `_harvest` asks only that the unwind freed something (`freed > 0`) and that health
-still clears `MIN_HEALTH_BPS`. A sandwiched harvest therefore does not revert — it distributes less.
-That is disclosed, not defended.
+The slippage half of that is a `constant` like the rest, and it should be read for exactly what it
+bounds. `_swap` takes its `amountOutMinimum` from the caller, and the exit path supplies one:
+`_sellBnb` and `_buyBnb` call `_floor(amountIn, pxIn, pxOut)`, which values the input in units of
+the output at the prices already read from Venus's ResilientOracle — the same oracle that decides
+whether this position is liquidated, not a second feed with its own failure modes — and subtracts
+`MAX_SWAP_SLIP_BPS` **300**, 3%. A harvest or rebalance whose swap lands more than 3% below that
+price reverts inside the router with `Too little received`, and the whole unwind reverts with it; on
+the automatic path `trigger()` catches that, emits `WorkFailed`, and the slot it already bought
+stands.
+
+The build's swap still passes zero, deliberately, and it is not newly protected. Its flash callback
+requires `got >= owed` and reverts the entire transaction if the swap returns too little to repay
+the flash — a bound on the same quantity, strictly tighter than 3% and enforced by the pool rather
+than by an oracle. What changed is the exit, which previously had no floor of any kind.
+
+What the floor does **not** do is prevent sandwiching, and it is deliberately loose for a reason:
+the pool legitimately drifts from the oracle between updates, and a floor tight enough to catch
+every sandwich would also stop the vault deleveraging in exactly the fast market where deleveraging
+matters most — the market in which `MIN_HEALTH_BPS` is closest to being breached. Inside the 3%
+band nothing has changed: `_shrinkBy` repays `pay = min(usdt, debt - debtTarget)` out of whatever
+the swap actually returned, and `_harvest` asks only that the unwind freed something (`freed > 0`)
+and that health still clears `MIN_HEALTH_BPS`. A harvest sandwiched within 3% therefore does not
+revert — it distributes less. The floor bounds that loss; it does not eliminate it. That is
+disclosed, not defended.
 
 Paying on what was actually released has two consequences worth stating. The first is that a
 rebalance which levers *up* normally pays too, contrary to what the shape of the rule suggests:
@@ -342,6 +363,12 @@ distance from that line, not to guarantee it is never crossed.
 testnet. The parameters above are the launch configuration recorded in `LAUNCH.md`, not a description
 of anything trading. What *is* deployed is the factory, the beacon and the implementation, at
 identical addresses on chain 56 and chain 97.
+
+**It does not claim the deployed implementation carries the swap floor.** `MAX_SWAP_SLIP_BPS` and
+the floored exit swaps are in `src/flap/LeverVault.sol` and have not been deployed anywhere: the
+implementation behind the beacon on chain 56 and chain 97 is the earlier one, whose exit swaps still
+pass `amountOutMinimum: 0`. This document describes the source in this repository, which is what a
+vault would run once that implementation is replaced behind the beacon.
 
 **It does not claim any of this was exercised on testnet.** No vault can be created on BSC testnet,
 and the reason is the mechanism this document just described. The build path must flash-borrow, and

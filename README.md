@@ -23,7 +23,7 @@ Keel keeps the story and removes the custodian.
 
 ## Status
 
-The Flap factory is live on BNB Chain at `0x8666262877046df9f4B338B9D7f1a30d55688A5c`. No token has been launched — Flap's own
+The Flap factory is live on BNB Chain at `0xb79443A953E6340Bdcba2F420C9f3eD50864f90b`. No token has been launched — Flap's own
 launcher creates one through the VaultPortal. See `deployments/56.json`.
 
 ## Measured on live BNB Chain state

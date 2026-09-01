@@ -2,7 +2,7 @@
 
 ## The address
 
-Register **`0x8666262877046df9f4B338B9D7f1a30d55688A5c`**.
+Register **`0xb79443A953E6340Bdcba2F420C9f3eD50864f90b`**.
 
 That address is the same on BNB Chain (56) and on BSC testnet (97) — same bytecode, same
 deployer, same nonce, so CREATE lands it in the same place on both. Two more contracts came
@@ -11,9 +11,9 @@ and recognise them.
 
 | Contract | Address | Runtime bytes |
 |---|---|---:|
-| `LeverVaultFactory` — **this is the one to register** | `0x8666262877046df9f4B338B9D7f1a30d55688A5c` | 6,476 |
-| `LeverBeacon` — upgrade authority | `0x7444B36CdC9372588C9C6A9A21bc435F31FE761a` | 785 |
-| `LeverVault` — the implementation behind every vault | `0xAF3A1d973724ed416FEE48E5A58146893D1a9ac1` | 19,462 |
+| `LeverVaultFactory` — **this is the one to register** | `0xb79443A953E6340Bdcba2F420C9f3eD50864f90b` | 6,476 |
+| `LeverBeacon` — upgrade authority | `0x552Fa7b39D6bD4AAAa9A84615b1d8e169A6f1Fd3` | 785 |
+| `LeverVault` — the implementation behind every vault | `0x644BFBA1D21b6bBab98fF3ddC281C1e536af85d9` | 19,462 |
 
 Both deployments were made by `0x1544A8fCE3a3c39E0a744a13392981bEcDF014f4` at nonce 1:
 
@@ -33,7 +33,7 @@ which we do not hold. On chain 56 the VaultPortal is
 for the chain it is standing on).
 
 ```solidity
-registerVaultFactory(0x8666262877046df9f4B338B9D7f1a30d55688A5c, /* enabled */ true, /* official */ false, riskLevel)
+registerVaultFactory(0xb79443A953E6340Bdcba2F420C9f3eD50864f90b, /* enabled */ true, /* official */ false, riskLevel)
 ```
 
 We are not asking to be marked `official`, and we are not asking for a risk level below
@@ -206,13 +206,13 @@ Nothing below needs a key, an archive node, or our repository — only `cast` an
 ```bash
 R=https://bsc-dataseed.bnbchain.org          # chain 56
 T=https://bsc-testnet-rpc.publicnode.com     # chain 97
-F=0x8666262877046df9f4B338B9D7f1a30d55688A5c
-B=0x7444B36CdC9372588C9C6A9A21bc435F31FE761a
+F=0xb79443A953E6340Bdcba2F420C9f3eD50864f90b
+B=0x552Fa7b39D6bD4AAAa9A84615b1d8e169A6f1Fd3
 
 # runtime sizes: 6,476 / 785 / 19,462
 cast codesize $F --rpc-url $R
 cast codesize $B --rpc-url $R
-cast codesize 0xAF3A1d973724ed416FEE48E5A58146893D1a9ac1 --rpc-url $R
+cast codesize 0x644BFBA1D21b6bBab98fF3ddC281C1e536af85d9 --rpc-url $R
 
 # the wiring, read from the chain rather than from the deploy log
 cast call $F "beacon()(address)" --rpc-url $R              # -> 0x7444B36C...

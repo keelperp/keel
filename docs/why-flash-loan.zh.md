@@ -58,8 +58,8 @@ IVBNB(vBNB).mint{value: borrowed}();
 uint256 usdtNeeded = owed * pxBnb / pxUsdt * 1003 / 1000;
 require(IVToken(vUSDT).borrow(usdtNeeded) == 0, "Venus borrow failed / Venus 借款失败");
 
-// 4. 换回 WBNB 并归还闪电贷
-uint256 got = _swap(USDT, WBNB, usdtNeeded);
+// 4. 换回 WBNB 并归还闪电贷。这一步不设下限,下面那行 require 比任何下限都紧
+uint256 got = _swap(USDT, WBNB, usdtNeeded, 0);
 require(got >= owed, "flash repayment short / 闪电贷还款不足");
 IERC20Min(WBNB).transfer(FLASH_POOL, owed);
 
@@ -97,24 +97,47 @@ V3 的池在自己的 flash 回调期间是**锁住的**。如果从同一个池
 
 **时序**(本文主题):闪电贷解决的。跟滑点无关。
 
-**滑点**:这个合约**没有滑点参数**。`_swap` 提交的是:
+**滑点**:两条路径受**两种不同的约束**,不是同一道。
+
+**建仓路径:由闪电贷还款兜住,不设下限。** 回调里那次 swap 仍然提交 `amountOutMinimum: 0`:
 
 ```solidity
-amountOutMinimum: 0,
-sqrtPriceLimitX96: 0
+uint256 got = _swap(USDT, WBNB, usdtNeeded, 0);
+require(got >= owed, "flash repayment short / 闪电贷还款不足");
 ```
 
-代替它的是**建仓路径上的一道事后检查**:`require(got >= owed)`。被夹到还不上闪电贷,
-整笔交易回滚。
+这不是漏了一道,是因为下面那行更紧:换回来的 WBNB 不够还闪电贷,整笔交易就回滚。
+约束这条路径的是池子本身,不是预言机——建仓从来就是有界的,不要把它说成"新加了保护"。
 
-**但减仓路径没有这道保护。** `harvest` 与 `rebalance` 走的是:
+**减仓路径:预言机下限,3%。** `harvest` 与 `rebalance` 的每一次 swap 都走 `_sellBnb` /
+`_buyBnb`,`amountOutMinimum` 由 `_floor` 按预言机价折算:
 
 ```solidity
-uint256 pay = usdt < debt - debtTarget ? usdt : debt - debtTarget;
+uint256 public constant MAX_SWAP_SLIP_BPS = 300; // 3%
+
+/// 把 amountIn 按预言机价折成 amountOut 的单位,再让出这点容差
+function _floor(uint256 amountIn, uint256 pxIn, uint256 pxOut) internal pure returns (uint256) {
+    if (amountIn == 0 || pxOut == 0) return 0;
+    return amountIn * pxIn / pxOut * (BPS - MAX_SWAP_SLIP_BPS) / BPS;
+}
 ```
 
-换回来少了就少还,不会回滚。这是对所有调用方开放的 MEV 暴露(不是特权方独有),我们在
-提交文档里按披露处理,而不是说成"滑点是常量"。
+`pxIn` / `pxOut` 取自 `_px()`,也就是 Venus 自己的 ResilientOracle——决定这个仓位会不会
+被清算的**同一个价**,而不是另接一路喂价、多背一套失效模式。成交比预言机低出 3% 以上,
+路由器直接回滚(`Too little received`)。
+
+**3% 是故意放松的:它封顶,不消除。** 池价与预言机之间在两次更新之间本来就会漂;下限收
+到能拦住每一次夹子的程度,也会在最需要减仓的那种急行情里把减仓本身拦死。所以夹子仍然拿
+得走 3% 以内的价值,只是拿不到更多——**不要写成"现在夹不了了"**。
+
+同一道下限也没有取消 `_repayOnce` 里"换回来少了就少还"这一条:
+
+```solidity
+uint256 pay = usdt < needUsdt ? usdt : needUsdt;
+```
+
+差额留给下一轮,不回滚。这仍然是对所有调用方开放的 MEV 暴露(不是特权方独有),我们在提
+交文档里按披露处理——现在披露的是**一个有界的暴露**,而不是"这个合约没有滑点参数"。
 
 ---
 

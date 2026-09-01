@@ -1,7 +1,7 @@
 # LeverVault — 提交给 Flap 的说明
 
 **版本**:factory spec `v2.2` · solc 0.8.26 / Cancun / optimizer 200 / 无 viaIR
-**状态**:factory 已部署至 BNB Chain(56)——`0x8666262877046df9f4B338B9D7f1a30d55688A5c`
+**状态**:factory 已部署至 BNB Chain(56)——`0xb79443A953E6340Bdcba2F420C9f3eD50864f90b`
 **尚未发币**:代币由 Flap 自己的 launcher 经 VaultPortal 创建
 **自审**:见 `AUDIT.md`(十条规则逐条)。**无第三方审计。**
 
@@ -61,7 +61,7 @@ Flap 的 factory commission 抽的是**税**——用户每一笔买卖产生的
 - [x] **69 项验证全绿**:28 个 forge 测试 + 33 条主网活状态断言 + 8 项 Vault UI 包检查
       (`bash scripts/test.sh`)。仓位生命周期一组测试按设计跳过——需要 archive RPC,BSC 没有免费的,
       同样的路径由那 33 条断言在主网当前状态上覆盖
-- [x] 编译参数固定,全部**可部署**合约在 EIP-170 之内(`LeverVault` 19,462 / `LeverVaultFactory`
+- [x] 编译参数固定,全部**可部署**合约在 EIP-170 之内(`LeverVault` 19,582 / `LeverVaultFactory`
       runtime 6,476)。三个测试探针 `FlapProbe` / `KeelProbe` / `KeelE2E` 超过 24,576,它们由
       `eth_call` state override 注入,永不部署
 

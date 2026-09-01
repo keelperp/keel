@@ -63,6 +63,20 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
     ///      a V3 pool is locked during its own flash callback, so borrowing and swapping
     ///      in one pool reverts LOK.
     uint24 internal constant SWAP_FEE = 100;
+
+    /// @notice How far a swap may land below the oracle's price before it reverts, in bps.
+    /// @dev    The exit path had no floor at all: `harvest` and `rebalance` repaid whatever the
+    ///         pool returned, so a sandwiched unwind completed at the attacker's price. The
+    ///         build path was already covered by the flash repayment check, which reverts if the
+    ///         swap cannot cover what is owed.
+    ///
+    ///         The reference is Venus's own ResilientOracle -- the same price that decides
+    ///         whether this position gets liquidated -- rather than a second feed with its own
+    ///         failure modes. 300 bps is deliberately loose: the pool legitimately drifts from
+    ///         the oracle between updates, and a floor tight enough to catch every sandwich
+    ///         would also stop the vault from deleveraging in exactly the fast market where
+    ///         deleveraging matters most. This bounds the loss; it does not eliminate it.
+    uint256 public constant MAX_SWAP_SLIP_BPS = 300;
     address internal constant FLASH_POOL = 0x36696169C63e42cd08ce11f5deeBbCeBae652050; // WBNB/USDT 0.05%
 
     uint256 internal constant WAD = 1e18;
@@ -579,7 +593,10 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
             IVToken(vUSDT).borrow(usdtNeeded) == 0,
             unicode"LeverVault: Venus borrow failed / Venus 借款失败"
         );
-        uint256 got = _swap(USDT, WBNB, usdtNeeded);
+        // No floor here, and none is needed: the require below is strictly tighter. The swap
+        // must return enough to repay the flash loan or the entire build reverts, which is a
+        // bound on the same quantity an oracle floor would bound, enforced by the pool itself.
+        uint256 got = _swap(USDT, WBNB, usdtNeeded, 0);
         require(got >= owed, unicode"LeverVault: flash repayment short / 闪电贷还款不足");
         IERC20Min(WBNB).transfer(FLASH_POOL, owed);
         if (got > owed) {
@@ -604,26 +621,7 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         for (uint8 i = 0; i < 8; i++) {
             uint256 debt = IVToken(vUSDT).borrowBalanceStored(address(this));
             if (debt <= debtTarget) break;
-            // Redeem what the repayment needs, not everything the floor allows. Pulling the
-            // maximum each pass left the surplus sitting as WBNB, which the tail then
-            // unwrapped and counted as freed — a 0.99 BNB harvest paid out 1.89.
-            uint256 needUsdt = debt - debtTarget;
-            uint256 needBnb = needUsdt * p.usdt / p.bnb * 101 / 100;
-            uint256 cap = _maxRedeemableBnb(p);
-            uint256 pull = needBnb < cap ? needBnb : cap;
-            if (pull < MIN_DEPLOY) break;
-            require(
-                IVToken(vBNB).redeemUnderlying(pull) == 0,
-                unicode"LeverVault: Venus redeem failed / Venus 赎回失败"
-            );
-            IWNative(WBNB).deposit{value: pull}();
-            uint256 usdt = _swap(WBNB, USDT, pull);
-            uint256 pay = usdt < debt - debtTarget ? usdt : debt - debtTarget;
-            require(
-                IVToken(vUSDT).repayBorrow(pay) == 0,
-                unicode"LeverVault: Venus repay failed / Venus 还款失败"
-            );
-            if (usdt > pay) _swap(USDT, WBNB, usdt - pay);
+            if (!_repayOnce(debt - debtTarget, p)) break;
         }
 
         uint256 supplyNow = IVToken(vBNB).balanceOf(address(this)) * IVToken(vBNB).exchangeRateStored() / WAD;
@@ -656,7 +654,12 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         return (s - floorSupply) * WAD * 99 / (p.bnb * 100);
     }
 
-    function _swap(address from, address to, uint256 amountIn) internal returns (uint256) {
+    /// @param minOut The oracle-derived floor. Zero is only correct where the caller enforces
+    ///               its own bound afterwards, as the flash callback does.
+    function _swap(address from, address to, uint256 amountIn, uint256 minOut)
+        internal
+        returns (uint256)
+    {
         if (amountIn == 0) return 0;
         return IV3Router(V3_ROUTER)
             .exactInputSingle(
@@ -667,10 +670,54 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
                     recipient: address(this),
                     deadline: block.timestamp,
                     amountIn: amountIn,
-                    amountOutMinimum: 0,
+                    amountOutMinimum: minOut,
                     sqrtPriceLimitX96: 0
                 })
             );
+    }
+
+    /// @dev One deleveraging pass: redeem what the repayment needs, sell it, repay, and put any
+    ///      remainder back. Split out of `_shrinkBy` because that loop already held seven locals
+    ///      and adding the oracle floor to the swaps pushed it past the stack limit.
+    /// @return true if it moved, false if there was nothing worth redeeming.
+    function _repayOnce(uint256 needUsdt, Px memory p) internal returns (bool) {
+        // Redeem what the repayment needs, not everything the floor allows. Pulling the maximum
+        // each pass left the surplus sitting as WBNB, which the tail then unwrapped and counted
+        // as freed — a 0.99 BNB harvest paid out 1.89.
+        uint256 cap = _maxRedeemableBnb(p);
+        uint256 pull = needUsdt * p.usdt / p.bnb * 101 / 100;
+        if (pull > cap) pull = cap;
+        if (pull < MIN_DEPLOY) return false;
+        require(
+            IVToken(vBNB).redeemUnderlying(pull) == 0,
+            unicode"LeverVault: Venus redeem failed / Venus 赎回失败"
+        );
+        IWNative(WBNB).deposit{value: pull}();
+        uint256 usdt = _sellBnb(pull, p);
+        uint256 pay = usdt < needUsdt ? usdt : needUsdt;
+        require(
+            IVToken(vUSDT).repayBorrow(pay) == 0,
+            unicode"LeverVault: Venus repay failed / Venus 还款失败"
+        );
+        if (usdt > pay) _buyBnb(usdt - pay, p);
+        return true;
+    }
+
+    /// @dev BNB out of the position: sell WBNB for USDT, floored at the oracle.
+    function _sellBnb(uint256 amountIn, Px memory p) internal returns (uint256) {
+        return _swap(WBNB, USDT, amountIn, _floor(amountIn, p.bnb, p.usdt));
+    }
+
+    /// @dev The remainder after a repayment goes back to WBNB, floored the same way.
+    function _buyBnb(uint256 amountIn, Px memory p) internal returns (uint256) {
+        return _swap(USDT, WBNB, amountIn, _floor(amountIn, p.usdt, p.bnb));
+    }
+
+    /// @dev Value `amountIn` of `from` in units of `to` at the oracle, less the tolerance.
+    ///      Both prices are USD-per-token scaled to 1e18, so the units cancel.
+    function _floor(uint256 amountIn, uint256 pxIn, uint256 pxOut) internal pure returns (uint256) {
+        if (amountIn == 0 || pxOut == 0) return 0;
+        return amountIn * pxIn / pxOut * (BPS - MAX_SWAP_SLIP_BPS) / BPS;
     }
 
     // --------------------------------------------------------------- flap surface

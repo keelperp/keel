@@ -14,10 +14,16 @@ Everything needed to register `LeverVaultFactory` on the VaultPortal, in one dir
 
 Gains are settled by Flap's own trigger service every 5 minutes, and 70% of each gain goes to
 holders as WBNB through the token's dividend contract, 30% to the project. There is no keeper
-account, no published NAV, and no pause — and no slippage bound on the vault's swaps either, which
-[`RULES.md`](RULES.md) discloses under rule 003. The split and the cadence are `constant`: no
-setter, no role, no governance path, and no change short of the Flap Guardian replacing the
-implementation behind the beacon.
+account, no published NAV, and no pause. The swaps that unwind the position do have a bound now:
+`harvest`, and `rebalance` when it is deleveraging, value each swap at Venus's own ResilientOracle —
+the same price that decides whether this position is liquidated — and pass that value less
+`MAX_SWAP_SLIP_BPS`, 3%, as `amountOutMinimum`, so an unwind landing further below the oracle
+reverts. Three percent is deliberately loose: it bounds what a sandwiched `harvest` or `rebalance`
+can cost, it does not prevent one, and that residual exposure is what [`RULES.md`](RULES.md)
+discloses under rule 003. The floor is on chain: the implementation behind the beacon below returns
+`MAX_SWAP_SLIP_BPS() = 300` on 56 and on 97. The split and the cadence are `constant`: no setter, no
+role, no governance path, and no change short of the Flap Guardian replacing the implementation
+behind the beacon.
 
 ## What is in here
 
@@ -40,14 +46,22 @@ transactions and per-chain block numbers are in [`FACTORY.md`](FACTORY.md).
 
 | | Address | |
 |---|---|---|
-| `LeverVaultFactory` | `0x8666262877046df9f4B338B9D7f1a30d55688A5c` | **this is the one to register** — runtime 6,476 bytes |
-| `LeverBeacon` | `0x7444B36CdC9372588C9C6A9A21bc435F31FE761a` | 785 bytes; owner is the Flap Guardian on each chain, transferred inside the constructor, so the deployer never held upgrade authority. The Guardian can replace the implementation behind it, which is rule 009's proxy exemption working as intended and the only way any constant in the vault changes |
-| `LeverVault` (implementation) | `0xAF3A1d973724ed416FEE48E5A58146893D1a9ac1` | 19,462 bytes, sitting behind that beacon |
+| `LeverVaultFactory` | `0xb79443A953E6340Bdcba2F420C9f3eD50864f90b` | **this is the one to register** — runtime 6,476 bytes |
+| `LeverBeacon` | `0x552Fa7b39D6bD4AAAa9A84615b1d8e169A6f1Fd3` | 785 bytes; owner is the Flap Guardian on each chain, transferred inside the constructor, so the deployer never held upgrade authority. The Guardian can replace the implementation behind it, which is rule 009's proxy exemption working as intended and the only way any constant in the vault changes |
+| `LeverVault` (implementation) | `0x644BFBA1D21b6bBab98fF3ddC281C1e536af85d9` | 19,582 bytes, sitting behind that beacon — the code that carries the exit-path floor. `MAX_SWAP_SLIP_BPS()` reads 300 at this address on both chains |
 
-One correction to make before you look at the chain: an earlier factory,
-`0xE7EC91f5a78c413cDF2F1140B29d51cAfFAfE535`, is also deployed and is **retired**. Its
-`vaultDataSchema()` still described the project share as 40%. It is not the submission and should
-never be registered.
+Two corrections to make before you look at the chain, because the same deployer left two earlier
+factories behind on both 56 and 97 and **neither should ever be registered**. All three are 6,476
+bytes, so size does not tell them apart; `beacon()` does.
+
+`0x8666262877046df9f4B338B9D7f1a30d55688A5c` (nonce 1, block 119,116,447 on 56) is the set this
+one replaces. Its beacon still points at `0xAF3A1d973724ed416FEE48E5A58146893D1a9ac1`, 19,462
+bytes, which unwinds at `amountOutMinimum: 0` — the missing floor Flap's pre-audit flagged.
+`MAX_SWAP_SLIP_BPS()` reverts at that address, which is the cheapest way to tell the two
+implementations apart.
+
+`0xE7EC91f5a78c413cDF2F1140B29d51cAfFAfE535` (nonce 0) is older still. Its `vaultDataSchema()`
+still described the project share as 40%, from before the split changed to 30%.
 
 ## Status
 
@@ -65,6 +79,23 @@ behind `Ownable` with a third party as owner. Venus itself is live there (vBNB l
 borrowable), but its collateral factor is 70% against mainnet's 80%, and since `_cf()` reads it from
 chain the health floor would bind leverage near 2.4x even if a pool existed. If you have a test
 environment or a pool you want this run against, we will run it there.
+
+One thing the address list does not say on its own: this set **is** the fix. Flap's pre-audit
+flagged that the exit path swapped with `amountOutMinimum: 0` — the gap rule 003 had already
+disclosed — and rather than ask for an exception we changed the code and redeployed, which is why
+the addresses above are not the ones this package named before. `_sellBnb` and `_buyBnb` now floor
+`amountOutMinimum` at Venus's ResilientOracle less 3%. The build path — `deployPending`, and
+`rebalance` when it levers up — still passes zero, deliberately: its flash callback ends in
+`require(got >= owed)`, which is the tighter bound, because the swap must return enough to repay the
+flash loan or the whole build reverts. Do not read the build as newly protected; it was always
+bounded, by the pool itself. The floor costs 120 bytes, and those 120 bytes are the whole difference
+between the retired implementation's 19,462 and the 19,582 now behind the beacon. What it buys is a
+bound, not immunity: 3% is deliberately loose, because the pool drifts from the oracle between
+updates and a floor tight enough to catch every sandwich would also stop the vault deleveraging in
+exactly the fast market where deleveraging matters most. A sandwich that stays inside the band still
+profits. None of that needs taking on our word: `cast call
+0x644BFBA1D21b6bBab98fF3ddC281C1e536af85d9 "MAX_SWAP_SLIP_BPS()(uint256)"` returns 300 on both
+chains, and the same call against the retired `0xAF3A1d97…` reverts.
 
 What we have instead of a testnet run is 69 checks, all green: 28 forge tests, 33 assertions made
 against BNB Chain's current live state across seven atomic `eth_call`s, and 8 vault-UI package
@@ -97,10 +128,14 @@ contracts against the local build, `beacon.owner()` against the Guardian, the be
 wiring against each other, the project share the on-chain `vaultDataSchema()` states against
 `PROJECT_SHARE_BPS` in the source, and that native BNB is supported as quote. It also asserts that
 this package still says no token exists, and that no page in this directory states a superseded
-split. Two limits worth knowing before you lean on it: the size rows it diffs are the ones in
-[`AUDIT.md`](../AUDIT.md), which carries the same figures this page republishes, and
-`PROJECT_SHARE_BPS` is the only constant it checks — read out of `src/flap/LeverVault.sol` by
-regex, not out of the artefact. Pass `RPC=<url>` to use your own node. Read a claim here, then
-make the script prove it as far as it reaches; where it does not reach — the 69-check tally and
+split. It passes whole as of this writing, the three deployed runtimes included — 6,476 / 785 /
+19,582 against the local build — which is the row that would have caught this package still
+pointing at the pre-floor implementation. Two limits worth knowing before you lean on it: the size
+rows it diffs are the ones in [`AUDIT.md`](../AUDIT.md), which carries the same figures this page
+republishes, and `PROJECT_SHARE_BPS` is the only constant it checks — read out of
+`src/flap/LeverVault.sol` by regex, not out of the artefact. `MAX_SWAP_SLIP_BPS` is not one of
+them, so read that one off the chain yourself, as above. Pass `RPC=<url>` to use your own node.
+Read a claim here, then make the script prove it as far as it reaches; where it does not reach —
+the 69-check tally and
 the testnet finding — the working is in [`AUDIT.md`](../AUDIT.md) and reproduces with `forge test`
 and `python3 tools/verify.py`.
