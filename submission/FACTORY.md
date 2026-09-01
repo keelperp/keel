@@ -2,7 +2,7 @@
 
 ## The address
 
-Register **`0xb79443A953E6340Bdcba2F420C9f3eD50864f90b`**.
+Register **`0x94a24F97b635BF14E2FEd3d6C37361e60fA98338`**.
 
 That address is the same on BNB Chain (56) and on BSC testnet (97) — same bytecode, same
 deployer, same nonce, so CREATE lands it in the same place on both. Two more contracts came
@@ -11,9 +11,9 @@ and recognise them.
 
 | Contract | Address | Runtime bytes |
 |---|---|---:|
-| `LeverVaultFactory` — **this is the one to register** | `0xb79443A953E6340Bdcba2F420C9f3eD50864f90b` | 6,476 |
-| `LeverBeacon` — upgrade authority | `0x552Fa7b39D6bD4AAAa9A84615b1d8e169A6f1Fd3` | 785 |
-| `LeverVault` — the implementation behind every vault | `0x644BFBA1D21b6bBab98fF3ddC281C1e536af85d9` | 19,582 |
+| `LeverVaultFactory` — **this is the one to register** | `0x94a24F97b635BF14E2FEd3d6C37361e60fA98338` | 6,476 |
+| `LeverBeacon` — upgrade authority | `0x23BEd716Bcf81aA89B8f4045a734Ca3D4c23F366` | 785 |
+| `LeverVault` — the implementation behind every vault | `0x02587e513B893358DcFaecdF192cECABcd3f8D73` | 19,582 |
 
 Both deployments were made by `0x1544A8fCE3a3c39E0a744a13392981bEcDF014f4` at nonce 1:
 
@@ -33,7 +33,7 @@ which we do not hold. On chain 56 the VaultPortal is
 for the chain it is standing on).
 
 ```solidity
-registerVaultFactory(0xb79443A953E6340Bdcba2F420C9f3eD50864f90b, /* enabled */ true, /* official */ false, riskLevel)
+registerVaultFactory(0x94a24F97b635BF14E2FEd3d6C37361e60fA98338, /* enabled */ true, /* official */ false, riskLevel)
 ```
 
 We are not asking to be marked `official`, and we are not asking for a risk level below
@@ -94,7 +94,7 @@ constructor that runs them. The child sizes are read from `out/LeverVault.sol/Le
 and `out/LeverBeacon.sol/LeverBeacon.json` after `forge build`.
 
 Two limits apply and both are cleared. EIP-170 caps *runtime* code at 24,576 bytes, and every
-deployable contract here is inside it — the largest is `LeverVault` at 19,582. EIP-3860 caps
+deployable contract here is inside it — the largest is `LeverVault` at 20,242. EIP-3860 caps
 *initcode* at 49,152, and 27,668 is inside that. Only a real deploy exercises the second one,
 and both of the deploys in the table above did — mainnet first, testnet immediately after.
 
@@ -206,13 +206,13 @@ Nothing below needs a key, an archive node, or our repository — only `cast` an
 ```bash
 R=https://bsc-dataseed.bnbchain.org          # chain 56
 T=https://bsc-testnet-rpc.publicnode.com     # chain 97
-F=0xb79443A953E6340Bdcba2F420C9f3eD50864f90b
-B=0x552Fa7b39D6bD4AAAa9A84615b1d8e169A6f1Fd3
+F=0x94a24F97b635BF14E2FEd3d6C37361e60fA98338
+B=0x23BEd716Bcf81aA89B8f4045a734Ca3D4c23F366
 
-# runtime sizes: 6,476 / 785 / 19,582
+# runtime sizes: 6,476 / 785 / 20,242
 cast codesize $F --rpc-url $R
 cast codesize $B --rpc-url $R
-cast codesize 0x644BFBA1D21b6bBab98fF3ddC281C1e536af85d9 --rpc-url $R
+cast codesize 0x02587e513B893358DcFaecdF192cECABcd3f8D73 --rpc-url $R
 
 # the wiring, read from the chain rather than from the deploy log
 cast call $F "beacon()(address)" --rpc-url $R              # -> 0x552Fa7b3...
@@ -222,7 +222,7 @@ cast call $B "owner()(address)" --rpc-url $T               # -> 0x76Fa8C52... (G
 
 # the swap floor Flap's pre-audit asked for, read from the implementation itself.
 # The retired implementation reverts on this selector, which is how to tell them apart.
-cast call 0x644BFBA1D21b6bBab98fF3ddC281C1e536af85d9 "MAX_SWAP_SLIP_BPS()(uint256)" --rpc-url $R   # -> 300
+cast call 0x02587e513B893358DcFaecdF192cECABcd3f8D73 "MAX_SWAP_SLIP_BPS()(uint256)" --rpc-url $R   # -> 300
 
 # the same three addresses exist on 97
 cast codesize $F --rpc-url $T

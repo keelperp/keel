@@ -96,9 +96,9 @@ done. This submission is the handover; nothing has been registered.
 
 | | address | runtime |
 |---|---|---:|
-| `LeverVaultFactory` | `0xb79443A953E6340Bdcba2F420C9f3eD50864f90b` | 6,476 |
-| `LeverBeacon` | `0x552Fa7b39D6bD4AAAa9A84615b1d8e169A6f1Fd3` | 785 |
-| `LeverVault` (implementation) | `0x644BFBA1D21b6bBab98fF3ddC281C1e536af85d9` | 19,582 |
+| `LeverVaultFactory` | `0x94a24F97b635BF14E2FEd3d6C37361e60fA98338` | 6,476 |
+| `LeverBeacon` | `0x23BEd716Bcf81aA89B8f4045a734Ca3D4c23F366` | 785 |
+| `LeverVault` (implementation) | `0x02587e513B893358DcFaecdF192cECABcd3f8D73` | 19,582 |
 
 The runtime column is what is on chain today, and that implementation predates the Rule 003
 slippage floor. That factory is superseded; the current one
@@ -123,7 +123,7 @@ now an on-chain fact rather than a claim in a document.
 **I-01 — a superseded factory is on chain and must not be cited.**
 `0xE7EC91f5a78c413cDF2F1140B29d51cAfFAfE535` exists on chain and is retired: its
 `vaultDataSchema()` still described the project share as 40%. **Status:** retired. The current and
-only factory is `0xb79443A953E6340Bdcba2F420C9f3eD50864f90b`; the live schema text is at
+only factory is `0x94a24F97b635BF14E2FEd3d6C37361e60fA98338`; the live schema text is at
 `src/flap/LeverVaultFactory.sol:109-119` and says 70% to holders, 30% to the project.
 
 **I-02 — the trigger fee bleeds a vault whose token nobody trades.**
@@ -189,7 +189,7 @@ the deploy script itself is tested (`test_deploy`).
 ## Sizes
 
 Every deployable contract is inside EIP-170: `LeverVault` 19,582 (4,994 of margin),
-`LeverVaultFactory` 6,476, `LeverBeacon` 785. The factory's initcode is 27,788 bytes — it carries
+`LeverVaultFactory` 6,476, `LeverBeacon` 785. The factory's initcode is 28,448 bytes — it carries
 both children, since its constructor is `new LeverBeacon(new LeverVault())` — which is inside
 EIP-3860's 49,152. These are the current sources, floor included; the slippage fix cost 120 bytes,
 which is why the implementation deployed in SB-02 reads 19,582. Three test-only probes

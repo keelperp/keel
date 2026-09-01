@@ -41,9 +41,10 @@
       "three-r3f-v1": {
         "surfaces": [
           "vault-ui-7777",
+          "mini-app-7777",
           "mini-app-8888"
         ],
-        "description": "Controlled Three.js and React Three Fiber runtime for 7777 Vault UI and 8888 Mini App surfaces.",
+        "description": "Controlled Three.js and React Three Fiber runtime for 7777 Vault UI plus 7777 Tax Token and 8888 zero-tax Mini App surfaces.",
         "dependencies": {
           "three": "0.185.1",
           "@react-three/fiber": "9.7.0",

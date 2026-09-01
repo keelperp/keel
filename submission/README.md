@@ -46,9 +46,9 @@ transactions and per-chain block numbers are in [`FACTORY.md`](FACTORY.md).
 
 | | Address | |
 |---|---|---|
-| `LeverVaultFactory` | `0xb79443A953E6340Bdcba2F420C9f3eD50864f90b` | **this is the one to register** — runtime 6,476 bytes |
-| `LeverBeacon` | `0x552Fa7b39D6bD4AAAa9A84615b1d8e169A6f1Fd3` | 785 bytes; owner is the Flap Guardian on each chain, transferred inside the constructor, so the deployer never held upgrade authority. The Guardian can replace the implementation behind it, which is rule 009's proxy exemption working as intended and the only way any constant in the vault changes |
-| `LeverVault` (implementation) | `0x644BFBA1D21b6bBab98fF3ddC281C1e536af85d9` | 19,582 bytes, sitting behind that beacon — the code that carries the exit-path floor. `MAX_SWAP_SLIP_BPS()` reads 300 at this address on both chains |
+| `LeverVaultFactory` | `0x94a24F97b635BF14E2FEd3d6C37361e60fA98338` | **this is the one to register** — runtime 6,476 bytes |
+| `LeverBeacon` | `0x23BEd716Bcf81aA89B8f4045a734Ca3D4c23F366` | 785 bytes; owner is the Flap Guardian on each chain, transferred inside the constructor, so the deployer never held upgrade authority. The Guardian can replace the implementation behind it, which is rule 009's proxy exemption working as intended and the only way any constant in the vault changes |
+| `LeverVault` (implementation) | `0x02587e513B893358DcFaecdF192cECABcd3f8D73` | 20,242 bytes, sitting behind that beacon — the code that carries the exit-path floor. `MAX_SWAP_SLIP_BPS()` reads 300 at this address on both chains |
 
 Two corrections to make before you look at the chain, because the same deployer left two earlier
 factories behind on both 56 and 97 and **neither should ever be registered**. All three are 6,476
@@ -95,7 +95,7 @@ bound, not immunity: 3% is deliberately loose, because the pool drifts from the 
 updates and a floor tight enough to catch every sandwich would also stop the vault deleveraging in
 exactly the fast market where deleveraging matters most. A sandwich that stays inside the band still
 profits. None of that needs taking on our word: `cast call
-0x644BFBA1D21b6bBab98fF3ddC281C1e536af85d9 "MAX_SWAP_SLIP_BPS()(uint256)"` returns 300 on both
+0x02587e513B893358DcFaecdF192cECABcd3f8D73 "MAX_SWAP_SLIP_BPS()(uint256)"` returns 300 on both
 chains, and the same call against the retired `0xAF3A1d97…` reverts.
 
 What we have instead of a testnet run is 69 checks, all green: 28 forge tests, 33 assertions made

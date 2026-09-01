@@ -4,17 +4,17 @@
   "network": "BNB Chain testnet",
   "note": "Factory only. A vault cannot be created on this chain: the build path needs a PancakeSwap V3 pool holding WBNB to flash from, and BSC testnet has none. See AUDIT.md.",
   "deployer": "0x1544A8fCE3a3c39E0a744a13392981bEcDF014f4",
-  "txHash": "0xfd7f13963a9bfe3502a425cab89c14bca9a77ccc10101852abbd57fbd5f85bd2",
-  "block": 128449152,
+  "txHash": "0x4dd1c55d575b5f55dbe9b04c55f847340b1a00b055c0c352dd572b7d0a370ae9",
+  "block": 128464603,
   "contracts": {
-    "LeverVaultFactory": "0xb79443A953E6340Bdcba2F420C9f3eD50864f90b",
-    "LeverBeacon": "0x552Fa7b39D6bD4AAAa9A84615b1d8e169A6f1Fd3",
-    "LeverVaultImplementation": "0x644BFBA1D21b6bBab98fF3ddC281C1e536af85d9"
+    "LeverVaultFactory": "0x94a24F97b635BF14E2FEd3d6C37361e60fA98338",
+    "LeverBeacon": "0x23BEd716Bcf81aA89B8f4045a734Ca3D4c23F366",
+    "LeverVaultImplementation": "0x02587e513B893358DcFaecdF192cECABcd3f8D73"
   },
   "beaconOwner": "0x76Fa8C526f8Bc27ba6958B76DeEf92a0dbE46950",
   "beaconOwnerIs": "Flap Guardian (BNB testnet). Same bytecode as chain 56 resolves a different Guardian by chain id, which is what this deployment demonstrates.",
   "supersedes": {
-    "factory": "0x8666262877046df9f4B338B9D7f1a30d55688A5c",
-    "reason": "its implementation swapped the exit path with amountOutMinimum: 0. Flap's pre-audit flagged the missing floor; this deployment carries MAX_SWAP_SLIP_BPS = 300 against Venus's ResilientOracle."
+    "factory": "0xb79443A953E6340Bdcba2F420C9f3eD50864f90b",
+    "reason": "its selector never asked Venus whether it could serve the action it chose, so a rescue blocked by market liquidity stayed selected and reverted on every wake; its unwind reverted whole instead of making partial progress; and its urgent line sat at 11,000. Raised by Flap's pre-audit."
   }
 }

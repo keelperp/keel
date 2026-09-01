@@ -12,6 +12,8 @@ interface IVToken {
     function exchangeRateStored() external view returns (uint256);
     function borrowBalanceStored(address) external view returns (uint256);
     function underlying() external view returns (address);
+    /// @notice Underlying held by this market and available to redeem or borrow right now.
+    function getCash() external view returns (uint256);
 }
 
 interface IComptroller {
@@ -19,6 +21,10 @@ interface IComptroller {
     function oracle() external view returns (address);
     function markets(address) external view returns (bool, uint256, bool);
     function supplyCaps(address) external view returns (uint256);
+    /// @notice Venus's own solvency answer: (error, liquidity, shortfall), all in USD 1e18.
+    ///         A non-zero shortfall means the account is already liquidatable, computed with
+    ///         whatever parameters Venus itself uses rather than with our copy of them.
+    function getAccountLiquidity(address) external view returns (uint256, uint256, uint256);
 }
 
 interface IVenusOracle {

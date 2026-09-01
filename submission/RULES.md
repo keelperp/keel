@@ -62,11 +62,11 @@ The table below is what this repository compiles to today, not what is on chain 
 
 | Contract | Runtime | Margin to EIP-170 |
 |---|---:|---:|
-| `LeverVault` | 19,582 | 4,994 |
+| `LeverVault` | 20,242 | 4,994 |
 | `LeverVaultFactory` | 6,476 | 18,100 |
 | `LeverBeacon` | 785 | 23,791 |
 
-`LeverVaultFactory`'s initcode is 27,788 bytes — it carries both children, since its constructor is
+`LeverVaultFactory`'s initcode is 28,448 bytes — it carries both children, since its constructor is
 `new LeverBeacon(new LeverVault())` — which is inside EIP-3860's 49,152.
 
 Three test probes exceed EIP-170: `FlapProbe` (30,081), `KeelProbe` (27,451), `KeelE2E` (46,100).
@@ -79,15 +79,15 @@ Identical addresses on both chains, from the same deployer and nonce.
 
 | | Address | Runtime |
 |---|---|---:|
-| `LeverVaultFactory` | `0xb79443A953E6340Bdcba2F420C9f3eD50864f90b` | 6,476 |
-| `LeverBeacon` | `0x552Fa7b39D6bD4AAAa9A84615b1d8e169A6f1Fd3` | 785 |
-| `LeverVault` (implementation) | `0x644BFBA1D21b6bBab98fF3ddC281C1e536af85d9` | 19,582 |
+| `LeverVaultFactory` | `0x94a24F97b635BF14E2FEd3d6C37361e60fA98338` | 6,476 |
+| `LeverBeacon` | `0x23BEd716Bcf81aA89B8f4045a734Ca3D4c23F366` | 785 |
+| `LeverVault` (implementation) | `0x02587e513B893358DcFaecdF192cECABcd3f8D73` | 19,582 |
 
 Chain 56: tx `0x88afc2d3bf…`, block 119,116,447. Chain 97: tx `0xba13570ab6…`, block 128,260,131.
 Deployer `0x1544A8fCE3a3c39E0a744a13392981bEcDF014f4`.
 
 **These three addresses hold the floored code.** The implementation above is
-19,582 bytes, matching the source in this repository byte for byte; the 120 bytes over the retired build are
+20,242 bytes, matching the source in this repository byte for byte; the 120 bytes over the retired build are
 the swap floor described in the Rule 003 row and the helpers that apply it. Nothing in this repository has
 been redeployed since that change, so any vault the deployed factory produced before an upgrade
 would unwind at `amountOutMinimum: 0` — no vault exists yet, and that is the only reason no

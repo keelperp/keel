@@ -5,11 +5,11 @@
     "bindings": [
       {
         "chainId": 97,
-        "factoryAddress": "0xb79443A953E6340Bdcba2F420C9f3eD50864f90b"
+        "factoryAddress": "0x94a24F97b635BF14E2FEd3d6C37361e60fA98338"
       },
       {
         "chainId": 56,
-        "factoryAddress": "0xb79443A953E6340Bdcba2F420C9f3eD50864f90b"
+        "factoryAddress": "0x94a24F97b635BF14E2FEd3d6C37361e60fA98338"
       }
     ]
   },

@@ -86,7 +86,17 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
     ///         floor: health = CF*L/(L-1), and 5x is exactly 1.00 — the liquidation point.
     uint256 public constant TARGET_LEVERAGE = 3 * WAD;
     uint256 public constant MIN_HEALTH_BPS = 12_000;
-    uint256 public constant URGENT_HEALTH_BPS = 11_000;
+    /// @notice Below this the vault deleverages immediately, waiving the rebalance cooldown.
+    /// @dev    Raised from 11_000 after Flap's pre-audit observed how narrow the window was.
+    ///         A build lands at health 1.205; at 11_000 the collateral had to fall 8.3% before
+    ///         anything happened, and the next scheduled wake can be an hour away when the
+    ///         previous one found nothing to do. 11_300 moves the trigger to a 6.5% fall.
+    ///
+    ///         It is not set higher because a rescue deleverages back to TARGET_LEVERAGE, which
+    ///         is health 1.20: the closer this sits to that, the less room each rescue buys and
+    ///         the more often ordinary volatility pays for a swap. At 11_500 a 4.6% move would
+    ///         trigger one, which BNB does on a normal day.
+    uint256 public constant URGENT_HEALTH_BPS = 11_300;
     uint256 public constant REBALANCE_BAND_BPS = 500;
 
     /// @notice Paid to whoever does the work, in the asset that work produced. Constant,
@@ -272,6 +282,21 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
     /// @notice supply x CF / debt, in bps. Venus liquidates at 10000.
     function healthBps() public view returns (uint256) {
         return _health(_px());
+    }
+
+    /// @notice Venus's own verdict: true when it already considers this account liquidatable.
+    /// @dev    `_health` derives a ratio from `collateralFactorMantissa`, which is what the
+    ///         vault targets. But `markets()` returns seven words and we read three, and Venus
+    ///         can set the parameter its liquidation engine uses independently of the one we
+    ///         read. Rather than guess which of the other words that is, ask Venus directly:
+    ///         a non-zero shortfall is computed with whatever it actually uses.
+    ///
+    ///         This is a floor under the ratio, not a replacement for it. The ratio still
+    ///         drives targeting; this catches the case where the two have diverged and our
+    ///         copy of the parameter says the position is safe when Venus does not.
+    function _venusShortfall() internal view returns (bool) {
+        (uint256 err,, uint256 shortfall) = IComptroller(COMPTROLLER).getAccountLiquidity(address(this));
+        return err == 0 && shortfall > 0;
     }
 
     function _health(Px memory p) internal view returns (uint256) {
@@ -499,14 +524,27 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         // Cheapest checks first: pendingRevenue is a single SLOAD, and it is what a wake
         // finds most of the time. Only reach for the oracle when it has to.
         Px memory p = _px();
-        if (_health(p) < URGENT_HEALTH_BPS) return 1;
-        if (pendingRevenue >= MIN_DEPLOY) return 2;
-        if (_gain(p) >= MIN_HARVEST) return 3;
+
+        // Venus is asked whether it can serve the action before it is chosen. Without this the
+        // selector re-picks the same blocked action on every wake -- a rescue that cannot
+        // redeem stays selected, reverts, and never lets a lower-priority action that would
+        // succeed run at all. getCash is one storage read on the market.
+        uint256 bnbCash = IVToken(vBNB).getCash();
+        uint256 usdtCash = IVToken(vUSDT).getCash();
+
+        // A rescue and a harvest both redeem BNB; a deploy borrows USDT.
+        // Venus's own verdict outranks our ratio: if it says this account is already
+        // liquidatable, nothing else is worth doing with the wake.
+        if ((_health(p) < URGENT_HEALTH_BPS || _venusShortfall()) && bnbCash >= MIN_DEPLOY) return 1;
+        if (pendingRevenue >= MIN_DEPLOY && usdtCash > 0) return 2;
+        if (_gain(p) >= MIN_HARVEST && bnbCash >= MIN_DEPLOY) return 3;
         uint256 lev = _leverage(p);
         if (lev != 0) {
             uint256 lo = TARGET_LEVERAGE * (BPS - REBALANCE_BAND_BPS) / BPS;
             uint256 hi = TARGET_LEVERAGE * (BPS + REBALANCE_BAND_BPS) / BPS;
-            if (lev < lo || lev > hi) return 4;
+            // Levering down redeems BNB; levering up borrows USDT.
+            bool servable = lev > hi ? bnbCash >= MIN_DEPLOY : usdtCash > 0;
+            if ((lev < lo || lev > hi) && servable) return 4;
         }
         return 0;
     }
@@ -687,6 +725,12 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         uint256 cap = _maxRedeemableBnb(p);
         uint256 pull = needUsdt * p.usdt / p.bnb * 101 / 100;
         if (pull > cap) pull = cap;
+        // Take what Venus can actually hand over. Redeeming more than the market holds reverts
+        // the whole call, which in a rescue is the worst possible outcome: the position stays
+        // exactly as leveraged as it was. A partial pass makes partial progress, and the next
+        // wake continues from there.
+        uint256 cash = IVToken(vBNB).getCash();
+        if (pull > cash) pull = cash;
         if (pull < MIN_DEPLOY) return false;
         require(
             IVToken(vBNB).redeemUnderlying(pull) == 0,

@@ -61,3 +61,5 @@ for (const [label, addr, abi, fn, args] of [
   console.log(call(addr, sig, ...args));
   console.log();
 }
+
+// Written only if every call above succeeded; a partial dump is not a schema.

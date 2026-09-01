@@ -1,6 +1,6 @@
 # Schemas, read from the deployed contracts on BNB Chain (56)
-# factory        0xb79443A953E6340Bdcba2F420C9f3eD50864f90b
-# implementation 0x644BFBA1D21b6bBab98fF3ddC281C1e536af85d9
+# factory        0x94a24F97b635BF14E2FEd3d6C37361e60fA98338
+# implementation 0x02587e513B893358DcFaecdF192cECABcd3f8D73
 # Tuple signatures are derived from the compiled ABI by tools/dump-schema.mjs.
 
 ## factory.vaultDataSchema()
@@ -16,7 +16,7 @@ true
 ## factory.beacon()
 # signature: beacon()(address)
 
-0x552Fa7b39D6bD4AAAa9A84615b1d8e169A6f1Fd3
+0x23BEd716Bcf81aA89B8f4045a734Ca3D4c23F366
 
 ## implementation.description()
 # signature: description()(string)
