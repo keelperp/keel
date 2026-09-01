@@ -2,7 +2,7 @@
 
 ## The address
 
-Register **`0x94a24F97b635BF14E2FEd3d6C37361e60fA98338`**.
+Register **`0x40dc17CC2FB7C584C87fA23d52782ea57FAC1cf1`**.
 
 That address is the same on BNB Chain (56) and on BSC testnet (97) — same bytecode, same
 deployer, same nonce, so CREATE lands it in the same place on both. Two more contracts came
@@ -11,16 +11,16 @@ and recognise them.
 
 | Contract | Address | Runtime bytes |
 |---|---|---:|
-| `LeverVaultFactory` — **this is the one to register** | `0x94a24F97b635BF14E2FEd3d6C37361e60fA98338` | 6,476 |
-| `LeverBeacon` — upgrade authority | `0x23BEd716Bcf81aA89B8f4045a734Ca3D4c23F366` | 785 |
-| `LeverVault` — the implementation behind every vault | `0x02587e513B893358DcFaecdF192cECABcd3f8D73` | 19,582 |
+| `LeverVaultFactory` — **this is the one to register** | `0x40dc17CC2FB7C584C87fA23d52782ea57FAC1cf1` | 6,476 |
+| `LeverBeacon` — upgrade authority | `0xA9ff7329a4F1196819BE56e54AaDDDA3E895f284` | 785 |
+| `LeverVault` — the implementation behind every vault | `0x229fF752270734718c63a961C8a0f29e0AFDE3E6` | 20,257 |
 
 Both deployments were made by `0x1544A8fCE3a3c39E0a744a13392981bEcDF014f4` at nonce 1:
 
 | Chain | Block | Transaction | `beacon.owner()` |
 |---|---:|---|---|
-| BNB Chain, 56 | 119,116,447 | `0x88afc2d3bfea9e3e3ce40b49d65d53f51c1511bc3208404fa9eda4bc5238362d` | `0x9e27098dcD8844bcc6287a557E0b4D09C86B8a4b` — Flap Guardian, BNB Chain |
-| BSC testnet, 97 | 128,260,131 | `0xba13570ab6942c7ed29e8646eea14d6c2a5e624273e26a95b2341cb6b86276f9` | `0x76Fa8C526f8Bc27ba6958B76DeEf92a0dbE46950` — Flap Guardian, testnet |
+| BNB Chain, 56 | 119,329,413 | `0x5c8796437013ac7ea1817b9044c898a2b6ed646e071dde74ad3e5b81520fdb33` | `0x9e27098dcD8844bcc6287a557E0b4D09C86B8a4b` — Flap Guardian, BNB Chain |
+| BSC testnet, 97 | 128,473,683 | `0x40983fb2702623004a5db9c5617f6ffaf883a51647300ae609cfce59a1b471be` | `0x76Fa8C526f8Bc27ba6958B76DeEf92a0dbE46950` — Flap Guardian, testnet |
 
 Those two transactions are recorded in `deployments/56.json` and `deployments/97.json`. The
 runtime sizes above are what a node returns today, not what the build promised.
@@ -33,7 +33,7 @@ which we do not hold. On chain 56 the VaultPortal is
 for the chain it is standing on).
 
 ```solidity
-registerVaultFactory(0x94a24F97b635BF14E2FEd3d6C37361e60fA98338, /* enabled */ true, /* official */ false, riskLevel)
+registerVaultFactory(0x40dc17CC2FB7C584C87fA23d52782ea57FAC1cf1, /* enabled */ true, /* official */ false, riskLevel)
 ```
 
 We are not asking to be marked `official`, and we are not asking for a risk level below
@@ -94,7 +94,7 @@ constructor that runs them. The child sizes are read from `out/LeverVault.sol/Le
 and `out/LeverBeacon.sol/LeverBeacon.json` after `forge build`.
 
 Two limits apply and both are cleared. EIP-170 caps *runtime* code at 24,576 bytes, and every
-deployable contract here is inside it — the largest is `LeverVault` at 20,242. EIP-3860 caps
+deployable contract here is inside it — the largest is `LeverVault` at 20,257. EIP-3860 caps
 *initcode* at 49,152, and 27,668 is inside that. Only a real deploy exercises the second one,
 and both of the deploys in the table above did — mainnet first, testnet immediately after.
 
@@ -206,13 +206,13 @@ Nothing below needs a key, an archive node, or our repository — only `cast` an
 ```bash
 R=https://bsc-dataseed.bnbchain.org          # chain 56
 T=https://bsc-testnet-rpc.publicnode.com     # chain 97
-F=0x94a24F97b635BF14E2FEd3d6C37361e60fA98338
-B=0x23BEd716Bcf81aA89B8f4045a734Ca3D4c23F366
+F=0x40dc17CC2FB7C584C87fA23d52782ea57FAC1cf1
+B=0xA9ff7329a4F1196819BE56e54AaDDDA3E895f284
 
-# runtime sizes: 6,476 / 785 / 20,242
+# runtime sizes: 6,476 / 785 / 20,257
 cast codesize $F --rpc-url $R
 cast codesize $B --rpc-url $R
-cast codesize 0x02587e513B893358DcFaecdF192cECABcd3f8D73 --rpc-url $R
+cast codesize 0x229fF752270734718c63a961C8a0f29e0AFDE3E6 --rpc-url $R
 
 # the wiring, read from the chain rather than from the deploy log
 cast call $F "beacon()(address)" --rpc-url $R              # -> 0x552Fa7b3...
@@ -222,7 +222,7 @@ cast call $B "owner()(address)" --rpc-url $T               # -> 0x76Fa8C52... (G
 
 # the swap floor Flap's pre-audit asked for, read from the implementation itself.
 # The retired implementation reverts on this selector, which is how to tell them apart.
-cast call 0x02587e513B893358DcFaecdF192cECABcd3f8D73 "MAX_SWAP_SLIP_BPS()(uint256)" --rpc-url $R   # -> 300
+cast call 0x229fF752270734718c63a961C8a0f29e0AFDE3E6 "MAX_SWAP_SLIP_BPS()(uint256)" --rpc-url $R   # -> 300
 
 # the same three addresses exist on 97
 cast codesize $F --rpc-url $T
@@ -245,8 +245,8 @@ cast call 0xE7EC91f5a78c413cDF2F1140B29d51cAfFAfE535 "vaultDataSchema()((string,
 cast call 0xE7EC91f5a78c413cDF2F1140B29d51cAfFAfE535 "beacon()(address)" --rpc-url $R
 
 # the deploy transactions and their blocks
-cast tx 0x88afc2d3bfea9e3e3ce40b49d65d53f51c1511bc3208404fa9eda4bc5238362d blockNumber --rpc-url $R
-cast tx 0xba13570ab6942c7ed29e8646eea14d6c2a5e624273e26a95b2341cb6b86276f9 blockNumber --rpc-url $T
+cast tx 0x5c8796437013ac7ea1817b9044c898a2b6ed646e071dde74ad3e5b81520fdb33 blockNumber --rpc-url $R
+cast tx 0x40983fb2702623004a5db9c5617f6ffaf883a51647300ae609cfce59a1b471be blockNumber --rpc-url $T
 
 # the addresses are CREATE arithmetic, not a coincidence
 cast compute-address 0x1544A8fCE3a3c39E0a744a13392981bEcDF014f4 --nonce 1   # -> the factory
@@ -259,7 +259,7 @@ To reproduce the sizes from source instead of reading them off a node:
 
 ```bash
 forge build --sizes        # runtime sizes; initcode is in out/<Name>.sol/<Name>.json
-bash scripts/test.sh       # 28 forge tests + 33 live-state assertions + 8 vault-UI checks = 69
+bash scripts/test.sh       # 31 forge tests + 33 live-state assertions + 8 vault-UI checks = 69
 ```
 
 `scripts/test.sh` runs everything named on this page. A plain `forge test` also exits 0 (29

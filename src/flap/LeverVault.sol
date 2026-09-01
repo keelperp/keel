@@ -535,7 +535,20 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         // A rescue and a harvest both redeem BNB; a deploy borrows USDT.
         // Venus's own verdict outranks our ratio: if it says this account is already
         // liquidatable, nothing else is worth doing with the wake.
-        if ((_health(p) < URGENT_HEALTH_BPS || _venusShortfall()) && bnbCash >= MIN_DEPLOY) return 1;
+        //
+        // needsRebalance() is the third condition, and it is the one that matters when the
+        // position is underwater. A rescue runs _rebalance, which requires it. If supply has
+        // fallen to or below debt, _leverage returns 0, needsRebalance returns false, and the
+        // rescue reverts every single time -- while health is necessarily below the urgent line,
+        // so the selector picks it again on the next wake and never reaches the deploy that
+        // could actually recover the position. Requiring it here lets an action that cannot
+        // succeed step aside for one that can.
+        //
+        // It costs nothing in the ordinary case: health below 11,300 means leverage above
+        // 3.42x, which is already outside the 3x +/- 5% band, so needsRebalance is true there
+        // anyway. The only state this changes is the insolvent one.
+        if ((_health(p) < URGENT_HEALTH_BPS || _venusShortfall())
+            && needsRebalance() && bnbCash >= MIN_DEPLOY) return 1;
         if (pendingRevenue >= MIN_DEPLOY && usdtCash > 0) return 2;
         if (_gain(p) >= MIN_HARVEST && bnbCash >= MIN_DEPLOY) return 3;
         uint256 lev = _leverage(p);

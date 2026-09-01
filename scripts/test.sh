@@ -18,6 +18,9 @@ forge test --match-contract LeverVaultSchemaTest || fail=1
 echo; echo "=== forked: authorization, guards, receive stipend ==="
 forge test --match-contract LeverVaultAuthTest --fork-url "$RPC" || fail=1
 
+echo; echo "=== forked: the underwater position Flap's review asked about ==="
+forge test --match-contract LeverVaultInsolventTest --fork-url "$RPC" || fail=1
+
 echo; echo "=== forked: receive gas budget (rule 005) ==="
 forge test --match-contract LeverVaultGasTest --fork-url "$RPC" || fail=1
 

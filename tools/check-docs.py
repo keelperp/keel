@@ -7,7 +7,7 @@ artefact was 6,476, an initcode of 26,963 against an actual 27,668, a pasted tra
 9 offline tests when the suite declares 13, and a "60/40" split after the constant became 3000.
 Nothing here is typed by hand -- the contract and the compiler are the only sources.
 """
-import json, os, re, sys
+import glob, json, os, pathlib, re, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 fail = 0
@@ -145,10 +145,15 @@ live = dep["contracts"]["LeverVaultFactory"]
 superseded_addr = dep.get("supersedes", {}).get("factory", "")
 # Three addresses go stale together; checking only the factory let the retired beacon and
 # implementation survive in four documents, including a verification recipe.
-RETIRED = ["0x7444B36CdC9372588C9C6A9A21bc435F31FE761a",
-           "0xAF3A1d973724ed416FEE48E5A58146893D1a9ac1",
-           "0xA6B787FED6b42CbC772017A3F5d60fd988A364da",
-           "0x8D5Ca13bf1D3DCe1f210bb3Ab733A95Da37640b2"]
+# Three addresses go stale together; checking only the factory let the retired beacon and
+# implementation survive in four documents, including a verification recipe. The list lives in
+# the manifest, not here, so a redeploy edits one file instead of a constant in the checker.
+RETIRED = dep.get("retired", [])
+say(len(RETIRED) >= 3, f"deployments/56.json carries the retired set ({len(RETIRED)} addresses)")
+for name, a in dep["contracts"].items():
+    if any(a.lower() == r.lower() for r in RETIRED):
+        say(False, f"{name} {a[:12]}… is listed both as live and as retired")
+
 MARKS = ("supersed", "retired", "replaces", "never be registered", "do not register",
          "previous", "作废", "已退役", "旧")
 
@@ -176,6 +181,28 @@ for rel in ["AUDIT.md", "SUBMISSION.md", "README.md", "vault-ui/manifest.json",
         say(False, f"{rel} names retired address {unmarked[0][:12]}… without marking it as old")
     else:
         say(True, f"{rel} names the current deployment, and any old address is marked as old")
+# The addresses were propagated on every redeploy but the block numbers were not: six files
+# still named the third deployment's blocks, and one named a block older than that. A number
+# stated beside an address has to come from the same manifest the address does.
+d97 = json.loads(read("deployments/97.json"))
+STAMPS = {f"{dep['block']:,}": "chain 56 block", f"{d97['block']:,}": "chain 97 block",
+          dep["txHash"]: "chain 56 tx", d97["txHash"]: "chain 97 tx"}
+stale = []
+for rel in ["AUDIT.md", "SUBMISSION.md", "README.md", "submission/RULES.md", "submission/README.md",
+            "submission/FACTORY.md", "submission/SPEC-CHECK.md", "submission/MECHANISM.md"]:
+    body = read(rel)
+    # Requiring a "block " prefix made this gate blind to the two stale numbers that actually
+    # existed, which sat bare in a table. Match the shape, and exclude a trailing decimal so a
+    # token amount of the same magnitude is not read as a block.
+    for n in re.findall(r"(?<![\d.])(1[12][0-9],[0-9]{3},[0-9]{3})(?![\d.])", body):
+        if n not in STAMPS:
+            stale.append(f"{rel} says block {n}")
+    for h in re.findall(r"0x[0-9a-fA-F]{64}", body):
+        if h not in STAMPS and h not in body[:0]:
+            stale.append(f"{rel} names tx {h[:12]}…")
+say(not stale, "every block and tx in the documents is one the manifests record"
+    + (f" — {stale[:2]}" if stale else ""))
+
 m = re.search(r"Receives (\d+)% of every harvest", read("submission/schema.txt"))
 say(bool(m) and int(m.group(1)) == project_pct,
     f"on-chain schema says {m.group(1) if m else '?'}% == constant {project_pct}%")
@@ -222,7 +249,22 @@ for rel in PAGES:
 print("\n=== test counts, as published vs as declared ===")
 offline = len(re.findall(r"function test", read("test/LeverVaultSchema.t.sol")))
 auth    = len(re.findall(r"function test", read("test/LeverVaultAuth.t.sol")))
-gas     = len(re.findall(r"function test", read("test/LeverVaultGas.t.sol")))
+# Every contract scripts/test.sh runs, rather than a list that goes stale when a suite is
+# added -- which is exactly what happened when the underwater tests arrived.
+suite = read("scripts/test.sh")
+run_contracts = set(re.findall(r"--match-contract (\w+)", suite))
+skipped = {"LeverVaultPositionTest"}   # archive-RPC only, gated behind KEEL_ARCHIVE
+gas = 0
+counted = []
+for path in sorted(pathlib.Path(ROOT, "test").glob("*.t.sol")):
+    src = path.read_text()
+    m = re.search(r"contract (\w+) is Test", src)
+    if not m or m.group(1) not in run_contracts or m.group(1) in skipped:
+        continue
+    n = len(re.findall(r"function test", src))
+    counted.append((m.group(1), n))
+    if m.group(1) not in ("LeverVaultSchemaTest", "LeverVaultAuthTest"):
+        gas += n
 m = re.search(r"(\d+) passed\s+offline", audit)
 say(bool(m) and int(m.group(1)) == offline, f"AUDIT.md offline count {m.group(1) if m else '?'} == {offline} declared")
 m = re.search(r"(\d+) passed\s+forked:\s+authorization", audit)

@@ -1,0 +1,12 @@
+{
+  "name": "keel-tools",
+  "private": true,
+  "type": "module",
+  "description": "Dev dependencies for the gates in tools/. The site gate needs a real browser; without this file it resolved playwright from whatever directory it happened to run in, and reported a module error as a site failure.",
+  "scripts": {
+    "gate:site": "node tools/qa-site.mjs",
+    "gate:ui": "node tools/check-vault-ui.mjs",
+    "gate:docs": "python3 tools/check-docs.py"
+  },
+  "devDependencies": { "playwright": "^1.49.0" }
+}

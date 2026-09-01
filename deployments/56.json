@@ -4,17 +4,28 @@
   "network": "BNB Chain mainnet",
   "note": "Flap custom-vault side only. No token has been launched; a token is created by Flap's launcher through the VaultPortal.",
   "deployer": "0x1544A8fCE3a3c39E0a744a13392981bEcDF014f4",
-  "txHash": "0x93f74ad6e6e3e224d7d162ba27207aac2a774fa98a742db1f6b4e71c3c89e262",
-  "block": 119320793,
+  "txHash": "0x5c8796437013ac7ea1817b9044c898a2b6ed646e071dde74ad3e5b81520fdb33",
+  "block": 119329413,
   "contracts": {
-    "LeverVaultFactory": "0x94a24F97b635BF14E2FEd3d6C37361e60fA98338",
-    "LeverBeacon": "0x23BEd716Bcf81aA89B8f4045a734Ca3D4c23F366",
-    "LeverVaultImplementation": "0x02587e513B893358DcFaecdF192cECABcd3f8D73"
+    "LeverVaultFactory": "0x40dc17CC2FB7C584C87fA23d52782ea57FAC1cf1",
+    "LeverBeacon": "0xA9ff7329a4F1196819BE56e54AaDDDA3E895f284",
+    "LeverVaultImplementation": "0x229fF752270734718c63a961C8a0f29e0AFDE3E6"
   },
   "beaconOwner": "0x9e27098dcD8844bcc6287a557E0b4D09C86B8a4b",
   "beaconOwnerIs": "Flap Guardian (BNB Chain), set in LeverBeacon's constructor -- never the deployer",
   "supersedes": {
-    "factory": "0xb79443A953E6340Bdcba2F420C9f3eD50864f90b",
-    "reason": "its selector never asked Venus whether it could serve the action it chose, so a rescue blocked by market liquidity stayed selected and reverted on every wake; its unwind reverted whole instead of making partial progress; and its urgent line sat at 11,000. Raised by Flap's pre-audit."
-  }
+    "factory": "0x94a24F97b635BF14E2FEd3d6C37361e60fA98338",
+    "reason": "its selector could pick the rescue action on a position whose supply had fallen below its debt, where needsRebalance() is false and the rescue always reverts -- the wake was then spent on an action that could not run while banked revenue and gains waited behind it. Raised by Flap's reviewer. The urgent line also moved from 11,000 to 11,300."
+  },
+  "retired": [
+    "0x7444B36CdC9372588C9C6A9A21bc435F31FE761a",
+    "0xAF3A1d973724ed416FEE48E5A58146893D1a9ac1",
+    "0xA6B787FED6b42CbC772017A3F5d60fd988A364da",
+    "0x8D5Ca13bf1D3DCe1f210bb3Ab733A95Da37640b2",
+    "0xb79443A953E6340Bdcba2F420C9f3eD50864f90b",
+    "0x94a24F97b635BF14E2FEd3d6C37361e60fA98338",
+    "0x23BEd716Bcf81aA89B8f4045a734Ca3D4c23F366",
+    "0x02587e513B893358DcFaecdF192cECABcd3f8D73"
+  ],
+  "retiredNote": "Every address this project has ever deployed and replaced. Registering any of them with Flap would bind a token to superseded code. tools/check-docs.py reads this list, so a redeploy updates one file rather than a constant in the checker."
 }
