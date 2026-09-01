@@ -55,8 +55,9 @@ factories behind on both 56 and 97 and **neither should ever be registered**. Al
 bytes, so size does not tell them apart; `beacon()` does.
 
 `0x8666262877046df9f4B338B9D7f1a30d55688A5c` (nonce 1, block 119,116,447 on 56) is the set this
-one replaces. Its beacon still points at `0xAF3A1d973724ed416FEE48E5A58146893D1a9ac1`, 19,462
-bytes, which unwinds at `amountOutMinimum: 0` — the missing floor Flap's pre-audit flagged.
+one replaces. Its beacon is `0x7444B36CdC9372588C9C6A9A21bc435F31FE761a`, pointing at
+`0xAF3A1d973724ed416FEE48E5A58146893D1a9ac1` — 19,462 bytes, which unwinds at
+`amountOutMinimum: 0`, the missing floor Flap's pre-audit flagged.
 `MAX_SWAP_SLIP_BPS()` reverts at that address, which is the cheapest way to tell the two
 implementations apart.
 
@@ -136,6 +137,5 @@ republishes, and `PROJECT_SHARE_BPS` is the only constant it checks — read out
 `src/flap/LeverVault.sol` by regex, not out of the artefact. `MAX_SWAP_SLIP_BPS` is not one of
 them, so read that one off the chain yourself, as above. Pass `RPC=<url>` to use your own node.
 Read a claim here, then make the script prove it as far as it reaches; where it does not reach —
-the 69-check tally and
-the testnet finding — the working is in [`AUDIT.md`](../AUDIT.md) and reproduces with `forge test`
+the 69-check tally and the testnet finding — the working is in [`AUDIT.md`](../AUDIT.md) and reproduces with `forge test`
 and `python3 tools/verify.py`.

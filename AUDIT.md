@@ -197,7 +197,7 @@ factory 已于 block 119,107,358 部署至 BNB Chain:
 |---|---|---:|
 | `LeverVaultFactory` | `0xb79443A953E6340Bdcba2F420C9f3eD50864f90b` | 6,476 |
 | `LeverBeacon` | `0x552Fa7b39D6bD4AAAa9A84615b1d8e169A6f1Fd3` | 785 |
-| `LeverVault`(implementation) | `0x644BFBA1D21b6bBab98fF3ddC281C1e536af85d9` | 19,462 |
+| `LeverVault`(implementation) | `0x644BFBA1D21b6bBab98fF3ddC281C1e536af85d9` | 19,582 |
 
 链上读回的 `beacon.owner()` 是 `0x9e27098dcD8844bcc6287a557E0b4D09C86B8a4b`,即 Flap 的 BNB Chain
 Guardian——**在 `LeverBeacon` 构造函数里就转出,部署者从未持有过升级权**。这是 Rule 009 代理豁免

@@ -143,17 +143,81 @@ print("\n=== deployed addresses, as published vs as recorded ===")
 dep = json.loads(read("deployments/56.json"))
 live = dep["contracts"]["LeverVaultFactory"]
 superseded_addr = dep.get("supersedes", {}).get("factory", "")
-for rel in ["AUDIT.md", "SUBMISSION.md", "README.md", "vault-ui/manifest.json", "submission/schema.txt"]:
+# Three addresses go stale together; checking only the factory let the retired beacon and
+# implementation survive in four documents, including a verification recipe.
+RETIRED = ["0x7444B36CdC9372588C9C6A9A21bc435F31FE761a",
+           "0xAF3A1d973724ed416FEE48E5A58146893D1a9ac1",
+           "0xA6B787FED6b42CbC772017A3F5d60fd988A364da",
+           "0x8D5Ca13bf1D3DCe1f210bb3Ab733A95Da37640b2"]
+MARKS = ("supersed", "retired", "replaces", "never be registered", "do not register",
+         "previous", "作废", "已退役", "旧")
+
+def marked_retired(body, addr):
+    """True when this mention is explained as an old address rather than presented as current.
+    Naming the retired set to say 'do not register this' is the right thing to do; only an
+    unexplained mention is a defect."""
+    low = body.lower()
+    i = low.find(addr.lower())
+    if i < 0:
+        return True
+    window = low[max(0, i - 400):i + 400]
+    return any(w in window for w in MARKS)
+
+for rel in ["AUDIT.md", "SUBMISSION.md", "README.md", "vault-ui/manifest.json",
+            "submission/schema.txt", "submission/README.md", "submission/FACTORY.md",
+            "submission/RULES.md", "submission/SPEC-CHECK.md", "submission/MECHANISM.md",
+            "submission/UI-REQUEST.md"]:
     body = read(rel)
+    unmarked = [a for a in ([superseded_addr] if superseded_addr else []) + RETIRED
+                if a and a.lower() in body.lower() and not marked_retired(body, a)]
     if live.lower() not in body.lower() and "0x" + "0" * 40 not in body:
         say(False, f"{rel} never names the deployed factory {live}")
-    elif superseded_addr and superseded_addr.lower() in body.lower():
-        say(False, f"{rel} still names the superseded factory {superseded_addr}")
+    elif unmarked:
+        say(False, f"{rel} names retired address {unmarked[0][:12]}… without marking it as old")
     else:
-        say(True, f"{rel} names the current factory only")
+        say(True, f"{rel} names the current deployment, and any old address is marked as old")
 m = re.search(r"Receives (\d+)% of every harvest", read("submission/schema.txt"))
 say(bool(m) and int(m.group(1)) == project_pct,
     f"on-chain schema says {m.group(1) if m else '?'}% == constant {project_pct}%")
+
+print("\n=== every page's sizes, and nothing claiming it is unshipped ===")
+PAGES = ["AUDIT.md", "SUBMISSION.md", "README.md", "submission/README.md",
+         "submission/FACTORY.md", "submission/RULES.md", "submission/SPEC-CHECK.md",
+         "submission/MECHANISM.md"]
+# The size check above only read AUDIT.md, so a submission page could print the previous
+# build's runtime beside the current address and still pass.
+SUPERSEDED_SIZES = {19_462, 20_060, 5_173}
+for rel in PAGES:
+    body = read(rel)
+    wrong = []
+    for name, size in (("LeverVault", vault_rt), ("LeverVaultFactory", fac_rt)):
+        for m in re.finditer(rf"{name}[^|\n]{{0,90}}?\|\s*([\d,]{{4,7}})\s*\|", body):
+            got = int(m.group(1).replace(",", ""))
+            line = body[body.rfind(chr(10), 0, m.start()) + 1:
+                        body.find(chr(10), m.end()) if body.find(chr(10), m.end()) > 0 else len(body)]
+            if got in SUPERSEDED_SIZES and got != size and f"{size:,}" not in line:
+                wrong.append(f"{name} {m.group(1)} but the build is {size:,}")
+    say(not wrong, f"{rel} prints no superseded size" + (f" — {wrong[0]}" if wrong else ""))
+
+# A page saying the code is unshipped, after it shipped. Five documents said exactly this
+# because they were written while the redeploy was happening.
+UNSHIPPED = ("not on chain", "has not been deployed", "have not been deployed",
+             "is not deployed", "predates this change", "not yet deployed",
+             "尚未部署", "还没有部署")
+SUBJECTS = ("implementation", "factory", "beacon", "contract", "vault", "floor",
+            "max_swap_slip", "swap floor", "合约", "实现")
+for rel in PAGES:
+    low = read(rel).lower()
+    hit = []
+    for w in UNSHIPPED:
+        i = low.find(w)
+        while i >= 0:
+            near = low[max(0, i - 200):i + 200]
+            if any(sub in near for sub in SUBJECTS):
+                hit.append(w); break
+            i = low.find(w, i + 1)
+    say(not hit, f"{rel} does not call the deployed contracts unshipped"
+                 + (f" — '{hit[0]}'" if hit else ""))
 
 print("\n=== test counts, as published vs as declared ===")
 offline = len(re.findall(r"function test", read("test/LeverVaultSchema.t.sol")))

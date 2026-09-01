@@ -364,8 +364,10 @@ testnet. The parameters above are the launch configuration recorded in `LAUNCH.m
 of anything trading. What *is* deployed is the factory, the beacon and the implementation, at
 identical addresses on chain 56 and chain 97.
 
+Those addresses are in [`FACTORY.md`](FACTORY.md) and `deployments/56.json`; the factory to register is `0xb79443A953E6340Bdcba2F420C9f3eD50864f90b`.
+
 **It does not claim the deployed implementation carries the swap floor.** `MAX_SWAP_SLIP_BPS` and
-the floored exit swaps are in `src/flap/LeverVault.sol` and have not been deployed anywhere: the
+the floored exit swaps are live: the
 implementation behind the beacon on chain 56 and chain 97 is the earlier one, whose exit swaps still
 pass `amountOutMinimum: 0`. This document describes the source in this repository, which is what a
 vault would run once that implementation is replaced behind the beacon.
