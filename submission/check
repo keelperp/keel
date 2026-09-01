@@ -18,16 +18,22 @@ fail=0
 ok()  { printf '  \033[32mPASS\033[0m  %s\n' "$1"; }
 no()  { printf '  \033[31mFAIL\033[0m  %s\n' "$1"; fail=1; }
 
-FACTORY=$(python3 -c "import json;print(json.load(open('deployments/56.json'))['contracts']['LeverVaultFactory'])")
-BEACON=$(python3 -c "import json;print(json.load(open('deployments/56.json'))['contracts']['LeverBeacon'])")
-IMPL=$(python3 -c "import json;print(json.load(open('deployments/56.json'))['contracts']['LeverVaultImplementation'])")
+j() { python3 -c "import json;print(json.load(open('deployments/56.json'))['contracts']['$1'])"; }
+FACTORY=$(j LeverVaultFactory)              # a BeaconProxy -- this is what Flap registers
+FACTORY_BEACON=$(j LeverFactoryBeacon)
+FACTORY_IMPL=$(j LeverVaultFactoryImplementation)
+BEACON=$(j LeverBeacon)
+IMPL=$(j LeverVaultImplementation)
 GUARDIAN=0x9e27098dcD8844bcc6287a557E0b4D09C86B8a4b
 
 echo; echo "=== documents vs build ==="
 python3 tools/check-docs.py || fail=1
 
 echo; echo "=== deployed bytecode vs local build ==="
-for pair in "LeverVaultFactory:$FACTORY" "LeverBeacon:$BEACON" "LeverVault:$IMPL"; do
+# The registered address is a proxy now, so it is NOT compared against the factory artefact --
+# that mismatch (279 on chain vs 7,145 in the build) is what this loop reported before the
+# split. The proxy is checked separately, below, against OpenZeppelin's BeaconProxy.
+for pair in "LeverVaultFactory:$FACTORY_IMPL" "LeverBeacon:$BEACON" "LeverBeacon:$FACTORY_BEACON" "LeverVault:$IMPL"; do
   name="${pair%%:*}"; addr="${pair#*:}"
   onchain=$(cast code "$addr" --rpc-url "$RPC" 2>/dev/null)
   n=$(( (${#onchain} - 2) / 2 ))
@@ -38,11 +44,28 @@ print(len(d['deployedBytecode']['object'])//2-1)")
                         || no "$name is $n bytes on chain but $local_n in the build"
 done
 
-echo; echo "=== the Guardian owns the beacon, not us ==="
-owner=$(cast call "$BEACON" 'owner()(address)' --rpc-url "$RPC" 2>/dev/null)
-[ "$(echo "$owner" | tr 'A-Z' 'a-z')" = "$(echo "$GUARDIAN" | tr 'A-Z' 'a-z')" ] \
-  && ok "beacon.owner() is the Flap Guardian $GUARDIAN" \
-  || no "beacon.owner() is $owner, expected the Guardian $GUARDIAN"
+echo; echo "=== the registered address is a proxy in front of that implementation ==="
+proxy=$(cast code "$FACTORY" --rpc-url "$RPC" 2>/dev/null)
+proxy_n=$(( (${#proxy} - 2) / 2 ))
+oz_n=$(python3 -c "
+import json;d=json.load(open('out/BeaconProxy.sol/BeaconProxy.json'))
+print(len(d['deployedBytecode']['object'])//2-1)")
+[ "$proxy_n" = "$oz_n" ] \
+  && ok "the registered address is a $proxy_n-byte BeaconProxy, same as the build" \
+  || no "the registered address is $proxy_n bytes, OpenZeppelin's BeaconProxy is $oz_n"
+wired=$(cast call "$FACTORY" 'beacon()(address)' --rpc-url "$RPC" 2>/dev/null)
+[ "$(echo "$wired" | tr 'A-Z' 'a-z')" = "$(echo "$BEACON" | tr 'A-Z' 'a-z')" ] \
+  && ok "factory.beacon() points at the vault beacon $BEACON" \
+  || no "factory.beacon() is $wired, expected $BEACON"
+
+echo; echo "=== the Guardian owns BOTH beacons, not us ==="
+for pair in "vault:$BEACON" "factory:$FACTORY_BEACON"; do
+  which="${pair%%:*}"; b="${pair#*:}"
+  owner=$(cast call "$b" 'owner()(address)' --rpc-url "$RPC" 2>/dev/null)
+  [ "$(echo "$owner" | tr 'A-Z' 'a-z')" = "$(echo "$GUARDIAN" | tr 'A-Z' 'a-z')" ] \
+    && ok "$which beacon owner() is the Flap Guardian $GUARDIAN" \
+    || no "$which beacon owner() is $owner, expected the Guardian $GUARDIAN"
+done
 impl=$(cast call "$BEACON" 'implementation()(address)' --rpc-url "$RPC" 2>/dev/null)
 [ "$(echo "$impl" | tr 'A-Z' 'a-z')" = "$(echo "$IMPL" | tr 'A-Z' 'a-z')" ] \
   && ok "beacon points at the recorded implementation" \

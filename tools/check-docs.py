@@ -203,6 +203,55 @@ for rel in ["AUDIT.md", "SUBMISSION.md", "README.md", "submission/RULES.md", "su
 say(not stale, "every block and tx in the documents is one the manifests record"
     + (f" — {stale[:2]}" if stale else ""))
 
+# Making the factory upgradeable moved it behind a proxy, and a bulk replace then wrote three
+# false claims: that the registered address is 7,145 bytes (it is a 279-byte proxy), that the
+# retired factories are the same size as it, and that the constructor still builds the tree.
+# Those survived because the size gate compares artefacts, and the registered address is no
+# longer an artefact. Check the sentences instead.
+print("\n=== nothing describes the superseded immutable-factory shape ===")
+SUPERSEDED_SHAPE = [
+    ("new LeverBeacon(address(new LeverVault()))", "the constructor no longer builds the tree"),
+    ("new LeverBeacon(new LeverVault())", "the constructor no longer builds the tree"),
+    ("three contracts", "five contracts are deployed now"),
+    ("nonces 1 and 2", "the children are no longer the factory's own CREATEs"),
+]
+shape_bad = []
+for rel in ["AUDIT.md", "SUBMISSION.md", "README.md", "submission/README.md", "submission/FACTORY.md",
+            "submission/RULES.md", "submission/SPEC-CHECK.md", "submission/MECHANISM.md"]:
+    body = read(rel)
+    for phrase, why in SUPERSEDED_SHAPE:
+        if phrase in body:
+            shape_bad.append(f"{rel}: '{phrase}' — {why}")
+say(not shape_bad, "no document still describes the immutable factory"
+    + (f" — {shape_bad[:2]}" if shape_bad else ""))
+
+# The registered address is a proxy; its size comes from the chain, not from out/. Pin the
+# three numbers a reader can check with `cast codesize` so a redeploy cannot silently drift.
+ONCHAIN_SIZES = {"0x1FBa768c7E78B83edAF99c5094a8ED44A5fdF45B": 279}
+size_bad = []
+for rel in ["submission/FACTORY.md", "submission/README.md", "submission/RULES.md",
+            "AUDIT.md", "submission/SPEC-CHECK.md"]:
+    body = read(rel)
+    for addr, size in ONCHAIN_SIZES.items():
+        for row in re.findall(rf"^\|[^\n]*{addr}[^\n]*$", body, re.M):
+            # Search the SIZE CELL, not the whole row: the prose cell on this row also says
+            # "279 bytes", so an any-position match passed even with the number falsified.
+            cells = [c.strip().strip("`") for c in row.strip().strip("|").split("|")]
+            hit = next((i for i, c in enumerate(cells) if addr.lower() in c.lower()), None)
+            after = [c for c in cells[hit + 1:]] if hit is not None else []
+            sizes = [int(c.replace(",", "")) for c in after if re.fullmatch(r"[\d,]{3,}", c)]
+            if sizes and size not in sizes:
+                size_bad.append(f"{rel} size cell for {addr[:10]}… says {sizes}, chain says {size}")
+say(not size_bad, f"the registered proxy is described as {list(ONCHAIN_SIZES.values())[0]} bytes everywhere"
+    + (f" — {size_bad[:2]}" if size_bad else ""))
+
+# Both beacons must be named wherever the deployment is listed: naming only one was exactly the
+# gap Flap's reviewer pointed at.
+missing_fb = [rel for rel in ["submission/FACTORY.md", "submission/README.md", "submission/RULES.md"]
+              if "0x8Ec0BA4aE3406427B05F21EeA80609B658b71fD5" not in read(rel)]
+say(not missing_fb, "every deployment listing names the factory beacon too"
+    + (f" — missing in {missing_fb}" if missing_fb else ""))
+
 m = re.search(r"Receives (\d+)% of every harvest", read("submission/schema.txt"))
 say(bool(m) and int(m.group(1)) == project_pct,
     f"on-chain schema says {m.group(1) if m else '?'}% == constant {project_pct}%")

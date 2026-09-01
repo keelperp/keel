@@ -4,18 +4,20 @@
   "network": "BNB Chain testnet",
   "note": "Factory only. A vault cannot be created on this chain: the build path needs a PancakeSwap V3 pool holding WBNB to flash from, and BSC testnet has none. See AUDIT.md.",
   "deployer": "0x1544A8fCE3a3c39E0a744a13392981bEcDF014f4",
-  "txHash": "0x40983fb2702623004a5db9c5617f6ffaf883a51647300ae609cfce59a1b471be",
-  "block": 128473683,
+  "txHash": "0xbff6dff1da786defd193ee466faca593775f9a701be4199e859847b38d6a7e51",
+  "block": 128491108,
   "contracts": {
-    "LeverVaultFactory": "0x40dc17CC2FB7C584C87fA23d52782ea57FAC1cf1",
-    "LeverBeacon": "0xA9ff7329a4F1196819BE56e54AaDDDA3E895f284",
-    "LeverVaultImplementation": "0x229fF752270734718c63a961C8a0f29e0AFDE3E6"
+    "LeverVaultFactory": "0x1FBa768c7E78B83edAF99c5094a8ED44A5fdF45B",
+    "LeverFactoryBeacon": "0x8Ec0BA4aE3406427B05F21EeA80609B658b71fD5",
+    "LeverVaultFactoryImplementation": "0x38009623d77D95C66A1bf2e85b8D2f432485AB84",
+    "LeverBeacon": "0xa1643361821169822581F33ab2C34B45A9042ce0",
+    "LeverVaultImplementation": "0x74f67181F26f180Af7D625a96C50a37e6B462b2e"
   },
   "beaconOwner": "0x76Fa8C526f8Bc27ba6958B76DeEf92a0dbE46950",
   "beaconOwnerIs": "Flap Guardian (BNB testnet). Same bytecode as chain 56 resolves a different Guardian by chain id, which is what this deployment demonstrates.",
   "supersedes": {
-    "factory": "0x94a24F97b635BF14E2FEd3d6C37361e60fA98338",
-    "reason": "its selector could pick the rescue action on a position whose supply had fallen below its debt, where needsRebalance() is false and the rescue always reverts -- the wake was then spent on an action that could not run while banked revenue and gains waited behind it. Raised by Flap's reviewer. The urgent line also moved from 11,000 to 11,300."
+    "factory": "0x40dc17CC2FB7C584C87fA23d52782ea57FAC1cf1",
+    "reason": "Flap's reviewer asked that every module beyond the vault itself also be upgradeable, so the Guardian can rescue all of them. The factory was immutable: it held the beacon as an `immutable` and created it in its own constructor. It now runs behind a beacon of its own, holds the vault beacon in storage, and is reached through a BeaconProxy whose address never moves across upgrades. Both beacons are Guardian-owned from inside their constructors."
   },
   "retired": [
     "0x7444B36CdC9372588C9C6A9A21bc435F31FE761a",
@@ -25,7 +27,16 @@
     "0xb79443A953E6340Bdcba2F420C9f3eD50864f90b",
     "0x94a24F97b635BF14E2FEd3d6C37361e60fA98338",
     "0x23BEd716Bcf81aA89B8f4045a734Ca3D4c23F366",
-    "0x02587e513B893358DcFaecdF192cECABcd3f8D73"
+    "0x02587e513B893358DcFaecdF192cECABcd3f8D73",
+    "0x40dc17CC2FB7C584C87fA23d52782ea57FAC1cf1",
+    "0xA9ff7329a4F1196819BE56e54AaDDDA3E895f284",
+    "0x229fF752270734718c63a961C8a0f29e0AFDE3E6"
   ],
-  "retiredNote": "Every address this project has ever deployed and replaced. Registering any of them with Flap would bind a token to superseded code. tools/check-docs.py reads this list, so a redeploy updates one file rather than a constant in the checker."
+  "retiredNote": "Every address this project has ever deployed and replaced. Registering any of them with Flap would bind a token to superseded code. tools/check-docs.py reads this list, so a redeploy updates one file rather than a constant in the checker.",
+  "registerThis": "0x1FBa768c7E78B83edAF99c5094a8ED44A5fdF45B",
+  "upgradeAuthority": {
+    "LeverBeacon": "owns the vault implementation; Flap Guardian",
+    "LeverFactoryBeacon": "owns the factory implementation; Flap Guardian",
+    "note": "Both beacons transfer ownership to the Guardian inside their own constructors, so the deployer never holds upgrade authority for a single block. Nothing else in this project has an owner, admin, or role of any kind."
+  }
 }

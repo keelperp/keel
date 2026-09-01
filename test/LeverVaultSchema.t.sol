@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import {LeverVault} from "../src/flap/LeverVault.sol";
 import {LeverVaultFactory} from "../src/flap/LeverVaultFactory.sol";
 import {LeverBeacon} from "../src/flap/LeverBeacon.sol";
+import {BeaconProxy} from "openzeppelin-contracts/contracts/proxy/beacon/BeaconProxy.sol";
 import {VaultUISchema, VaultDataSchema} from "../src/flap/IVaultSchemasV1.sol";
 import {IVaultFactoryValidationV2} from "../src/flap/IVaultFactory.sol";
 import {IPortalTypes} from "../src/flap/IPortal.sol";
@@ -22,10 +23,27 @@ contract LeverVaultSchemaTest is Test {
     ///      contracts and guessing cost a red test here rather than a dead factory later.
     address constant VAULT_PORTAL = 0x90497450f2a706f1951b5bdda52B4E5d16f34C06;
 
+    LeverBeacon vaultBeacon;
+    LeverBeacon factoryBeacon;
+    LeverVaultFactory factoryImpl;
+
+    /// @dev Builds the factory exactly the way the deploy script does -- behind its own beacon.
+    ///      Constructing the implementation directly would test a shape that never reaches the
+    ///      chain: its `beacon` is deliberately locked to 0xdead.
     function setUp() public {
         vm.chainId(56);
         vault = new LeverVault();
-        factory = new LeverVaultFactory();
+        vaultBeacon = new LeverBeacon(address(vault));
+        factoryImpl = new LeverVaultFactory();
+        factoryBeacon = new LeverBeacon(address(factoryImpl));
+        factory = LeverVaultFactory(
+            address(
+                new BeaconProxy(
+                    address(factoryBeacon),
+                    abi.encodeCall(LeverVaultFactory.initialize, (address(vaultBeacon)))
+                )
+            )
+        );
     }
 
     // ---------------------------------------------------------------- rule 001/006

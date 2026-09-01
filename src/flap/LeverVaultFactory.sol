@@ -2,11 +2,11 @@
 pragma solidity 0.8.26;
 
 import {BeaconProxy} from "openzeppelin-contracts/contracts/proxy/beacon/BeaconProxy.sol";
+import {UpgradeableBeacon} from "openzeppelin-contracts/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import {VaultFactoryBaseV2} from "./VaultFactoryBaseV2.sol";
 import {VaultDataSchema, FieldDescriptor} from "./IVaultSchemasV1.sol";
 import {IVaultFactoryValidationV2} from "./IVaultFactory.sol";
 import {LeverVault} from "./LeverVault.sol";
-import {LeverBeacon} from "./LeverBeacon.sol";
 
 /// @title LeverVaultFactory — the only way a LeverVault comes into existence
 ///
@@ -25,9 +25,16 @@ contract LeverVaultFactory is VaultFactoryBaseV2 {
     address internal constant WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
 
     /// @notice The beacon every vault this factory deploys points at. Guardian-owned.
-    address public immutable beacon;
+    /// @dev Storage, not `immutable`, because this factory itself runs behind a BeaconProxy:
+    ///      an `immutable` is burned into the implementation's bytecode, so every upgrade
+    ///      would silently hand new vaults a different beacon than the live ones use.
+    address public beacon;
 
     /// @notice Vaults created by this factory, oldest first.
+    /// @dev Storage layout is part of this contract's interface now that it lives behind a
+    ///      proxy: beacon at slot 0, vaults at 1, vaultOf at 2. An upgrade may append but must
+    ///      never reorder or remove. VaultFactoryBaseV2 declares no storage of its own, so
+    ///      these three slots are the whole layout.
     address[] public vaults;
     mapping(address => address) public vaultOf;
 
@@ -35,8 +42,31 @@ contract LeverVaultFactory is VaultFactoryBaseV2 {
         address indexed taxToken, address indexed vault, address indexed creator, address project
     );
 
+    /// @dev Locks the implementation contract itself so nobody can initialize it directly.
+    ///      A BeaconProxy has its own storage, so this does not affect the live factory.
     constructor() {
-        beacon = address(new LeverBeacon(address(new LeverVault())));
+        beacon = address(0xdead);
+    }
+
+    /// @notice Points this factory at the Guardian-owned beacon its vaults will use.
+    ///
+    /// @dev Called once, atomically, from the BeaconProxy's own constructor -- there is no
+    ///      block in which an uninitialized factory is reachable, so no one can front-run it
+    ///      with a beacon of their own. It still checks, because a misconfigured deployment
+    ///      would be just as bad as a hostile one: a beacon this factory does not control
+    ///      means the Guardian cannot upgrade the vaults this factory creates.
+    ///
+    ///      The vault implementation is deployed by the script rather than here. A runtime
+    ///      `new LeverVault()` would carry that contract's ~22kB creation code in this
+    ///      factory's own runtime and put it over EIP-170's 24,576-byte limit.
+    function initialize(address beacon_) external {
+        require(beacon == address(0), unicode"LeverVaultFactory: already initialized / 已初始化");
+        require(beacon_ != address(0), unicode"LeverVaultFactory: beacon is zero / beacon 为零地址");
+        require(
+            UpgradeableBeacon(beacon_).owner() == _getGuardian(),
+            unicode"LeverVaultFactory: beacon is not Guardian-owned / beacon 不归 Guardian 所有"
+        );
+        beacon = beacon_;
     }
 
     function vaultCount() external view returns (uint256) {

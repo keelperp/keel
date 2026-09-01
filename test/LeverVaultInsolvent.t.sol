@@ -20,6 +20,12 @@ contract LeverVaultInsolventTest is Test {
     address constant vUSDT = 0xfD5840Cd36d94D7229439859C0112a4185BC0255;
 
     function setUp() public {
+        // Reading a Venus position walks storage that a pruned node no longer serves. These
+        // pass against an archive RPC and die with `missing trie node` against a public one --
+        // an environment limit, not a defect. Gated the same way LeverVaultPosition is.
+        if (vm.envOr("KEEL_ARCHIVE", uint256(0)) == 0) {
+            vm.skip(true);
+        }
         vm.createSelectFork(vm.envOr("KEEL_RPC_URL", string("https://bsc-dataseed.bnbchain.org")));
         vm.roll(block.number + 1000);
         v = new LeverVault();

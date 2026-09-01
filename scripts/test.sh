@@ -15,7 +15,10 @@ fail=0
 echo; echo "=== offline: schema, factory guards, beacon ownership ==="
 forge test --match-contract LeverVaultSchemaTest || fail=1
 
-echo; echo "=== forked: authorization, guards, receive stipend ==="
+echo; echo; echo "=== offline: everything beyond the vault is Guardian-upgradeable too ==="
+forge test --match-contract LeverVaultUpgradeableTest || fail=1
+
+echo "=== forked: authorization, guards, receive stipend ==="
 forge test --match-contract LeverVaultAuthTest --fork-url "$RPC" || fail=1
 
 echo; echo "=== forked: the underwater position Flap's review asked about ==="
