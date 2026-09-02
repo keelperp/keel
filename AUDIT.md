@@ -97,7 +97,6 @@ health 地板 1.20 对应上限 **3.00x**;**5x 算出来正好 1.00,即清算点
 | 建仓到目标杠杆与健康度(三个规模) | 可选 | ✅ 12 条断言 |
 | 收割:释放额=收益、70/30 分账、健康度不降 | 可选 | ✅ 10 条断言 |
 | 自动结算:买时间片、授权、重放、回调 gas | 可选 | ✅ 11 条断言 |
-| 假 vault / 出身校验(自建版) | — | ✅ `tools/e2e.py` |
 
 ```
 $ bash scripts/test.sh
@@ -137,7 +136,7 @@ revert `math error`。
 
 `LeverVaultFactory` 的 initcode 为 7,192 字节,在 EIP-3860 的 49,152 之内。
 
-三个测试探针 `FlapProbe`(30,081)、`KeelProbe`(27,451)、`KeelE2E`(46,100)超过 24,576。它们由
+一个测试探针 `FlapProbe`(30,081)超过 24,576。它由
 `eth_call` state override 注入,永不部署,因此不受 EIP-170 约束;`scripts/test.sh` 的尺寸门
 对它们放行、对任何可部署合约失败。
 

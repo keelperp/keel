@@ -252,6 +252,28 @@ missing_fb = [rel for rel in ["submission/FACTORY.md", "submission/README.md", "
 say(not missing_fb, "every deployment listing names the factory beacon too"
     + (f" — missing in {missing_fb}" if missing_fb else ""))
 
+# Flap's reviewer read the package and could not tell whether a second, unrelated launchpad
+# in the same repo was also being submitted. It was not, and it has been removed. This keeps
+# the submitted surface to exactly what gets registered: the Flap vault side and nothing else.
+print("\n=== the package contains only the Flap vault side ===")
+stray_src = sorted(p for p in glob.glob("src/**/*.sol", recursive=True)
+                   if not p.startswith(("src/flap/", "src/interfaces/")))
+say(not stray_src, "src/ holds only src/flap and src/interfaces"
+    + (f" — stray: {stray_src[:3]}" if stray_src else ""))
+stray_script = sorted(p for p in glob.glob("script/*.sol")
+                      if pathlib.Path(p).name not in ("DeployFlapFactory.s.sol", "LaunchKeel.s.sol"))
+say(not stray_script, "script/ holds only the Flap deploy and launch paths"
+    + (f" — stray: {stray_script}" if stray_script else ""))
+# Every test must reach only the Flap side. A test importing ../src/Something.sol would drag a
+# second project back into the review surface without anyone editing src/.
+bad_imports = []
+for t in sorted(glob.glob("test/*.sol")):
+    for imp in re.findall(r'from\s+"(\.\./src/[^"]+)"', read(t)):
+        if not imp.startswith(("../src/flap/", "../src/interfaces/")):
+            bad_imports.append(f"{t} imports {imp}")
+say(not bad_imports, "no test imports anything outside the Flap vault side"
+    + (f" — {bad_imports[:2]}" if bad_imports else ""))
+
 m = re.search(r"Receives (\d+)% of every harvest", read("submission/schema.txt"))
 say(bool(m) and int(m.group(1)) == project_pct,
     f"on-chain schema says {m.group(1) if m else '?'}% == constant {project_pct}%")

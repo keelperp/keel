@@ -124,7 +124,7 @@ deployable contract here is inside it — the largest is `LeverVault` at 20,257.
 *initcode* at 49,152, and 7,192 is inside that. Only a real deploy exercises the second one,
 and both of the deploys in the table above did — mainnet first, testnet immediately after.
 
-Three test-only contracts — `FlapProbe` (30,081), `KeelProbe` (27,451), `KeelE2E` (46,100) —
+One test-only contract — `FlapProbe` (30,081) —
 are over the EIP-170 limit. They are injected into an `eth_call` by state override and are
 never deployed to any chain.
 

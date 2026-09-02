@@ -62,7 +62,7 @@ Flap 的 factory commission 抽的是**税**——用户每一笔买卖产生的
       (`bash scripts/test.sh`)。仓位生命周期一组测试按设计跳过——需要 archive RPC,BSC 没有免费的,
       同样的路径由那 33 条断言在主网当前状态上覆盖
 - [x] 编译参数固定,全部**可部署**合约在 EIP-170 之内(`LeverVault` 20,257 / `LeverVaultFactory`
-      runtime 7,145)。三个测试探针 `FlapProbe` / `KeelProbe` / `KeelE2E` 超过 24,576,它们由
+      runtime 7,145)。一个测试探针 `FlapProbe` 超过 24,576,它由
       `eth_call` state override 注入,永不部署
 
 ## Vault UI 包

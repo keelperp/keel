@@ -32,8 +32,7 @@ echo; echo "=== building ==="
 rm -rf /tmp/keelpkg && mkdir -p /tmp/keelpkg/keel /tmp/keelui/keel
 rsync -a --exclude lib --exclude out --exclude cache --exclude broadcast --exclude node_modules \
       --exclude .git --exclude .qa --exclude dist --exclude .vercel --exclude '.env*' \
-      --exclude site --exclude frontend --exclude .rehearsal --exclude '*.log' \
-      --exclude 'scripts/rehearse-ops.sh' ./ /tmp/keelpkg/keel/
+      --exclude site --exclude .rehearsal --exclude '*.log' ./ /tmp/keelpkg/keel/
 rm -f "$OUT/keel-submission.zip"; (cd /tmp/keelpkg && zip -qr "$OUT/keel-submission.zip" keel)
 
 rm -rf /tmp/keelui && mkdir -p /tmp/keelui/keel

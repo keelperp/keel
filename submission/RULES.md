@@ -69,7 +69,7 @@ The table below is what this repository compiles to today, not what is on chain 
 `LeverVaultFactory`'s initcode is 7,192 bytes, inside EIP-3860's 49,152. The registered address
 is a 279-byte `BeaconProxy` in front of that implementation.
 
-Three test probes exceed EIP-170: `FlapProbe` (30,081), `KeelProbe` (27,451), `KeelE2E` (46,100).
+One test probe exceeds EIP-170: `FlapProbe` (30,081).
 They are injected by `eth_call` state override and are never deployed, so the limit does not bind
 them; the size gate in `scripts/test.sh` passes them through and fails on any deployable contract.
 

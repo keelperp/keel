@@ -197,7 +197,7 @@ creation code: the factory runs behind a proxy now, so its wiring happens in `in
 runtime code -- and a `new LeverVault()` there would have added 20,285 bytes to its runtime and
 broken EIP-170. These are the current sources, floor included; the slippage fix cost 120 bytes,
 which is why the implementation deployed in SB-02 reads 20,257. Three test-only probes
-exceed 24,576 (`FlapProbe` 30,081, `KeelProbe` 27,451, `KeelE2E` 46,100); they are
+exceeds 24,576 (`FlapProbe` 30,081); it is
 injected by `eth_call` state override and are never deployed, so the size gate passes them and
 fails any deployable contract.
 

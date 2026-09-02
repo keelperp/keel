@@ -58,7 +58,7 @@ echo; echo "=== sizes (EIP-170) ==="
     gsub(/[ \t]/, "", name); gsub(/[ ,\t]/, "", size)
     if (name == "" || size !~ /^[0-9]+$/) next
     if (size + 0 <= 24576) next
-    if (name ~ /^(FlapProbe|KeelProbe|KeelE2E)$/) { probes = probes "  note: " name " " size " (test-only probe, never deployed)\n"; next }
+    if (name ~ /^(FlapProbe)$/) { probes = probes "  note: " name " " size " (test-only probe, never deployed)\n"; next }
     print "  OVER: " name " " size; over = 1
   }
   END {
