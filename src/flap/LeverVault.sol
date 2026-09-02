@@ -416,9 +416,21 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         totalHarvested += toHolders;
         totalToProject += toProject;
 
+        // Flap's dividend contract takes no tokens when it has no eligible holders, and its
+        // `deposit` is declared without a return value here, so there is nothing to check.
+        // Check the balance instead: WBNB is an ERC20 and `_nav` counts only native balance
+        // plus the Venus position, so any WBNB left sitting here is outside NAV, invisible to
+        // `_gain`, and unreachable -- while `totalHarvested` above has already counted it as
+        // paid. Reverting keeps the gain in the position for the next attempt, which is
+        // strictly better than stranding it.
+        uint256 wbnbHeld = IERC20Min(WBNB).balanceOf(address(this));
         IWNative(WBNB).deposit{value: toHolders}();
         IERC20Min(WBNB).approve(div, toHolders);
         IDividend(div).deposit(toHolders);
+        require(
+            IERC20Min(WBNB).balanceOf(address(this)) <= wbnbHeld,
+            unicode"LeverVault: dividend did not take the WBNB / 分红合约未收取 WBNB"
+        );
 
         if (toProject > 0) {
             (bool sent,) = project.call{value: toProject}("");
@@ -454,12 +466,20 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         lastRebalanceAt = block.timestamp;
 
         uint256 before = _leverage(p);
+        uint256 healthBefore = _health(p);
         uint256 bnbBefore = address(this).balance;
         bool deleveraging = before > TARGET_LEVERAGE;
         if (deleveraging) {
             (uint256 s, uint256 b) = _positionUsd(p);
             uint256 excess = s - (s - b) * TARGET_LEVERAGE / WAD;
-            _shrinkBy(excess * WAD / p.bnb, p);
+            _deleverBy(excess * WAD / p.usdt, p);
+            // The deleverage frees nothing by design, so the caller has to be paid out of a
+            // proportional shrink -- which is what `_shrinkBy` is for, and which leaves the
+            // leverage the step above just set exactly where it is.
+            if (bountyTo != address(0)) {
+                Px memory q = _px();
+                _shrinkBy(excess * REBALANCE_BOUNTY_BPS / BPS * WAD / q.bnb, q);
+            }
         } else {
             _build(0, p);
         }
@@ -486,9 +506,17 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
             }
             pendingRevenue += rest;
         }
+        // Improvement, not an absolute floor. TARGET_LEVERAGE, MIN_HEALTH_BPS and Venus's 80%
+        // collateral factor are exactly coincident: health at 3x is 0.8 * 3/2 = 1.2000, the
+        // floor itself. So a deleverage that lands on its own target sits precisely on the line
+        // and any swap friction puts it a hair under -- the check would revert the very move it
+        // exists to encourage. Worse, a deep rescue from 1.05 that reaches 1.15 is a large
+        // improvement and would also have been reverted. Demand that health rose, and keep the
+        // absolute floor as the other way to pass.
+        uint256 healthAfter = _health(_px());
         require(
-            _health(_px()) >= MIN_HEALTH_BPS,
-            unicode"LeverVault: rebalance breached the health floor / 再平衡跌破健康度下限"
+            healthAfter >= MIN_HEALTH_BPS || healthAfter > healthBefore,
+            unicode"LeverVault: rebalance did not improve health / 再平衡没有改善健康度"
         );
         emit Rebalanced(bountyTo, before, _leverage(p), bounty);
     }
@@ -686,6 +714,35 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
     }
 
     /// @dev Free `wantBnb` of BNB by shrinking both legs proportionally.
+    /// @notice Redeem collateral and spend all of it on debt until leverage reaches the target.
+    ///
+    /// @dev Deliberately NOT `_shrinkBy`. That shrinks both legs by the same *fraction*, and a
+    ///      proportional shrink leaves leverage exactly where it was:
+    ///      `s(1-f) / (s(1-f) - b(1-f)) == s / (s - b)`. Deleveraging needs the legs to move by
+    ///      the same *absolute* amount, because `(s-x) / ((s-x) - (b-x)) = (s-x) / (s-b)` is the
+    ///      expression that actually falls. Solving it for the target gives
+    ///      `x = s - (s-b) * TARGET`, which is the `excess` the caller passes in.
+    ///
+    ///      Handing that `excess` to `_shrinkBy` instead -- as this did -- overstated the
+    ///      fraction by the leverage factor, because `excess` was divided by equity rather than
+    ///      by supply. Where leverage ended up was then decided by how much of the tail redeem
+    ///      the health cap happened to block: everything blocked landed 2.83x, nothing blocked
+    ///      landed back at 3.15x, and the 3.00x target was not reachable either way.
+    ///
+    /// @param repayUsdt Debt to retire, in vUSDT underlying units.
+    function _deleverBy(uint256 repayUsdt, Px memory p) internal {
+        uint256 debt0 = IVToken(vUSDT).borrowBalanceStored(address(this));
+        if (repayUsdt == 0 || debt0 == 0) return;
+        uint256 debtTarget = debt0 > repayUsdt ? debt0 - repayUsdt : 0;
+        // Every redeemed BNB is spent on debt, so nothing is freed here and leverage is the only
+        // thing that moves. A partial pass is progress; the next wake continues from it.
+        for (uint8 i = 0; i < 8; i++) {
+            uint256 debt = IVToken(vUSDT).borrowBalanceStored(address(this));
+            if (debt <= debtTarget) break;
+            if (!_repayOnce(debt - debtTarget, p)) break;
+        }
+    }
+
     function _shrinkBy(uint256 wantBnb, Px memory p) internal {
         uint256 navBnb = _nav(p) - address(this).balance;
         if (navBnb == 0 || wantBnb == 0) return;

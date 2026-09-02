@@ -4,6 +4,10 @@ pragma solidity 0.8.26;
 import "forge-std/Test.sol";
 import {LeverVault} from "../src/flap/LeverVault.sol";
 
+interface IVUSDT {
+    function borrowBalanceStored(address) external view returns (uint256);
+}
+
 /// @notice The accounting identity Flap's reviewer found broken: deleveraging must move BNB
 ///         between costBasis and pendingRevenue, not add it to one of them.
 ///
@@ -69,6 +73,10 @@ contract LeverVaultRebalanceBasisTest is Test {
         assertTrue(v.needsRebalance(), "the deleveraging branch must be the one under test");
 
         uint256 levBefore = v.currentLeverage();
+        uint256 debtBefore = IVUSDT(vUSDT).borrowBalanceStored(address(v));
+        (uint256 s0, uint256 b0) = v.positionUsd();
+        // x = s - (s-b)*TARGET is the debt that has to go, in USD.
+        uint256 needUsd = s0 - (s0 - b0) * 3;
         uint256 mine = address(this).balance;
         v.rebalance();
         uint256 bounty = address(this).balance - mine;
@@ -76,7 +84,20 @@ contract LeverVaultRebalanceBasisTest is Test {
         // The unwind has to have actually run, or the identity below is vacuous.
         assertGt(bounty, 0, "no bounty paid, so the unwind freed nothing");
         assertGt(v.pendingRevenue(), 0, "nothing was booked, so nothing was tested");
-        assertLt(v.currentLeverage(), levBefore, "leverage did not come down");
+        // Not merely "lower": the deleverage has to LAND on the target. A proportional shrink
+        // cannot move leverage at all, and what the old code reached was decided by how much of
+        // the tail redeem the health cap blocked -- 2.83x with it fully blocked, 3.15x with it
+        // fully open, never the 3.00x it was aiming at.
+        uint256 lev = v.currentLeverage();
+        assertLt(lev, levBefore, "leverage did not come down");
+        assertApproxEqRel(lev, 3e18, 0.02e18, "deleverage did not land on the 3x target");
+
+        // Landing on the target is not enough: the proportional model reached it too, but only
+        // by over-repaying and then redeeming part of it back, paying PancakeSwap on both legs.
+        // The repayment must be close to what the algebra actually requires.
+        uint256 repaidUsd = (debtBefore - IVUSDT(vUSDT).borrowBalanceStored(address(v)))
+            * (b0 * 1e18 / debtBefore) / 1e18;
+        assertLt(repaidUsd, needUsd * 2, "repaid far more debt than the target required");
 
         // The bounty is the only BNB that genuinely left, and it was never part of the basis
         // on either side -- it shows up as a fall in NAV, which is what it is. Everything else

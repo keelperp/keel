@@ -62,7 +62,7 @@ The table below is what this repository compiles to today, not what is on chain 
 
 | Contract | Runtime | Margin to EIP-170 |
 |---|---:|---:|
-| `LeverVault` | 21,129 | 4,994 |
+| `LeverVault` | 21,935 | 4,994 |
 | `LeverVaultFactory` | 7,397 | 17,179 |
 | `LeverBeacon` | 785 | 23,791 |
 
@@ -79,17 +79,17 @@ Identical addresses on both chains, from the same deployer and nonce.
 
 | | Address | Runtime |
 |---|---|---:|
-| `LeverVaultFactory` (proxy — register this) | `0xCBf3f108A7E42B7a870f8B0729Ca88c165d9D421` | 279 |
-| `LeverFactoryBeacon` | `0xb1145a8301ac72754B409aF1088cB1170500585D` | 785 |
-| `LeverVaultFactory` (implementation) | `0xbA2F0a36EE66799e36f2bc3aD45aF8ACd5750cD2` | 7,397 |
-| `LeverBeacon` | `0x396D1608AdA4F59775656Ff96823283d2B23d60d` | 785 |
-| `LeverVault` (implementation) | `0x07785Ebb6482757739e176Ea5f761cc8B345a862` | 21,129 |
+| `LeverVaultFactory` (proxy — register this) | `0x753c65B6a18454534Bd3B759f69E793bcf4B5F55` | 279 |
+| `LeverFactoryBeacon` | `0x5C429A338087c89B9D3c9B444Ca2311361bb12e1` | 785 |
+| `LeverVaultFactory` (implementation) | `0x8b811e4bF19D603f47e04Deb0db977fbD183AB6D` | 7,397 |
+| `LeverBeacon` | `0x00D634BdDbbff39CC6cfA3A4a9431ED4294a2EA9` | 785 |
+| `LeverVault` (implementation) | `0x2D0EA137C010731607B34a85C32bd7aB02576131` | 21,935 |
 
-Chain 56: tx `0x88afc2d3bf…`, block 119,507,924. Chain 97: tx `0xba13570ab6…`, block 128,651,782.
+Chain 56: tx `0x88afc2d3bf…`, block 119,555,538. Chain 97: tx `0xba13570ab6…`, block 128,699,443.
 Deployer `0x1544A8fCE3a3c39E0a744a13392981bEcDF014f4`.
 
 **These three addresses hold the floored code.** The implementation above is
-21,129 bytes, matching the source in this repository byte for byte; the 120 bytes over the retired build are
+21,935 bytes, matching the source in this repository byte for byte; the 120 bytes over the retired build are
 the swap floor described in the Rule 003 row and the helpers that apply it. Nothing in this repository has
 been redeployed since that change, so any vault the deployed factory produced before an upgrade
 would unwind at `amountOutMinimum: 0` — no vault exists yet, and that is the only reason no

@@ -4,20 +4,20 @@
   "network": "BNB Chain testnet",
   "note": "Factory only. A vault cannot be created on this chain: the build path needs a PancakeSwap V3 pool holding WBNB to flash from, and BSC testnet has none. See AUDIT.md.",
   "deployer": "0x1544A8fCE3a3c39E0a744a13392981bEcDF014f4",
-  "txHash": "0x0c1bed018907440b2f1306c482d673de6d4e044f8848b29f3b16c3e61316167c",
-  "block": 128651782,
+  "txHash": "0x9db770b9ea5ecf8b9cfafab5de4387d055e2c6844f166ac673b66008020778b0",
+  "block": 128699443,
   "contracts": {
-    "LeverVaultFactory": "0xCBf3f108A7E42B7a870f8B0729Ca88c165d9D421",
-    "LeverFactoryBeacon": "0xb1145a8301ac72754B409aF1088cB1170500585D",
-    "LeverVaultFactoryImplementation": "0xbA2F0a36EE66799e36f2bc3aD45aF8ACd5750cD2",
-    "LeverBeacon": "0x396D1608AdA4F59775656Ff96823283d2B23d60d",
-    "LeverVaultImplementation": "0x07785Ebb6482757739e176Ea5f761cc8B345a862"
+    "LeverVaultFactory": "0x753c65B6a18454534Bd3B759f69E793bcf4B5F55",
+    "LeverFactoryBeacon": "0x5C429A338087c89B9D3c9B444Ca2311361bb12e1",
+    "LeverVaultFactoryImplementation": "0x8b811e4bF19D603f47e04Deb0db977fbD183AB6D",
+    "LeverBeacon": "0x00D634BdDbbff39CC6cfA3A4a9431ED4294a2EA9",
+    "LeverVaultImplementation": "0x2D0EA137C010731607B34a85C32bd7aB02576131"
   },
   "beaconOwner": "0x76Fa8C526f8Bc27ba6958B76DeEf92a0dbE46950",
   "beaconOwnerIs": "Flap Guardian (BNB testnet). Same bytecode as chain 56 resolves a different Guardian by chain id, which is what this deployment demonstrates.",
   "supersedes": {
-    "factory": "0x1FBa768c7E78B83edAF99c5094a8ED44A5fdF45B",
-    "reason": "Flap's interaction risk report. Two defects and one found while testing the fix: (1) deleveraging booked position capital as pendingRevenue without taking it out of costBasis, so redeploying it counted the same BNB twice and permanently suppressed every later harvest; (2) _maxRedeemableBnb held the repay pass to MIN_HEALTH_BPS, which is arithmetically unreachable once rebalance triggers -- every deleverage and every urgent rescue was a no-op that then reverted on the closing health check; (3) description(), vaultUISchema() and vaultDataSchema() were English-only while all 27 require strings were bilingual, violating rule 004 UI-02."
+    "factory": "0xCBf3f108A7E42B7a870f8B0729Ca88c165d9D421",
+    "reason": "Flap interaction risk report, findings 4 and 5, plus two defects found while testing them. (4) harvest now verifies the dividend contract actually took the WBNB, by balance rather than by a return value it does not declare -- stranded WBNB sits outside _nav and is unreachable. (5) deleveraging used _shrinkBy, which shrinks both legs by the same fraction and so cannot move leverage at all; where it landed was decided by how much of the tail redeem the health cap blocked. _deleverBy moves the legs by the same absolute amount instead. Also: the closing health check demanded an absolute floor after an operation that raises health, and at 3x leverage health is exactly 1.2000 -- the floor itself -- so a deleverage landing on its own target was reverted by friction, and a deep rescue that improved health greatly was reverted too."
   },
   "retired": [
     "0x7444B36CdC9372588C9C6A9A21bc435F31FE761a",
@@ -35,10 +35,15 @@
     "0x8Ec0BA4aE3406427B05F21EeA80609B658b71fD5",
     "0x38009623d77D95C66A1bf2e85b8D2f432485AB84",
     "0xa1643361821169822581F33ab2C34B45A9042ce0",
-    "0x74f67181F26f180Af7D625a96C50a37e6B462b2e"
+    "0x74f67181F26f180Af7D625a96C50a37e6B462b2e",
+    "0xCBf3f108A7E42B7a870f8B0729Ca88c165d9D421",
+    "0xb1145a8301ac72754B409aF1088cB1170500585D",
+    "0xbA2F0a36EE66799e36f2bc3aD45aF8ACd5750cD2",
+    "0x396D1608AdA4F59775656Ff96823283d2B23d60d",
+    "0x07785Ebb6482757739e176Ea5f761cc8B345a862"
   ],
   "retiredNote": "Every address this project has ever deployed and replaced. Registering any of them with Flap would bind a token to superseded code. tools/check-docs.py reads this list, so a redeploy updates one file rather than a constant in the checker.",
-  "registerThis": "0xCBf3f108A7E42B7a870f8B0729Ca88c165d9D421",
+  "registerThis": "0x753c65B6a18454534Bd3B759f69E793bcf4B5F55",
   "upgradeAuthority": {
     "LeverBeacon": "owns the vault implementation; Flap Guardian",
     "LeverFactoryBeacon": "owns the factory implementation; Flap Guardian",

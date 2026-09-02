@@ -364,7 +364,7 @@ testnet. The parameters above are the launch configuration recorded in `LAUNCH.m
 of anything trading. What *is* deployed is the factory, the beacon and the implementation, at
 identical addresses on chain 56 and chain 97.
 
-Those addresses are in [`FACTORY.md`](FACTORY.md) and `deployments/56.json`; the factory to register is `0xCBf3f108A7E42B7a870f8B0729Ca88c165d9D421`.
+Those addresses are in [`FACTORY.md`](FACTORY.md) and `deployments/56.json`; the factory to register is `0x753c65B6a18454534Bd3B759f69E793bcf4B5F55`.
 
 **It does not claim the deployed implementation carries the swap floor.** `MAX_SWAP_SLIP_BPS` and
 the floored exit swaps are live: the

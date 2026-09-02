@@ -96,11 +96,11 @@ done. This submission is the handover; nothing has been registered.
 
 | | address | runtime |
 |---|---|---:|
-| `LeverVaultFactory` (proxy — register this) | `0xCBf3f108A7E42B7a870f8B0729Ca88c165d9D421` | 279 |
-| `LeverFactoryBeacon` | `0xb1145a8301ac72754B409aF1088cB1170500585D` | 785 |
-| `LeverVaultFactory` (implementation) | `0xbA2F0a36EE66799e36f2bc3aD45aF8ACd5750cD2` | 7,397 |
-| `LeverBeacon` | `0x396D1608AdA4F59775656Ff96823283d2B23d60d` | 785 |
-| `LeverVault` (implementation) | `0x07785Ebb6482757739e176Ea5f761cc8B345a862` | 21,129 |
+| `LeverVaultFactory` (proxy — register this) | `0x753c65B6a18454534Bd3B759f69E793bcf4B5F55` | 279 |
+| `LeverFactoryBeacon` | `0x5C429A338087c89B9D3c9B444Ca2311361bb12e1` | 785 |
+| `LeverVaultFactory` (implementation) | `0x8b811e4bF19D603f47e04Deb0db977fbD183AB6D` | 7,397 |
+| `LeverBeacon` | `0x00D634BdDbbff39CC6cfA3A4a9431ED4294a2EA9` | 785 |
+| `LeverVault` (implementation) | `0x2D0EA137C010731607B34a85C32bd7aB02576131` | 21,935 |
 
 The runtime column is what is on chain today, and that implementation predates the Rule 003
 slippage floor. That factory is superseded; the current one
@@ -108,9 +108,9 @@ as it stands would register the pre-fix implementation. Which route closes that 
 factory deployment, or a Guardian `upgradeTo` on the existing beacon — is a decision for Flap
 alongside registration; nothing here assumes one.
 
-Deployed by `0x1544A8fCE3a3c39E0a744a13392981bEcDF014f4` in tx `0x88afc2d3bf…`, block 119,507,924.
+Deployed by `0x1544A8fCE3a3c39E0a744a13392981bEcDF014f4` in tx `0x88afc2d3bf…`, block 119,555,538.
 The same bytecode from the same deployer and nonce is at the same address on chain 97 (tx
-`0xba13570ab6…`, block 128,651,782), which is itself the evidence that the per-chain Guardian
+`0xba13570ab6…`, block 128,699,443), which is itself the evidence that the per-chain Guardian
 resolution works on a real chain: `beacon.owner()` reads back as
 `0x9e27098dcD8844bcc6287a557E0b4D09C86B8a4b` on 56 and `0x76Fa8C526f8Bc27ba6958B76DeEf92a0dbE46950`
 on 97 — the Flap Guardian on each, never the deployer. Ownership is transferred inside
@@ -125,7 +125,7 @@ now an on-chain fact rather than a claim in a document.
 **I-01 — a superseded factory is on chain and must not be cited.**
 `0xE7EC91f5a78c413cDF2F1140B29d51cAfFAfE535` exists on chain and is retired: its
 `vaultDataSchema()` still described the project share as 40%. **Status:** retired. The current and
-only factory is `0xCBf3f108A7E42B7a870f8B0729Ca88c165d9D421`; the live schema text is at
+only factory is `0x753c65B6a18454534Bd3B759f69E793bcf4B5F55`; the live schema text is at
 `src/flap/LeverVaultFactory.sol:109-119` and says 70% to holders, 30% to the project.
 
 **I-02 — the trigger fee bleeds a vault whose token nobody trades.**
@@ -190,13 +190,13 @@ the deploy script itself is tested (`test_deploy`).
 
 ## Sizes
 
-Every deployable contract is inside EIP-170: `LeverVault` 21,129 (4,994 of margin),
+Every deployable contract is inside EIP-170: `LeverVault` 21,935 (4,994 of margin),
 `LeverVaultFactory` 7,397, `LeverBeacon` 785, and the registered `BeaconProxy` 279. The
 factory's initcode is 7,444 bytes, inside EIP-3860's 49,152. It no longer carries the vault's
 creation code: the factory runs behind a proxy now, so its wiring happens in `initialize` --
 runtime code -- and a `new LeverVault()` there would have added 20,285 bytes to its runtime and
 broken EIP-170. These are the current sources, floor included; the slippage fix cost 120 bytes,
-which is why the implementation deployed in SB-02 reads 21,129. Three test-only probes
+which is why the implementation deployed in SB-02 reads 21,935. Three test-only probes
 exceeds 24,576 (`FlapProbe` 30,081); it is
 injected by `eth_call` state override and are never deployed, so the size gate passes them and
 fails any deployable contract.

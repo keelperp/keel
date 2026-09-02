@@ -26,11 +26,11 @@ launched** — Flap's own launcher creates one through the VaultPortal at regist
 
 | Contract | Address | Runtime |
 |---|---|---:|
-| `LeverVaultFactory` (proxy — register this) | `0xCBf3f108A7E42B7a870f8B0729Ca88c165d9D421` | 279 |
-| `LeverFactoryBeacon` | `0xb1145a8301ac72754B409aF1088cB1170500585D` | 785 |
-| `LeverVaultFactory` (implementation) | `0xbA2F0a36EE66799e36f2bc3aD45aF8ACd5750cD2` | 7,397 |
-| `LeverBeacon` | `0x396D1608AdA4F59775656Ff96823283d2B23d60d` | 785 |
-| `LeverVault` (implementation) | `0x07785Ebb6482757739e176Ea5f761cc8B345a862` | 21,129 |
+| `LeverVaultFactory` (proxy — register this) | `0x753c65B6a18454534Bd3B759f69E793bcf4B5F55` | 279 |
+| `LeverFactoryBeacon` | `0x5C429A338087c89B9D3c9B444Ca2311361bb12e1` | 785 |
+| `LeverVaultFactory` (implementation) | `0x8b811e4bF19D603f47e04Deb0db977fbD183AB6D` | 7,397 |
+| `LeverBeacon` | `0x00D634BdDbbff39CC6cfA3A4a9431ED4294a2EA9` | 785 |
+| `LeverVault` (implementation) | `0x2D0EA137C010731607B34a85C32bd7aB02576131` | 21,935 |
 
 Both beacons are owned by the Flap Guardian from inside their own constructors — the deployer
 never held upgrade authority for a single block. See `deployments/56.json` and

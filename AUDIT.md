@@ -1,7 +1,7 @@
 # LeverVault — Flap 十条规则自审报告
 
 **被审对象**：`src/flap/LeverVault.sol`、`src/flap/LeverVaultFactory.sol`、`src/flap/LeverBeacon.sol`
-**日期**：2026-08-31 · **链**：BNB Chain (56) · **状态**：factory 已上主网 `0xCBf3f108A7E42B7a870f8B0729Ca88c165d9D421`,**未发任何代币**
+**日期**：2026-08-31 · **链**：BNB Chain (56) · **状态**：factory 已上主网 `0x753c65B6a18454534Bd3B759f69E793bcf4B5F55`,**未发任何代币**
 
 > 这是一份**自审**报告,不是第三方审计。反复地自己对抗自己审查不是审计,本文也不会把它叫做审计。
 
@@ -130,7 +130,7 @@ revert `math error`。
 
 | 合约 | runtime | 余量 |
 |---|---:|---:|
-| `LeverVault` | 21,129 | 3,447 |
+| `LeverVault` | 21,935 | 2,641 |
 | `LeverVaultFactory` | 7,397 | 17,179 |
 | `LeverBeacon` | 785 | 23,791 |
 
@@ -156,7 +156,7 @@ Venus 的 ResilientOracle 一次 `getUnderlyingPrice` 要 **26,308** gas(它要�
 | `deployPending` 端到端 | 1,420,949 | **1,134,531** |
 | 自动结算回调 | 1,510,777 | **1,206,637** |
 | 对 2,000,000 上限的余量 | 24% | **40%** |
-| `LeverVault` runtime | 20,060 | 21,129 |
+| `LeverVault` runtime | 20,060 | 21,935 |
 
 行为未变:三个规模实测仍是 2.960x / health 1.208 / 待部署归零。
 
@@ -190,15 +190,15 @@ share 已被其自审标为提交阻断,本金库的 30% 更高。
 
 `registerVaultFactory` 需要 `VAULT_ADMIN_ROLE`,只有 Flap 能调。提交流程是:
 **先把 factory 部署到 BSC 主网 → 把地址交给 Flap → 由 Flap 注册**。
-factory 已于 block 119,507,924 部署至 BNB Chain:
+factory 已于 block 119,555,538 部署至 BNB Chain:
 
 | | 地址 | runtime |
 |---|---|---:|
-| `LeverVaultFactory` (proxy — register this) | `0xCBf3f108A7E42B7a870f8B0729Ca88c165d9D421` | 279 |
-| `LeverFactoryBeacon` | `0xb1145a8301ac72754B409aF1088cB1170500585D` | 785 |
-| `LeverVaultFactory` (implementation) | `0xbA2F0a36EE66799e36f2bc3aD45aF8ACd5750cD2` | 7,397 |
-| `LeverBeacon` | `0x396D1608AdA4F59775656Ff96823283d2B23d60d` | 785 |
-| `LeverVault`(implementation) | `0x07785Ebb6482757739e176Ea5f761cc8B345a862` | 21,129 |
+| `LeverVaultFactory` (proxy — register this) | `0x753c65B6a18454534Bd3B759f69E793bcf4B5F55` | 279 |
+| `LeverFactoryBeacon` | `0x5C429A338087c89B9D3c9B444Ca2311361bb12e1` | 785 |
+| `LeverVaultFactory` (implementation) | `0x8b811e4bF19D603f47e04Deb0db977fbD183AB6D` | 7,397 |
+| `LeverBeacon` | `0x00D634BdDbbff39CC6cfA3A4a9431ED4294a2EA9` | 785 |
+| `LeverVault`(implementation) | `0x2D0EA137C010731607B34a85C32bd7aB02576131` | 21,935 |
 
 链上读回的 `beacon.owner()` 是 `0x9e27098dcD8844bcc6287a557E0b4D09C86B8a4b`,即 Flap 的 BNB Chain
 Guardian——**在 `LeverBeacon` 构造函数里就转出,部署者从未持有过升级权**。这是 Rule 009 代理豁免
@@ -209,8 +209,8 @@ Guardian——**在 `LeverBeacon` 构造函数里就转出,部署者从未持有
 ### 为什么没有测试网端到端
 
 factory 也部署到了 BSC 测试网(97),同一份字节码、同一个部署者、同一个 nonce,因此
-**地址与主网相同**:`0xCBf3f108A7E42B7a870f8B0729Ca88c165d9D421`(tx `0x0c1bed01…`,block
-128,651,782)。这次部署本身证明了按链分流的逻辑在真实链上生效——同样的字节码在 97 上把
+**地址与主网相同**:`0x753c65B6a18454534Bd3B759f69E793bcf4B5F55`(tx `0x9db770b9…`,block
+128,699,443)。这次部署本身证明了按链分流的逻辑在真实链上生效——同样的字节码在 97 上把
 `beacon.owner()` 解析成 `0x76Fa8C52…`(测试网 Guardian),在 56 上解析成 `0x9e27098d…`(主网
 Guardian),都不是部署者。
 
