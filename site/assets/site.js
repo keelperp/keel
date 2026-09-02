@@ -125,7 +125,7 @@ export const C = {
  * an argument that takes three paragraphs to write and one drag to feel.
  *
  * health = CF * L / (L - 1), and the liquidation drop is 1 - 1/(L * (1 - CF) + CF)... in the
- * shape Venus actually uses: a position is liquidated once health reaches 1.00, which for a
+ * shape the lending market actually uses: a position is liquidated once health reaches 1.00, which for a
  * long at leverage L happens after the collateral falls by (health - 1) / health.
  */
 export function leverageDial(root) {
@@ -152,7 +152,7 @@ export function leverageDial(root) {
     const padL = 8, padR = 8, trackW = w - padL - padR, y = 56;
 
     ctx.font = C.monoSm; ctx.fillStyle = C.dim; ctx.textAlign = "left";
-    ctx.fillText("BNB against the position", padL, 20);
+    ctx.fillText("NVDA against the position", padL, 20);
     ctx.textAlign = "right"; ctx.fillText("−40%", padL + trackW, 20);
 
     ctx.strokeStyle = C.lineSoft; ctx.lineWidth = 1;
@@ -199,14 +199,14 @@ export function leverageDial(root) {
 }
 
 /**
- * The build, as a sequence rather than four boxes. Venus checks collateral before the borrowed
+ * The build, as a sequence rather than four boxes. The lending market checks collateral before the borrowed
  * funds become collateral, so the four steps have to happen inside one transaction -- which is
  * a thing to watch happen, not a thing to read about.
  */
 export function buildSequence(cv) {
   const STEPS = [
-    { t: "flash", d: "borrow WBNB from the V3 pool", c: () => C.accent },
-    { t: "supply", d: "into Venus as collateral", c: () => C.positive },
+    { t: "flash", d: "borrow WETH from the V3 pool", c: () => C.accent },
+    { t: "supply", d: "into the lending market as collateral", c: () => C.positive },
     { t: "borrow", d: "USDT against it", c: () => C.negative },
     { t: "repay", d: "swap back, close the flash", c: () => C.accent },
   ];
@@ -253,6 +253,25 @@ export function buildSequence(cv) {
     ctx.textAlign = "left"; ctx.font = C.monoSm; ctx.fillStyle = C.dim;
     ctx.fillText("one transaction", padL, 24);
     ctx.textAlign = "right";
-    ctx.fillText("Venus checks collateral before the borrowed funds become collateral", padL + trackW, 24);
+    ctx.fillText("The lending market checks collateral before the borrowed funds become collateral", padL + trackW, 24);
   });
 }
+
+/* Contract address. Set data-ca on #ca once the token exists and this fills itself in. With no
+   address it keeps saying "not launched yet" rather than rendering something copyable. */
+(function () {
+  var el = document.getElementById("ca");
+  if (!el) return;
+  var val = document.getElementById("ca-value");
+  var btn = document.getElementById("ca-copy");
+  var addr = (el.getAttribute("data-ca") || "").trim();
+  if (!addr) return;
+  val.textContent = addr;
+  btn.hidden = false;
+  btn.addEventListener("click", function () {
+    navigator.clipboard.writeText(addr).then(function () {
+      btn.textContent = "copied";
+      setTimeout(function () { btn.textContent = "copy"; }, 1200);
+    }, function () {});
+  });
+})();
