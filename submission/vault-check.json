@@ -4,10 +4,10 @@
   "error": "manifest.match.bindings must declare at least one real deployed 7777 or 8888-suffix tokenAddresses entry for Workbench/vault:e2e test coverage. Local vault:e2e --token overrides do not satisfy vault:check, and production CA restrictions belong in Workbench/registry caRestrictionMode configuration.",
   "fixHint": "Declare at least one real deployed ERC20 test token ending in 7777 or 8888 in match.bindings[].tokenAddresses. Workbench vault:check does not accept local-only vault:e2e --token overrides as package proof. Keep the final real mainnet factoryAddress in its own production binding.",
   "ranAgainst": {
-    "factory": "0x1FBa768c7E78B83edAF99c5094a8ED44A5fdF45B",
-    "date": "2026-09-01",
+    "factory": "0xCBf3f108A7E42B7a870f8B0729Ca88c165d9D421",
+    "date": "2026-09-02",
     "checker": "flap vault-template scripts/vault-check.mjs @ cee8b3c",
     "blockingCount": 1
   },
-  "note": "The only blocking rule left needs a real 7777/8888 token deployed and bound in the manifest. No token has been launched -- Flap's launcher creates it through the VaultPortal at registration, so this rule can only close after Flap registers the factory."
+  "note": "The only blocking rule left needs a real 7777/8888 token bound in the manifest. Flap's launcher creates that token through the VaultPortal at registration, so it can only close afterwards."
 }

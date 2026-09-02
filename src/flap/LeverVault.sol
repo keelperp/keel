@@ -97,6 +97,20 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
     ///         the more often ordinary volatility pays for a swap. At 11_500 a 4.6% move would
     ///         trigger one, which BNB does on a normal day.
     uint256 public constant URGENT_HEALTH_BPS = 11_300;
+
+    /// @notice The floor a redeem-then-repay pass may dip to, as opposed to a plain redeem.
+    /// @dev Repaying raises health: for s > b, d/dx[(s-x)/(b-x)] > 0, so redeeming collateral
+    ///      and immediately spending it on debt ends higher than it started, and the pass is
+    ///      atomic so the dip between the two legs is never observable to a liquidator.
+    ///
+    ///      Sizing this pass against MIN_HEALTH_BPS instead made every deleverage a no-op, by
+    ///      arithmetic rather than by accident: `rebalance` triggers above 3x * 1.05, which is
+    ///      health 1.1721, and `_maxRedeemableBnb` only returns a non-zero cap above health
+    ///      1.20. So the repay loop broke on its first pass, the tail redeemed nothing, and the
+    ///      closing health check reverted the whole call -- leverage and health identical
+    ///      before and after. The urgent rescue at 1.13 was blocked the same way. A position
+    ///      that drifted past the band could not come back, on any path.
+    uint256 public constant REPAY_FLOOR_BPS = 10_200;
     uint256 public constant REBALANCE_BAND_BPS = 500;
 
     /// @notice Paid to whoever does the work, in the asset that work produced. Constant,
@@ -441,7 +455,8 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
 
         uint256 before = _leverage(p);
         uint256 bnbBefore = address(this).balance;
-        if (before > TARGET_LEVERAGE) {
+        bool deleveraging = before > TARGET_LEVERAGE;
+        if (deleveraging) {
             (uint256 s, uint256 b) = _positionUsd(p);
             uint256 excess = s - (s - b) * TARGET_LEVERAGE / WAD;
             _shrinkBy(excess * WAD / p.bnb, p);
@@ -455,7 +470,22 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
             require(ok, unicode"LeverVault: bounty transfer failed / 赏金转账失败");
         }
         uint256 rest = address(this).balance - bnbBefore;
-        if (rest > 0) pendingRevenue += rest;
+        if (rest > 0) {
+            // Deleveraging hands back capital that is already inside costBasis, unlike
+            // `harvest`, whose freed BNB leaves the vault entirely and so leaves the basis
+            // alone. Booking it as pending revenue without taking it out of the basis counts
+            // the same BNB twice the moment `_deploy` puts it back and runs `costBasis +=
+            // work` on capital that never left. Since `_nav` already counts idle balance,
+            // `_gain = nav - (costBasis + pendingRevenue)` would then sit permanently lower
+            // by the freed amount, and `harvest` would stop paying holders until NAV had
+            // grown past a basis that no longer describes what was paid. Move it between the
+            // two rather than adding to one. What genuinely left -- the bounty -- is not
+            // moved here, so it shows up as the loss it is.
+            if (deleveraging) {
+                costBasis = costBasis > rest ? costBasis - rest : 0;
+            }
+            pendingRevenue += rest;
+        }
         require(
             _health(_px()) >= MIN_HEALTH_BPS,
             unicode"LeverVault: rebalance breached the health floor / 再平衡跌破健康度下限"
@@ -678,7 +708,9 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         uint256 supplyNow = IVToken(vBNB).balanceOf(address(this)) * IVToken(vBNB).exchangeRateStored() / WAD;
         if (supplyNow > supplyTarget) {
             uint256 rest = supplyNow - supplyTarget;
-            uint256 cap = _maxRedeemableBnb(p);
+            // A plain redeem lowers health with nothing to offset it, so this one keeps the
+            // strict floor -- an early harvest freed 3.88 BNB against a 0.99 gain here.
+            uint256 cap = _maxRedeemableBnb(p, MIN_HEALTH_BPS);
             if (rest > cap) rest = cap;
             if (rest >= MIN_DEPLOY) {
                 require(
@@ -696,11 +728,11 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
     ///      free 3.88 BNB against a 0.99 BNB gain and leave health at 1.003 — the loop
     ///      had not repaid enough debt, and the tail redeemed its share regardless.
     ///      Solving (s - x) * cf >= h * b for x gives the only safe pull.
-    function _maxRedeemableBnb(Px memory p) internal view returns (uint256) {
+    function _maxRedeemableBnb(Px memory p, uint256 floorBps) internal view returns (uint256) {
         (uint256 s, uint256 b) = _positionUsd(p);
         if (b == 0) return s * WAD / p.bnb;
         uint256 cfBps = p.cf / 1e14;
-        uint256 floorSupply = MIN_HEALTH_BPS * b / cfBps;
+        uint256 floorSupply = floorBps * b / cfBps;
         if (s <= floorSupply) return 0;
         return (s - floorSupply) * WAD * 99 / (p.bnb * 100);
     }
@@ -735,7 +767,7 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         // Redeem what the repayment needs, not everything the floor allows. Pulling the maximum
         // each pass left the surplus sitting as WBNB, which the tail then unwrapped and counted
         // as freed — a 0.99 BNB harvest paid out 1.89.
-        uint256 cap = _maxRedeemableBnb(p);
+        uint256 cap = _maxRedeemableBnb(p, REPAY_FLOOR_BPS);
         uint256 pull = needUsdt * p.usdt / p.bnb * 101 / 100;
         if (pull > cap) pull = cap;
         // Take what Venus can actually hand over. Redeeming more than the market holds reverts
@@ -780,9 +812,11 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
     // --------------------------------------------------------------- flap surface
 
     function description() public pure override returns (string memory) {
-        return "Trading tax becomes a leveraged BNB position the vault holds on Venus itself. "
-            "The treasury moves with the market when nobody is trading, and its gain is paid to "
-            "holders through the token's dividend contract. No keeper, no published NAV, no pause.";
+        return unicode"Trading tax becomes a leveraged BNB position the vault holds on Venus itself. "
+            unicode"The treasury moves with the market when nobody is trading, and its gain is paid to "
+            unicode"holders through the token's dividend contract. No keeper, no published NAV, no pause."
+            unicode" / 交易税会变成金库自己持有在 Venus 上的杠杆 BNB 仓位。无人交易时国库仍随市场波动,"
+            unicode"其收益通过代币的分红合约发给持有者。没有 keeper,不发布 NAV,没有暂停开关。";
     }
 
     function vaultUISchema() public pure override returns (VaultUISchema memory schema) {
@@ -792,34 +826,35 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         VaultMethodSchema[] memory m = new VaultMethodSchema[](6);
 
         m[0].name = "nav";
-        m[0].description = "Treasury value in BNB, read straight from Venus.";
-        m[0].outputs = _one("bnb", "uint256", "Treasury value in wei");
+        m[0].description = unicode"Treasury value in BNB, read straight from Venus. / 国库价值(以 BNB 计),直接读自 Venus。";
+        m[0].outputs = _one("bnb", "uint256", unicode"Treasury value in wei / 国库价值,单位 wei");
         m[0].isWriteMethod = false;
 
         m[1].name = "currentLeverage";
-        m[1].description = "Live BNB exposure over net value, 1e18-scaled.";
-        m[1].outputs = _one("leverage", "uint256", "3e18 means 3x");
+        m[1].description = unicode"Live BNB exposure over net value, 1e18-scaled. / 实时 BNB 敞口除以净值,按 1e18 缩放。";
+        m[1].outputs = _one("leverage", "uint256", unicode"3e18 means 3x / 3e18 表示 3 倍");
         m[1].isWriteMethod = false;
 
         m[2].name = "healthBps";
-        m[2].description = "Collateral x factor over debt, in bps. Venus liquidates at 10000.";
-        m[2].outputs = _one("health", "uint256", "12000 means liquidated only by a 16.7% move");
+        m[2].description = unicode"Collateral x factor over debt, in bps. Venus liquidates at 10000. / 抵押乘以抵押率再除以负债,单位 bps。Venus 在 10000 清算。";
+        m[2].outputs = _one("health", "uint256", unicode"12000 means liquidated only by a 16.7% move / 12000 表示需下跌 16.7% 才会被清算");
         m[2].isWriteMethod = false;
 
         m[3].name = "deployPending";
-        m[3].description = "Turn accumulated tax into position. Anyone may call; pays 0.25%.";
-        m[3].outputs = _one("bounty", "uint256", "BNB paid to the caller");
+        m[3].description = unicode"Turn accumulated tax into position. Anyone may call; pays 0.25%. / 把累积的税收建成仓位。任何人都可调用,支付 0.25% 赏金。";
+        m[3].outputs = _one("bounty", "uint256", unicode"BNB paid to the caller / 支付给调用者的 BNB");
         m[3].isWriteMethod = true;
 
         m[4].name = "harvest";
-        m[4].description =
-            "Distribute the position's gain: 70% to holders as WBNB dividends, 30% to the project. Anyone may call; pays 0.5% to the caller.";
-        m[4].outputs = _one("bounty", "uint256", "BNB paid to the caller");
+        m[4].description = unicode"Distribute the position's gain: 70% to holders as WBNB dividends, "
+            unicode"30% to the project. Anyone may call; pays 0.5% to the caller."
+            unicode" / 分配仓位收益:70% 以 WBNB 分红发给持有者,30% 给项目方。任何人都可调用,支付 0.5% 赏金。";
+        m[4].outputs = _one("bounty", "uint256", unicode"BNB paid to the caller / 支付给调用者的 BNB");
         m[4].isWriteMethod = true;
 
         m[5].name = "rebalance";
-        m[5].description = "Push leverage back inside the band. Anyone may call; pays 0.3% of what it frees.";
-        m[5].outputs = _one("bounty", "uint256", "BNB paid to the caller");
+        m[5].description = unicode"Push leverage back inside the band. Anyone may call; pays 0.3% of what it frees. / 把杠杆推回区间内。任何人都可调用,支付所释放资金的 0.3% 作为赏金。";
+        m[5].outputs = _one("bounty", "uint256", unicode"BNB paid to the caller / 支付给调用者的 BNB");
         m[5].isWriteMethod = true;
 
         schema.methods = m;

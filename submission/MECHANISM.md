@@ -94,8 +94,8 @@ emergency withdraw and no pause.
 
 The four rows marked **(fork)** live in `test/LeverVaultPosition.t.sol` and are skipped unless an
 archive RPC is configured. That is why plain `forge test` reports **36 passed, 0 failed, 5 skipped** — the
-skip is that file, not a failure. The full run used for this submission is 41 forge tests + 33
-live-state assertions + 8 vault-UI checks = **82, all green**.
+skip is that file, not a failure. The full run used for this submission is 43 forge tests + 33
+live-state assertions + 8 vault-UI checks = **84, all green**.
 
 ## How the tax reaches the vault, and what the other 2000 does
 
@@ -364,7 +364,7 @@ testnet. The parameters above are the launch configuration recorded in `LAUNCH.m
 of anything trading. What *is* deployed is the factory, the beacon and the implementation, at
 identical addresses on chain 56 and chain 97.
 
-Those addresses are in [`FACTORY.md`](FACTORY.md) and `deployments/56.json`; the factory to register is `0x1FBa768c7E78B83edAF99c5094a8ED44A5fdF45B`.
+Those addresses are in [`FACTORY.md`](FACTORY.md) and `deployments/56.json`; the factory to register is `0xCBf3f108A7E42B7a870f8B0729Ca88c165d9D421`.
 
 **It does not claim the deployed implementation carries the swap floor.** `MAX_SWAP_SLIP_BPS` and
 the floored exit swaps are live: the

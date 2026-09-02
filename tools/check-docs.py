@@ -227,7 +227,7 @@ say(not shape_bad, "no document still describes the immutable factory"
 
 # The registered address is a proxy; its size comes from the chain, not from out/. Pin the
 # three numbers a reader can check with `cast codesize` so a redeploy cannot silently drift.
-ONCHAIN_SIZES = {"0x1FBa768c7E78B83edAF99c5094a8ED44A5fdF45B": 279}
+ONCHAIN_SIZES = {dep["contracts"]["LeverVaultFactory"]: 279}
 size_bad = []
 for rel in ["submission/FACTORY.md", "submission/README.md", "submission/RULES.md",
             "AUDIT.md", "submission/SPEC-CHECK.md"]:
@@ -247,8 +247,11 @@ say(not size_bad, f"the registered proxy is described as {list(ONCHAIN_SIZES.val
 
 # Both beacons must be named wherever the deployment is listed: naming only one was exactly the
 # gap Flap's reviewer pointed at.
+# Derived, not pasted: the first version of this gate hardcoded the beacon address and went
+# red on the next redeploy for the wrong reason.
+_fb = dep["contracts"]["LeverFactoryBeacon"]
 missing_fb = [rel for rel in ["submission/FACTORY.md", "submission/README.md", "submission/RULES.md"]
-              if "0x8Ec0BA4aE3406427B05F21EeA80609B658b71fD5" not in read(rel)]
+              if _fb.lower() not in read(rel).lower()]
 say(not missing_fb, "every deployment listing names the factory beacon too"
     + (f" — missing in {missing_fb}" if missing_fb else ""))
 
@@ -273,6 +276,28 @@ for t in sorted(glob.glob("test/*.sol")):
             bad_imports.append(f"{t} imports {imp}")
 say(not bad_imports, "no test imports anything outside the Flap vault side"
     + (f" — {bad_imports[:2]}" if bad_imports else ""))
+
+# Rule 004 UI-02: once a contract carries more than one language anywhere, EVERY user-facing
+# string must carry them all. All 27 require strings were bilingual while description(),
+# vaultUISchema() and vaultDataSchema() were English-only -- Flap's reviewer flagged it. A
+# string reaching a UI without its Chinese half is the defect, so look for assignments to the
+# fields a UI actually renders.
+print("\n=== every user-facing string carries both languages ===")
+mono = []
+for rel in ["src/flap/LeverVault.sol", "src/flap/LeverVaultFactory.sol"]:
+    body = read(rel)
+    # Join implicit string concatenation so a multi-part literal is judged as one string.
+    joined = re.sub(r'"\s*\n\s*(?:unicode)?"', "", body)
+    for m in re.finditer(r'(description|schema\.description)\s*=\s*((?:unicode)?"[^"]*")', joined):
+        lit = m.group(2)
+        if " / " not in lit and len(lit) > 24:
+            mono.append(f"{rel}: {lit[:56]}…")
+    for m in re.finditer(r'_one\(\s*"[^"]*",\s*"[^"]*",\s*((?:unicode)?"[^"]*")', joined):
+        lit = m.group(1)
+        if " / " not in lit and len(lit) > 12:
+            mono.append(f"{rel}: {lit[:56]}…")
+say(not mono, "no UI-facing string is one-language-only"
+    + (f" — {mono[:2]}" if mono else ""))
 
 m = re.search(r"Receives (\d+)% of every harvest", read("submission/schema.txt"))
 say(bool(m) and int(m.group(1)) == project_pct,
