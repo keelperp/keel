@@ -66,7 +66,7 @@ SURFACES = ["AUDIT.md", "SUBMISSION.md", "LAUNCH.md", "vault-ui/i18n.json",
             "src/flap/LeverVault.sol", "src/flap/LeverVaultFactory.sol",
             "site/index.html", "site/economics/index.html", "site/risks/index.html",
             "submission/README.md", "submission/FACTORY.md", "submission/MECHANISM.md",
-            "submission/RULES.md", "submission/SPEC-CHECK.md", "submission/UI-REQUEST.md"]
+            "submission/RULES.md", "submission/SPEC-CHECK.md", "submission/UI-REQUEST.md", "submission/RISK-REPORT-RESPONSE.md"]
 W = re.compile(r"holders|持有者|project|项目方", re.I)
 PCT = re.compile(r"(\d{1,3})%")
 # A split written without a percent sign is still a split. Catch "60/40", and a bare number
@@ -171,7 +171,7 @@ def marked_retired(body, addr):
 for rel in ["AUDIT.md", "SUBMISSION.md", "README.md", "vault-ui/manifest.json",
             "submission/schema.txt", "submission/README.md", "submission/FACTORY.md",
             "submission/RULES.md", "submission/SPEC-CHECK.md", "submission/MECHANISM.md",
-            "submission/UI-REQUEST.md"]:
+            "submission/UI-REQUEST.md", "submission/RISK-REPORT-RESPONSE.md"]:
     body = read(rel)
     unmarked = [a for a in ([superseded_addr] if superseded_addr else []) + RETIRED
                 if a and a.lower() in body.lower() and not marked_retired(body, a)]
@@ -189,7 +189,7 @@ STAMPS = {f"{dep['block']:,}": "chain 56 block", f"{d97['block']:,}": "chain 97 
           dep["txHash"]: "chain 56 tx", d97["txHash"]: "chain 97 tx"}
 stale = []
 for rel in ["AUDIT.md", "SUBMISSION.md", "README.md", "submission/RULES.md", "submission/README.md",
-            "submission/FACTORY.md", "submission/SPEC-CHECK.md", "submission/MECHANISM.md"]:
+            "submission/FACTORY.md", "submission/SPEC-CHECK.md", "submission/MECHANISM.md", "submission/RISK-REPORT-RESPONSE.md"]:
     body = read(rel)
     # Requiring a "block " prefix made this gate blind to the two stale numbers that actually
     # existed, which sat bare in a table. Match the shape, and exclude a trailing decimal so a
@@ -217,7 +217,7 @@ SUPERSEDED_SHAPE = [
 ]
 shape_bad = []
 for rel in ["AUDIT.md", "SUBMISSION.md", "README.md", "submission/README.md", "submission/FACTORY.md",
-            "submission/RULES.md", "submission/SPEC-CHECK.md", "submission/MECHANISM.md"]:
+            "submission/RULES.md", "submission/SPEC-CHECK.md", "submission/MECHANISM.md", "submission/RISK-REPORT-RESPONSE.md"]:
     body = read(rel)
     for phrase, why in SUPERSEDED_SHAPE:
         if phrase in body:
@@ -306,21 +306,42 @@ say(bool(m) and int(m.group(1)) == project_pct,
 print("\n=== every page's sizes, and nothing claiming it is unshipped ===")
 PAGES = ["AUDIT.md", "SUBMISSION.md", "README.md", "submission/README.md",
          "submission/FACTORY.md", "submission/RULES.md", "submission/SPEC-CHECK.md",
-         "submission/MECHANISM.md"]
+         "submission/MECHANISM.md", "submission/RISK-REPORT-RESPONSE.md"]
 # The size check above only read AUDIT.md, so a submission page could print the previous
 # build's runtime beside the current address and still pass.
-SUPERSEDED_SIZES = {19_462, 20_060, 5_173}
+# This was a hand-kept set of superseded sizes, which is the same mistake as a hand-kept set of
+# superseded addresses: it went stale on the next redeploy and passed a document printing the
+# previous build's runtime. Judge against the artefact instead -- a size beside a contract name
+# must BE that contract's size. `(?![A-Za-z])` keeps "LeverVault" from matching
+# "LeverVaultFactory", which is why the old version needed the whitelist to stay quiet.
 for rel in PAGES:
     body = read(rel)
     wrong = []
-    for name, size in (("LeverVault", vault_rt), ("LeverVaultFactory", fac_rt)):
-        for m in re.finditer(rf"{name}[^|\n]{{0,90}}?\|\s*([\d,]{{4,7}})\s*\|", body):
-            got = int(m.group(1).replace(",", ""))
-            line = body[body.rfind(chr(10), 0, m.start()) + 1:
-                        body.find(chr(10), m.end()) if body.find(chr(10), m.end()) > 0 else len(body)]
-            if got in SUPERSEDED_SIZES and got != size and f"{size:,}" not in line:
-                wrong.append(f"{name} {m.group(1)} but the build is {size:,}")
-    say(not wrong, f"{rel} prints no superseded size" + (f" — {wrong[0]}" if wrong else ""))
+    # Walk table cells, not a regex across the row: the row is
+    #   | `LeverVault` (implementation) | `0x0778…` | 21,129 |
+    # and an expression that cannot cross a `|` never reaches the size, while one that can
+    # reaches into the next contract's row. Both versions of this gate passed on a falsified
+    # number before it was written this way.
+    for row in re.findall(r"^\|[^\n]*\|$", body, re.M):
+        cells = [c.strip().strip("`").strip() for c in row.strip().strip("|").split("|")]
+        for name, size in (("LeverVault", vault_rt), ("LeverVaultFactory", fac_rt)):
+            named = next((i for i, c in enumerate(cells)
+                          if re.match(rf"^{name}(?![A-Za-z])", c)), None)
+            if named is None:
+                continue
+            # Only the FIRST numeric cell is the runtime; AUDIT.md follows it with the
+            # EIP-170 margin, and judging that against the runtime is a false positive.
+            nums = [int(c.replace(",", "")) for c in cells[named + 1:]
+                    if re.fullmatch(r"[\d,]{4,7}", c)]
+            # A row that also carries the current size is a before/after comparison, which is
+            # a legitimate thing for a document to say. AUDIT.md has one.
+            if size in nums:
+                break
+            first = f"{nums[0]:,}" if nums else None
+            if first is not None and int(first.replace(",", "")) != size:
+                wrong.append(f"{name} {first} but the build is {size:,}")
+            break   # the longer name wins; do not judge a Factory row against the vault
+    say(not wrong, f"{rel} prints only the current build's sizes" + (f" — {wrong[0]}" if wrong else ""))
 
 # A page saying the code is unshipped, after it shipped. Five documents said exactly this
 # because they were written while the redeploy was happening.
