@@ -11,7 +11,11 @@ built into a leveraged BNB position the vault owns outright, and every settlemen
 the realised gain to holders as WBNB dividends and 30% to the project.
 
 There is no keeper and no custodian. The three working functions — `deployPending`, `harvest`,
-`rebalance` — are permissionless and each pays a fixed bounty to whoever calls it. Flap's
+`rebalance` — are permissionless. `deployPending` and `harvest` always pay a fixed bounty out of
+what they move. `rebalance`'s bounty is real only on the deleveraging half, which is the direction
+that has something to pay a caller from; levering up frees nothing and pays none, and is not
+urgent — the position is already above target leverage, the safe direction, so it can wait for
+Flap's own scheduled wake rather than needing a paid caller to race it. Flap's
 Trigger Service calls the automatic path every five minutes while there is work; after a wake
 that finds nothing to do it backs off to hourly, so it is not paying a trigger fee to be told the
 same thing. That is a floor on responsiveness, not a cap: the three working functions are
@@ -30,11 +34,11 @@ launched** — Flap's own launcher creates one through the VaultPortal at regist
 
 | Contract | Address | Runtime |
 |---|---|---:|
-| `LeverVaultFactory` (proxy — register this) | `0x1B4304227D4090E2418ADd6bdB8AA43395cBf69e` | 279 |
-| `LeverFactoryBeacon` | `0x237931c0B9770bdfFDbE0a77e75A9d406377361a` | 785 |
-| `LeverVaultFactory` (implementation) | `0x4849D256A180f5Db5990fBfF25b2b2C47EC12C19` | 7,745 |
-| `LeverBeacon` | `0xD71A4655dd2f5C8f3ccC03582DafEAD1b1E73934` | 785 |
-| `LeverVault` (implementation) | `0x471f00F9D9cfAc8910a20C95770Dd7706Cb09D9f` | 22,529 |
+| `LeverVaultFactory` (proxy — register this) | `0x2559DD277E5a8E2f6d8594Deded3eD1025e6402C` | 279 |
+| `LeverFactoryBeacon` | `0x4EB9bE3Ec27673c5A7B88e1420fA349d68A69910` | 785 |
+| `LeverVaultFactory` (implementation) | `0x04F0AAc92361f66E0B78c8f6d03656Ab6A9a460d` | 7,745 |
+| `LeverBeacon` | `0x16Bb8430D443d120BC4bDe71d43d2A9EeA759E0B` | 785 |
+| `LeverVault` (implementation) | `0xC57c9D2ac2459e814Bc93C885C8D9F9E6d6Cd6A1` | 22,678 |
 
 Both beacons are owned by the Flap Guardian from inside their own constructors — the deployer
 never held upgrade authority for a single block. See `deployments/56.json` and
@@ -116,7 +120,7 @@ src/flap/VaultBase*.sol          Flap's own base contracts, unmodified
 src/interfaces/IVenus.sol        Venus, PancakeSwap and WBNB interfaces
 script/DeployFlapFactory.s.sol   the only deploy path: five contracts, two of them beacons
 script/LaunchKeel.s.sol          launches through Flap's official VaultPortal
-test/                            50 forge tests; see scripts/test.sh
+test/                            52 forge tests; see scripts/test.sh
 tools/verify.py                  33 live-state assertions, one atomic eth_call each
 site/                            the public site
 vault-ui/                        the custom Vault UI submitted to Flap

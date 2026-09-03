@@ -27,7 +27,10 @@ forge test --match-contract LeverVaultAuthTest --fork-url "$RPC" || fail=1
 echo; echo "=== forked: the underwater position Flap's review asked about ==="
 forge test --match-contract LeverVaultInsolventTest --fork-url "$RPC" || fail=1
 
-echo; echo; echo; echo "=== forked: the deleverage bounty and the selector's dividend check ==="
+echo; echo; echo; echo; echo "=== forked: rebalanceCooldown() and the lever-up bounty disclosure ==="
+forge test --match-contract LeverVaultCooldownAndBountyTest --fork-url "$RPC" || fail=1
+
+echo "=== forked: the deleverage bounty and the selector's dividend check ==="
 forge test --match-contract LeverVaultSelectorBountyTest --fork-url "$RPC" || fail=1
 
 echo "=== forked: the rebalance accounting Flap's reviewer found ==="

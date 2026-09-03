@@ -46,15 +46,15 @@ transactions and per-chain block numbers are in [`FACTORY.md`](FACTORY.md).
 
 | | Address | |
 |---|---|---|
-| `LeverVaultFactory` | `0x1B4304227D4090E2418ADd6bdB8AA43395cBf69e` | **this is the one to register** — a 279-byte `BeaconProxy`; its logic is the 7,745-byte implementation at `0x4849D256A180f5Db5990fBfF25b2b2C47EC12C19`, behind the Guardian-owned `LeverFactoryBeacon` at `0x237931c0B9770bdfFDbE0a77e75A9d406377361a`. **This address does not move when the Guardian upgrades it** |
-| `LeverBeacon` | `0xD71A4655dd2f5C8f3ccC03582DafEAD1b1E73934` | 785 bytes; owner is the Flap Guardian on each chain, transferred inside the constructor, so the deployer never held upgrade authority. The Guardian can replace the implementation behind it, which is rule 009's proxy exemption working as intended and the only way any constant in the vault changes |
-| `LeverVault` (implementation) | `0x471f00F9D9cfAc8910a20C95770Dd7706Cb09D9f` | 22,529 bytes, sitting behind that beacon — the code that carries the exit-path floor. `MAX_SWAP_SLIP_BPS()` reads 300 at this address on both chains |
+| `LeverVaultFactory` | `0x2559DD277E5a8E2f6d8594Deded3eD1025e6402C` | **this is the one to register** — a 279-byte `BeaconProxy`; its logic is the 7,745-byte implementation at `0x04F0AAc92361f66E0B78c8f6d03656Ab6A9a460d`, behind the Guardian-owned `LeverFactoryBeacon` at `0x4EB9bE3Ec27673c5A7B88e1420fA349d68A69910`. **This address does not move when the Guardian upgrades it** |
+| `LeverBeacon` | `0x16Bb8430D443d120BC4bDe71d43d2A9EeA759E0B` | 785 bytes; owner is the Flap Guardian on each chain, transferred inside the constructor, so the deployer never held upgrade authority. The Guardian can replace the implementation behind it, which is rule 009's proxy exemption working as intended and the only way any constant in the vault changes |
+| `LeverVault` (implementation) | `0xC57c9D2ac2459e814Bc93C885C8D9F9E6d6Cd6A1` | 22,678 bytes, sitting behind that beacon — the code that carries the exit-path floor. `MAX_SWAP_SLIP_BPS()` reads 300 at this address on both chains |
 
 Two corrections to make before you look at the chain, because the same deployer left two earlier
 factories behind on both 56 and 97 and **neither should ever be registered**. All three are 6,476
 bytes, so size does not tell them apart; `beacon()` does.
 
-`0x8666262877046df9f4B338B9D7f1a30d55688A5c` (nonce 1, block 119,729,060 on 56) is the set this
+`0x8666262877046df9f4B338B9D7f1a30d55688A5c` (nonce 1, block 119,738,718 on 56) is the set this
 one replaces. Its beacon is `0x7444B36CdC9372588C9C6A9A21bc435F31FE761a`, pointing at
 `0xAF3A1d973724ed416FEE48E5A58146893D1a9ac1` — 19,462 bytes, which unwinds at
 `amountOutMinimum: 0`, the missing floor Flap's pre-audit flagged.
@@ -90,15 +90,15 @@ the addresses above are not the ones this package named before. `_sellBnb` and `
 `require(got >= owed)`, which is the tighter bound, because the swap must return enough to repay the
 flash loan or the whole build reverts. Do not read the build as newly protected; it was always
 bounded, by the pool itself. The floor costs 120 bytes, and those 120 bytes are the whole difference
-between the retired implementation's 19,462 and the 22,529 now behind the beacon. What it buys is a
+between the retired implementation's 19,462 and the 22,678 now behind the beacon. What it buys is a
 bound, not immunity: 3% is deliberately loose, because the pool drifts from the oracle between
 updates and a floor tight enough to catch every sandwich would also stop the vault deleveraging in
 exactly the fast market where deleveraging matters most. A sandwich that stays inside the band still
 profits. None of that needs taking on our word: `cast call
-0x471f00F9D9cfAc8910a20C95770Dd7706Cb09D9f "MAX_SWAP_SLIP_BPS()(uint256)"` returns 300 on both
+0xC57c9D2ac2459e814Bc93C885C8D9F9E6d6Cd6A1 "MAX_SWAP_SLIP_BPS()(uint256)"` returns 300 on both
 chains, and the same call against the retired `0xAF3A1d97…` reverts.
 
-What we have instead of a testnet run is 72 checks, all green: 50 forge tests, 33 assertions made
+What we have instead of a testnet run is 72 checks, all green: 52 forge tests, 33 assertions made
 against BNB Chain's current live state across seven atomic `eth_call`s, and 8 vault-UI package
 checks. Plain `forge test` also exits 0 — 36 passed, 0 failed, 5 skipped, the skip being the position
 lifecycle suite, which needs an archive RPC that BSC does not offer for free.
@@ -130,7 +130,7 @@ wiring against each other, the project share the on-chain `vaultDataSchema()` st
 `PROJECT_SHARE_BPS` in the source, and that native BNB is supported as quote. It also asserts that
 this package still says no token exists, and that no page in this directory states a superseded
 split. It passes whole as of this writing, the five deployed runtimes included — 279 / 785 / 7,745 / 785 /
-22,529 against the local build — which is the row that would have caught this package still
+22,678 against the local build — which is the row that would have caught this package still
 pointing at the pre-floor implementation. Two limits worth knowing before you lean on it: the size
 rows it diffs are the ones in [`AUDIT.md`](../AUDIT.md), which carries the same figures this page
 republishes, and `PROJECT_SHARE_BPS` is the only constant it checks — read out of

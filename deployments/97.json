@@ -4,20 +4,20 @@
   "network": "BNB Chain testnet",
   "note": "Factory only. A vault cannot be created on this chain: the build path needs a PancakeSwap V3 pool holding WBNB to flash from, and BSC testnet has none. See AUDIT.md.",
   "deployer": "0x1544A8fCE3a3c39E0a744a13392981bEcDF014f4",
-  "txHash": "0x11d0b3f6a958e7893f3ba45fa7813ea0b5d32ecadbda9e03a29dc99f7eb07612",
-  "block": 128873481,
+  "txHash": "0x3ec5cef590240793dcb6000ab9ebf95c93b14a2b01aee9aec047511c6ddd0bd0",
+  "block": 128883139,
   "contracts": {
-    "LeverVaultFactory": "0x1B4304227D4090E2418ADd6bdB8AA43395cBf69e",
-    "LeverFactoryBeacon": "0x237931c0B9770bdfFDbE0a77e75A9d406377361a",
-    "LeverVaultFactoryImplementation": "0x4849D256A180f5Db5990fBfF25b2b2C47EC12C19",
-    "LeverBeacon": "0xD71A4655dd2f5C8f3ccC03582DafEAD1b1E73934",
-    "LeverVaultImplementation": "0x471f00F9D9cfAc8910a20C95770Dd7706Cb09D9f"
+    "LeverVaultFactory": "0x2559DD277E5a8E2f6d8594Deded3eD1025e6402C",
+    "LeverFactoryBeacon": "0x4EB9bE3Ec27673c5A7B88e1420fA349d68A69910",
+    "LeverVaultFactoryImplementation": "0x04F0AAc92361f66E0B78c8f6d03656Ab6A9a460d",
+    "LeverBeacon": "0x16Bb8430D443d120BC4bDe71d43d2A9EeA759E0B",
+    "LeverVaultImplementation": "0xC57c9D2ac2459e814Bc93C885C8D9F9E6d6Cd6A1"
   },
   "beaconOwner": "0x76Fa8C526f8Bc27ba6958B76DeEf92a0dbE46950",
   "beaconOwnerIs": "Flap Guardian (BNB testnet). Same bytecode as chain 56 resolves a different Guardian by chain id, which is what this deployment demonstrates.",
   "supersedes": {
-    "factory": "0x62D1C54CeA0a03096741dc72e51E7a4c5Ec0ACFA",
-    "reason": "Third Flap interaction risk report (2026-09-03 12:27, rating Low). Two of its four findings were regressions introduced by fixes for the second report, which is the shape worth recording: a change correct in the function it touched and wrong in the function consuming it. The deleverage branch began producing a freed amount that already WAS the bounty while the generic line kept applying the rate to it, paying the caller 0.0009% of the repositioned amount instead of 0.3%; and _harvest gained a requirement that the dividend contract take the WBNB while _pickAction kept choosing harvest without asking whether it could, so a token with no eligible holders starved routine rebalance. The other two were README claims the code had outgrown."
+    "factory": "0x1B4304227D4090E2418ADd6bdB8AA43395cBf69e",
+    "reason": "Fourth Flap interaction risk report (2026-09-03 13:17, rating Medium). rebalanceCooldown() was pure and unconditionally returned 1 hours while the internal _cooldown it duplicated returned 0 in the urgent zone -- the public getter now calls the same function _rebalance does, so the two can never disagree. And the README's 'each pays a fixed bounty' overclaimed: rebalance's lever-up branch borrows more and frees nothing, so it pays none -- documentation now says so, on chain and in the README and submission/RULES.md together."
   },
   "retired": [
     "0x7444B36CdC9372588C9C6A9A21bc435F31FE761a",
@@ -50,10 +50,15 @@
     "0x3857a456D80e21467cC0EAcEE1F6D05DFab3a3b5",
     "0x2056d0Bb15bCf98CF9ddFbEEBc899eF6BAcb0F45",
     "0xf212DD92b89944367Ce674F638454576Cfa1B6cB",
-    "0x4F6f3D2E103A90599B994623B058BF8C984Adc4B"
+    "0x4F6f3D2E103A90599B994623B058BF8C984Adc4B",
+    "0x1B4304227D4090E2418ADd6bdB8AA43395cBf69e",
+    "0x237931c0B9770bdfFDbE0a77e75A9d406377361a",
+    "0x4849D256A180f5Db5990fBfF25b2b2C47EC12C19",
+    "0xD71A4655dd2f5C8f3ccC03582DafEAD1b1E73934",
+    "0x471f00F9D9cfAc8910a20C95770Dd7706Cb09D9f"
   ],
   "retiredNote": "Every address this project has ever deployed and replaced. Registering any of them with Flap would bind a token to superseded code. tools/check-docs.py reads this list, so a redeploy updates one file rather than a constant in the checker.",
-  "registerThis": "0x1B4304227D4090E2418ADd6bdB8AA43395cBf69e",
+  "registerThis": "0x2559DD277E5a8E2f6d8594Deded3eD1025e6402C",
   "upgradeAuthority": {
     "LeverBeacon": "owns the vault implementation; Flap Guardian",
     "LeverFactoryBeacon": "owns the factory implementation; Flap Guardian",

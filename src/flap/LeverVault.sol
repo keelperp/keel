@@ -354,10 +354,14 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         return lev < lo || lev > hi;
     }
 
-    /// @notice Seconds that must pass between rebalances. Zero when the position is close
-    ///         enough to liquidation that waiting is the larger risk.
-    function rebalanceCooldown() public pure returns (uint256) {
-        return 1 hours;
+    /// @notice Seconds that must pass between rebalances right now. Zero when the position is
+    ///         close enough to liquidation that waiting is the larger risk.
+    /// @dev Was `pure`, unconditionally returning 1 hours, while `_rebalance` enforced the real
+    ///      rule through the internal `_cooldown` below -- so this getter never reported the
+    ///      zero-cooldown case its own NatSpec documented. It now calls the same function
+    ///      `_rebalance` does, reading live Venus state, so the two can never disagree again.
+    function rebalanceCooldown() public view returns (uint256) {
+        return _cooldown(_px());
     }
 
     function _cooldown(Px memory p) internal view returns (uint256) {
@@ -970,7 +974,10 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         m[4].isWriteMethod = true;
 
         m[5].name = "rebalance";
-        m[5].description = unicode"Push leverage back inside the band. Anyone may call; pays 0.3% of what it frees. / 把杠杆推回区间内。任何人都可调用,支付所释放资金的 0.3% 作为赏金。";
+        m[5].description = unicode"Push leverage back inside the band. Anyone may call. Deleveraging pays "
+            unicode"0.3% of what it frees; levering up frees nothing, so it pays no bounty."
+            unicode" / 把杠杆推回区间内。任何人都可调用。降杠杆时支付所释放资金的 0.3% 作为赏金;"
+            unicode"加杠杆不释放任何资金,因此不支付赏金。";
         m[5].outputs = _one("bounty", "uint256", unicode"BNB paid to the caller / 支付给调用者的 BNB");
         m[5].isWriteMethod = true;
 
