@@ -1,7 +1,8 @@
 # Keel
 
 A Flap custom vault that levers a token's trading tax into a 3x BNB long the contract holds
-itself on Venus, settles every five minutes, and pays the gain out to holders.
+itself on Venus, settles on a five-minute cadence while there is work to do, and pays the gain
+out to holders.
 
 ## Why
 
@@ -11,7 +12,10 @@ the realised gain to holders as WBNB dividends and 30% to the project.
 
 There is no keeper and no custodian. The three working functions — `deployPending`, `harvest`,
 `rebalance` — are permissionless and each pays a fixed bounty to whoever calls it. Flap's
-Trigger Service calls the automatic path every five minutes; anyone may call the manual one.
+Trigger Service calls the automatic path every five minutes while there is work; after a wake
+that finds nothing to do it backs off to hourly, so it is not paying a trigger fee to be told the
+same thing. That is a floor on responsiveness, not a cap: the three working functions are
+permissionless and paid, so anyone may call them at any moment without waiting for a wake.
 
 Nothing in the vault is owner-gated, admin-gated or keeper-gated. The leverage target, health
 floor, rebalance band, bounties, swap route, fee tier, slippage floor and settlement interval
@@ -26,11 +30,11 @@ launched** — Flap's own launcher creates one through the VaultPortal at regist
 
 | Contract | Address | Runtime |
 |---|---|---:|
-| `LeverVaultFactory` (proxy — register this) | `0x62D1C54CeA0a03096741dc72e51E7a4c5Ec0ACFA` | 279 |
-| `LeverFactoryBeacon` | `0x3857a456D80e21467cC0EAcEE1F6D05DFab3a3b5` | 785 |
-| `LeverVaultFactory` (implementation) | `0x2056d0Bb15bCf98CF9ddFbEEBc899eF6BAcb0F45` | 7,745 |
-| `LeverBeacon` | `0xf212DD92b89944367Ce674F638454576Cfa1B6cB` | 785 |
-| `LeverVault` (implementation) | `0x4F6f3D2E103A90599B994623B058BF8C984Adc4B` | 22,216 |
+| `LeverVaultFactory` (proxy — register this) | `0x1B4304227D4090E2418ADd6bdB8AA43395cBf69e` | 279 |
+| `LeverFactoryBeacon` | `0x237931c0B9770bdfFDbE0a77e75A9d406377361a` | 785 |
+| `LeverVaultFactory` (implementation) | `0x4849D256A180f5Db5990fBfF25b2b2C47EC12C19` | 7,745 |
+| `LeverBeacon` | `0xD71A4655dd2f5C8f3ccC03582DafEAD1b1E73934` | 785 |
+| `LeverVault` (implementation) | `0x471f00F9D9cfAc8910a20C95770Dd7706Cb09D9f` | 22,529 |
 
 Both beacons are owned by the Flap Guardian from inside their own constructors — the deployer
 never held upgrade authority for a single block. See `deployments/56.json` and
@@ -56,7 +60,12 @@ liquidates at 1.00. Run leverage against it:
 
 **5x is not a risky approach to the liquidation point — at CF 80% it IS the liquidation
 point.** Keel targets 3x, holds a `MIN_HEALTH_BPS` floor of 12000 (liquidated only by a 16.7%
-move), and deleverages urgently below 11300. At CF 80% the floor is the real cap on the
+move), and deleverages urgently below 11300. Deploy and harvest hold that floor absolutely and
+revert below it. Rebalance is the one exception, and deliberately so: at 3x the health floor is
+`0.8 x 3/2 = 1.2000` exactly, so a deleverage that lands on its own target sits precisely on the
+line and any swap friction puts it a hair under -- an absolute check there would revert the very
+move it exists to encourage, and would also revert a deep rescue climbing from 1.05 to 1.15. It
+requires health to have risen instead, keeping the absolute floor as the other way to pass. At CF 80% the floor is the real cap on the
 product:
 
 | health floor | max leverage |
@@ -107,7 +116,7 @@ src/flap/VaultBase*.sol          Flap's own base contracts, unmodified
 src/interfaces/IVenus.sol        Venus, PancakeSwap and WBNB interfaces
 script/DeployFlapFactory.s.sol   the only deploy path: five contracts, two of them beacons
 script/LaunchKeel.s.sol          launches through Flap's official VaultPortal
-test/                            47 forge tests; see scripts/test.sh
+test/                            50 forge tests; see scripts/test.sh
 tools/verify.py                  33 live-state assertions, one atomic eth_call each
 site/                            the public site
 vault-ui/                        the custom Vault UI submitted to Flap

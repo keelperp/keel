@@ -483,6 +483,7 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
 
         uint256 before = _leverage(p);
         uint256 healthBefore = _health(p);
+        uint256 owedBounty;
         uint256 bnbBefore = address(this).balance;
         bool deleveraging = before > TARGET_LEVERAGE;
         if (deleveraging) {
@@ -491,16 +492,29 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
             _deleverBy(excess * WAD / p.usdt, p);
             // The deleverage frees nothing by design, so the caller has to be paid out of a
             // proportional shrink -- which is what `_shrinkBy` is for, and which leaves the
-            // leverage the step above just set exactly where it is.
+            // leverage the step above just set exactly where it is. What it frees IS the bounty,
+            // so it must not go through the generic rate below: doing that applied the 0.3% a
+            // second time and paid the caller 0.0009% of `excess` instead of 0.3%, while the
+            // other 99.7% of the shrink went back to pendingRevenue to be re-levered, paying
+            // flash fees and slippage for nothing.
             if (bountyTo != address(0)) {
                 Px memory q = _px();
-                _shrinkBy(excess * REBALANCE_BOUNTY_BPS / BPS * WAD / q.bnb, q);
+                owedBounty = excess * REBALANCE_BOUNTY_BPS / BPS * WAD / q.bnb;
+                _shrinkBy(owedBounty, q);
             }
         } else {
             _build(0, p);
         }
         uint256 freed = address(this).balance - bnbBefore;
-        bounty = bountyTo == address(0) ? 0 : freed * REBALANCE_BOUNTY_BPS / BPS;
+        if (bountyTo == address(0)) {
+            bounty = 0;
+        } else if (deleveraging) {
+            // Capped at what the shrink actually managed, which can fall short of the target
+            // when the redeem cap binds.
+            bounty = freed < owedBounty ? freed : owedBounty;
+        } else {
+            bounty = freed * REBALANCE_BOUNTY_BPS / BPS;
+        }
         if (bounty > 0) {
             (bool ok,) = bountyTo.call{value: bounty}("");
             require(ok, unicode"LeverVault: bounty transfer failed / 赏金转账失败");
@@ -624,7 +638,12 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         if ((_health(p) < URGENT_HEALTH_BPS || _venusShortfall())
             && needsRebalance() && bnbCash >= MIN_DEPLOY) return 1;
         if (pendingRevenue >= MIN_DEPLOY && usdtCash > 0) return 2;
-        if (_gain(p) >= MIN_HARVEST && bnbCash >= MIN_DEPLOY) return 3;
+        // Ask whether the dividend contract can actually take the deposit before choosing to
+        // harvest. `_harvest` requires the WBNB to leave the vault, so with no eligible holders
+        // it reverts -- and since harvest outranks rebalance here, the selector would pick it on
+        // every wake, revert inside the try, and never reach a rebalance that would have worked.
+        // Same shape as the rescue check above: an action that cannot succeed steps aside.
+        if (_gain(p) >= MIN_HARVEST && bnbCash >= MIN_DEPLOY && _dividendCanTake()) return 3;
         uint256 lev = _leverage(p);
         if (lev != 0) {
             uint256 lo = TARGET_LEVERAGE * (BPS - REBALANCE_BAND_BPS) / BPS;
@@ -634,6 +653,23 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
             if ((lev < lo || lev > hi) && servable) return 4;
         }
         return 0;
+    }
+
+    /// @notice Whether the token's dividend contract has anyone to pay.
+    /// @dev Flap's Dividend takes nothing when `totalShares` is zero -- every holder below
+    ///      `minimumShareBalance`, or excluded. Wrapped in a try so a token whose dividend
+    ///      contract is missing or reverting cannot brick the selector for every other action.
+    function _dividendCanTake() internal view returns (bool) {
+        try IFlapTaxToken(token).dividendContract() returns (address div) {
+            if (div == address(0)) return false;
+            try IDividend(div).totalShares() returns (uint256 shares) {
+                return shares > 0;
+            } catch {
+                return false;
+            }
+        } catch {
+            return false;
+        }
     }
 
     /// @dev External only so `trigger()` can wrap it in a try. Self-calls only.

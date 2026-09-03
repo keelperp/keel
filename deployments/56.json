@@ -4,20 +4,20 @@
   "network": "BNB Chain mainnet",
   "note": "Flap custom-vault side only. No token has been launched; a token is created by Flap's launcher through the VaultPortal.",
   "deployer": "0x1544A8fCE3a3c39E0a744a13392981bEcDF014f4",
-  "txHash": "0x039e6f0f306f9c1cc5c7f5f32d123506a60d933cb2f553446d907eec703bf37d",
-  "block": 119716853,
+  "txHash": "0x469be9d04b2a683bb68d30754c6f5ab907721a2fa8940005266356d1f5627afb",
+  "block": 119729060,
   "contracts": {
-    "LeverVaultFactory": "0x62D1C54CeA0a03096741dc72e51E7a4c5Ec0ACFA",
-    "LeverFactoryBeacon": "0x3857a456D80e21467cC0EAcEE1F6D05DFab3a3b5",
-    "LeverVaultFactoryImplementation": "0x2056d0Bb15bCf98CF9ddFbEEBc899eF6BAcb0F45",
-    "LeverBeacon": "0xf212DD92b89944367Ce674F638454576Cfa1B6cB",
-    "LeverVaultImplementation": "0x4F6f3D2E103A90599B994623B058BF8C984Adc4B"
+    "LeverVaultFactory": "0x1B4304227D4090E2418ADd6bdB8AA43395cBf69e",
+    "LeverFactoryBeacon": "0x237931c0B9770bdfFDbE0a77e75A9d406377361a",
+    "LeverVaultFactoryImplementation": "0x4849D256A180f5Db5990fBfF25b2b2C47EC12C19",
+    "LeverBeacon": "0xD71A4655dd2f5C8f3ccC03582DafEAD1b1E73934",
+    "LeverVaultImplementation": "0x471f00F9D9cfAc8910a20C95770Dd7706Cb09D9f"
   },
   "beaconOwner": "0x9e27098dcD8844bcc6287a557E0b4D09C86B8a4b",
   "beaconOwnerIs": "Flap Guardian (BNB Chain), set in LeverBeacon's constructor -- never the deployer",
   "supersedes": {
-    "factory": "0x753c65B6a18454534Bd3B759f69E793bcf4B5F55",
-    "reason": "Second Flap interaction risk report (2026-09-03). Findings 1-3 of that report were already fixed and deployed before it was written. This deployment carries the three new ones: the build swap now has a slippage floor of its own (MAX_BUILD_SLIP_BPS = 25) because the exit path's 300 bps floor lands below the flash repayment bound and would constrain nothing; and the on-chain schema strings no longer promise a five-minute cadence when idle (it is hourly) nor a flat 70% to holders on a manual harvest (the 0.5% bounty comes out first)."
+    "factory": "0x62D1C54CeA0a03096741dc72e51E7a4c5Ec0ACFA",
+    "reason": "Third Flap interaction risk report (2026-09-03 12:27, rating Low). Two of its four findings were regressions introduced by fixes for the second report, which is the shape worth recording: a change correct in the function it touched and wrong in the function consuming it. The deleverage branch began producing a freed amount that already WAS the bounty while the generic line kept applying the rate to it, paying the caller 0.0009% of the repositioned amount instead of 0.3%; and _harvest gained a requirement that the dividend contract take the WBNB while _pickAction kept choosing harvest without asking whether it could, so a token with no eligible holders starved routine rebalance. The other two were README claims the code had outgrown."
   },
   "retired": [
     "0x7444B36CdC9372588C9C6A9A21bc435F31FE761a",
@@ -45,10 +45,15 @@
     "0x5C429A338087c89B9D3c9B444Ca2311361bb12e1",
     "0x8b811e4bF19D603f47e04Deb0db977fbD183AB6D",
     "0x00D634BdDbbff39CC6cfA3A4a9431ED4294a2EA9",
-    "0x2D0EA137C010731607B34a85C32bd7aB02576131"
+    "0x2D0EA137C010731607B34a85C32bd7aB02576131",
+    "0x62D1C54CeA0a03096741dc72e51E7a4c5Ec0ACFA",
+    "0x3857a456D80e21467cC0EAcEE1F6D05DFab3a3b5",
+    "0x2056d0Bb15bCf98CF9ddFbEEBc899eF6BAcb0F45",
+    "0xf212DD92b89944367Ce674F638454576Cfa1B6cB",
+    "0x4F6f3D2E103A90599B994623B058BF8C984Adc4B"
   ],
   "retiredNote": "Every address this project has ever deployed and replaced. Registering any of them with Flap would bind a token to superseded code. tools/check-docs.py reads this list, so a redeploy updates one file rather than a constant in the checker.",
-  "registerThis": "0x62D1C54CeA0a03096741dc72e51E7a4c5Ec0ACFA",
+  "registerThis": "0x1B4304227D4090E2418ADd6bdB8AA43395cBf69e",
   "upgradeAuthority": {
     "LeverBeacon": "owns the vault implementation; Flap Guardian",
     "LeverFactoryBeacon": "owns the factory implementation; Flap Guardian",
