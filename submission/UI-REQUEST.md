@@ -57,7 +57,7 @@ submitted with this binding empty and the gap stated. We will do whichever you s
 
 ## Binding
 
-Factory-scoped to `0x753c65B6a18454534Bd3B759f69E793bcf4B5F55`, on chain 56 and on chain 97. The
+Factory-scoped to `0x62D1C54CeA0a03096741dc72e51E7a4c5Ec0ACFA`, on chain 56 and on chain 97. The
 address is identical on both chains because it is the same bytecode from the same deployer
 `0x1544A8fCE3a3c39E0a744a13392981bEcDF014f4` at the same nonce. Both bindings are already written
 into `manifest.json`, and locales are `en` and `zh`, both complete. The file is not

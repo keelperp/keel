@@ -1,12 +1,12 @@
 # Schemas, read from the deployed contracts on BNB Chain (56)
-# factory        0x753c65B6a18454534Bd3B759f69E793bcf4B5F55
-# implementation 0x2D0EA137C010731607B34a85C32bd7aB02576131
+# factory        0x62D1C54CeA0a03096741dc72e51E7a4c5Ec0ACFA
+# implementation 0x4F6f3D2E103A90599B994623B058BF8C984Adc4B
 # Tuple signatures are derived from the compiled ABI by tools/dump-schema.mjs.
 
 ## factory.vaultDataSchema()
 # signature: vaultDataSchema()((string,(string,string,string,uint8)[],bool))
 
-("Trading tax is levered into a 3x BNB long the vault holds on Venus. Gains are settled automatically every 5 minutes: 70% to holders as WBNB dividends, 30% to the project. / 交易税被加杠杆建成金库持有在 Venus 上的 3 倍 BNB 多头。收益每 5 分钟自动结算:70% 以 WBNB 分红发给持有者,30% 给项目方。", [("project", "address", "Receives 30% of every harvest. Fixed at creation; the vault has no setter. / 获得每次结算收益的 30%。创建时固定,金库没有任何修改入口。", 0)], false)
+("Trading tax is levered into a 3x BNB long the vault holds on Venus. It is checked every 5 minutes while there is work to do and hourly once idle; each settlement splits the gain 70% to holders as WBNB dividends and 30% to the project, after the caller's 0.5% bounty on a manual harvest (the automatic path pays no bounty, so holders receive the full 70% there). / 交易税被加杠杆建成金库持有在 Venus 上的 3 倍 BNB 多头。有事可做时每 5 分钟检查一次,空闲时改为每小时一次;每次结算把收益按 70% 给持有者(WBNB 分红)、30% 给项目方分配,手动调用时先扣调用者 0.5% 赏金(自动路径不付赏金,持有者拿满 70%)。", [("project", "address", "Receives 30% of every harvest. Fixed at creation; the vault has no setter. / 获得每次结算收益的 30%。创建时固定,金库没有任何修改入口。", 0)], false)
 
 ## factory.isQuoteTokenSupported(address(0))
 # signature: isQuoteTokenSupported(address)(bool)
@@ -16,7 +16,7 @@ true
 ## factory.beacon()
 # signature: beacon()(address)
 
-0x00D634BdDbbff39CC6cfA3A4a9431ED4294a2EA9
+0xf212DD92b89944367Ce674F638454576Cfa1B6cB
 
 ## implementation.description()
 # signature: description()(string)
@@ -26,5 +26,5 @@ true
 ## implementation.vaultUISchema()
 # signature: vaultUISchema()((string,string,(string,string,(string,string,string,uint8)[],(string,string,string,uint8)[],(string,string)[],bool,bool,bool)[]))
 
-("LeverVault", "Trading tax becomes a leveraged BNB position the vault holds on Venus itself. The treasury moves with the market when nobody is trading, and its gain is paid to holders through the token's dividend contract. No keeper, no published NAV, no pause. / 交易税会变成金库自己持有在 Venus 上的杠杆 BNB 仓位。无人交易时国库仍随市场波动,其收益通过代币的分红合约发给持有者。没有 keeper,不发布 NAV,没有暂停开关。", [("nav", "Treasury value in BNB, read straight from Venus. / 国库价值(以 BNB 计),直接读自 Venus。", [], [("bnb", "uint256", "Treasury value in wei / 国库价值,单位 wei", 18)], [], false, false, false), ("currentLeverage", "Live BNB exposure over net value, 1e18-scaled. / 实时 BNB 敞口除以净值,按 1e18 缩放。", [], [("leverage", "uint256", "3e18 means 3x / 3e18 表示 3 倍", 18)], [], false, false, false), ("healthBps", "Collateral x factor over debt, in bps. Venus liquidates at 10000. / 抵押乘以抵押率再除以负债,单位 bps。Venus 在 10000 清算。", [], [("health", "uint256", "12000 means liquidated only by a 16.7% move / 12000 表示需下跌 16.7% 才会被清算", 18)], [], false, false, false), ("deployPending", "Turn accumulated tax into position. Anyone may call; pays 0.25%. / 把累积的税收建成仓位。任何人都可调用,支付 0.25% 赏金。", [], [("bounty", "uint256", "BNB paid to the caller / 支付给调用者的 BNB", 18)], [], false, false, true), ("harvest", "Distribute the position's gain: 70% to holders as WBNB dividends, 30% to the project. Anyone may call; pays 0.5% to the caller. / 分配仓位收益:70% 以 WBNB 分红发给持有者,30% 给项目方。任何人都可调用,支付 0.5% 赏金。", [], [("bounty", "uint256", "BNB paid to the caller / 支付给调用者的 BNB", 18)], [], false, false, true), ("rebalance", "Push leverage back inside the band. Anyone may call; pays 0.3% of what it frees. / 把杠杆推回区间内。任何人都可调用,支付所释放资金的 0.3% 作为赏金。", [], [("bounty", "uint256", "BNB paid to the caller / 支付给调用者的 BNB", 18)], [], false, false, true)])
+("LeverVault", "Trading tax becomes a leveraged BNB position the vault holds on Venus itself. The treasury moves with the market when nobody is trading, and its gain is paid to holders through the token's dividend contract. No keeper, no published NAV, no pause. / 交易税会变成金库自己持有在 Venus 上的杠杆 BNB 仓位。无人交易时国库仍随市场波动,其收益通过代币的分红合约发给持有者。没有 keeper,不发布 NAV,没有暂停开关。", [("nav", "Treasury value in BNB, read straight from Venus. / 国库价值(以 BNB 计),直接读自 Venus。", [], [("bnb", "uint256", "Treasury value in wei / 国库价值,单位 wei", 18)], [], false, false, false), ("currentLeverage", "Live BNB exposure over net value, 1e18-scaled. / 实时 BNB 敞口除以净值,按 1e18 缩放。", [], [("leverage", "uint256", "3e18 means 3x / 3e18 表示 3 倍", 18)], [], false, false, false), ("healthBps", "Collateral x factor over debt, in bps. Venus liquidates at 10000. / 抵押乘以抵押率再除以负债,单位 bps。Venus 在 10000 清算。", [], [("health", "uint256", "12000 means liquidated only by a 16.7% move / 12000 表示需下跌 16.7% 才会被清算", 18)], [], false, false, false), ("deployPending", "Turn accumulated tax into position. Anyone may call; pays 0.25%. / 把累积的税收建成仓位。任何人都可调用,支付 0.25% 赏金。", [], [("bounty", "uint256", "BNB paid to the caller / 支付给调用者的 BNB", 18)], [], false, false, true), ("harvest", "Distribute the position's gain. Anyone may call; the caller takes 0.5% and the rest splits 70% to holders as WBNB dividends, 30% to the project. The automatic path pays no bounty, so holders receive the full 70% there. / 分配仓位收益。任何人都可调用:调用者先拿 0.5%,余额按 70% 给持有者(WBNB 分红)、30% 给项目方。自动路径不付赏金,持有者拿满 70%。", [], [("bounty", "uint256", "BNB paid to the caller / 支付给调用者的 BNB", 18)], [], false, false, true), ("rebalance", "Push leverage back inside the band. Anyone may call; pays 0.3% of what it frees. / 把杠杆推回区间内。任何人都可调用,支付所释放资金的 0.3% 作为赏金。", [], [("bounty", "uint256", "BNB paid to the caller / 支付给调用者的 BNB", 18)], [], false, false, true)])
 

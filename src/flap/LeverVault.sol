@@ -77,6 +77,18 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
     ///         would also stop the vault from deleveraging in exactly the fast market where
     ///         deleveraging matters most. This bounds the loss; it does not eliminate it.
     uint256 public constant MAX_SWAP_SLIP_BPS = 300;
+
+    /// @notice The build swap's slippage budget, far tighter than the exit's and necessarily so.
+    /// @dev The build borrows 0.3% more USDT than the flash repayment needs, and that buffer is
+    ///      the only thing a sandwich on this swap can take. Two consequences fix this number.
+    ///      It must be under 0.299%: at or above it the floor lands below `owed`, where
+    ///      `require(got >= owed)` already binds, so it would constrain nothing. And it must
+    ///      clear real slippage on this pool -- measured against the Venus oracle on the 0.01%
+    ///      WBNB/USDT tier: 0.109% at 6,000 USDT, 0.131% at 30,000, 0.215% at 120,000. 25 bps
+    ///      sits above the largest of those and below the ceiling. Keeping half the buffer
+    ///      instead, which was the first attempt, allowed only 0.1495% and would have reverted
+    ///      any build over roughly 50,000 USDT.
+    uint256 public constant MAX_BUILD_SLIP_BPS = 25;
     address internal constant FLASH_POOL = 0x36696169C63e42cd08ce11f5deeBbCeBae652050; // WBNB/USDT 0.05%
 
     uint256 internal constant WAD = 1e18;
@@ -130,6 +142,10 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
     uint64 public constant TRIGGER_INTERVAL = 5 minutes;
     /// @notice Cadence when the last wake found nothing. Checking every 5 minutes forever
     ///         would spend the treasury on trigger fees during a quiet market.
+    /// @notice Wake interval once `_pickAction` returns 0. The five-minute cadence applies
+    ///         while there is work; an idle vault backs off to an hour so it is not paying
+    ///         the trigger fee to be told there is nothing to do. Stated on the UI schema
+    ///         too, which previously promised five minutes unconditionally.
     uint64 public constant IDLE_INTERVAL = 1 hours;
     /// @dev Rule 008 caps a callback at 2,000,000 gas. A build measures 1.20-1.24M, so the
     ///      schedule is bought FIRST and the work is attempted second, inside a try —
@@ -702,10 +718,16 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
             IVToken(vUSDT).borrow(usdtNeeded) == 0,
             unicode"LeverVault: Venus borrow failed / Venus 借款失败"
         );
-        // No floor here, and none is needed: the require below is strictly tighter. The swap
-        // must return enough to repay the flash loan or the entire build reverts, which is a
-        // bound on the same quantity an oracle floor would bound, enforced by the pool itself.
-        uint256 got = _swap(USDT, WBNB, usdtNeeded, 0);
+        // `require(got >= owed)` alone bounds only the flash repayment, not what the vault got
+        // for the debt it just took on: a sandwich can push the output down to exactly `owed`
+        // and keep the whole 0.3% buffer, leaving the vault carrying more USDT debt per BNB of
+        // collateral than intended. The exit path's floor does not transfer here -- valued at
+        // the oracle, MAX_SWAP_SLIP_BPS lands at 0.973 * owed, BELOW the repayment bound, so it
+        // would constrain nothing. Bound it against the buffer instead, which is the quantity
+        // actually at risk: demand at least half of it survives, leaving the rest for real
+        // slippage and the 0.01% swap fee.
+        uint256 floorOut = usdtNeeded * pxUsdt / pxBnb * (BPS - MAX_BUILD_SLIP_BPS) / BPS;
+        uint256 got = _swap(USDT, WBNB, usdtNeeded, floorOut > owed ? floorOut : owed);
         require(got >= owed, unicode"LeverVault: flash repayment short / 闪电贷还款不足");
         IERC20Min(WBNB).transfer(FLASH_POOL, owed);
         if (got > owed) {
@@ -903,9 +925,11 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         m[3].isWriteMethod = true;
 
         m[4].name = "harvest";
-        m[4].description = unicode"Distribute the position's gain: 70% to holders as WBNB dividends, "
-            unicode"30% to the project. Anyone may call; pays 0.5% to the caller."
-            unicode" / 分配仓位收益:70% 以 WBNB 分红发给持有者,30% 给项目方。任何人都可调用,支付 0.5% 赏金。";
+        m[4].description = unicode"Distribute the position's gain. Anyone may call; the caller takes "
+            unicode"0.5% and the rest splits 70% to holders as WBNB dividends, 30% to the project. "
+            unicode"The automatic path pays no bounty, so holders receive the full 70% there."
+            unicode" / 分配仓位收益。任何人都可调用:调用者先拿 0.5%,余额按 70% 给持有者(WBNB 分红)、"
+            unicode"30% 给项目方。自动路径不付赏金,持有者拿满 70%。";
         m[4].outputs = _one("bounty", "uint256", unicode"BNB paid to the caller / 支付给调用者的 BNB");
         m[4].isWriteMethod = true;
 

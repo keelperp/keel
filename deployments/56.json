@@ -4,20 +4,20 @@
   "network": "BNB Chain mainnet",
   "note": "Flap custom-vault side only. No token has been launched; a token is created by Flap's launcher through the VaultPortal.",
   "deployer": "0x1544A8fCE3a3c39E0a744a13392981bEcDF014f4",
-  "txHash": "0xfb367983dac45fe35fd438fbc53836a656376540d6628483841af84b4e18613e",
-  "block": 119555538,
+  "txHash": "0x039e6f0f306f9c1cc5c7f5f32d123506a60d933cb2f553446d907eec703bf37d",
+  "block": 119716853,
   "contracts": {
-    "LeverVaultFactory": "0x753c65B6a18454534Bd3B759f69E793bcf4B5F55",
-    "LeverFactoryBeacon": "0x5C429A338087c89B9D3c9B444Ca2311361bb12e1",
-    "LeverVaultFactoryImplementation": "0x8b811e4bF19D603f47e04Deb0db977fbD183AB6D",
-    "LeverBeacon": "0x00D634BdDbbff39CC6cfA3A4a9431ED4294a2EA9",
-    "LeverVaultImplementation": "0x2D0EA137C010731607B34a85C32bd7aB02576131"
+    "LeverVaultFactory": "0x62D1C54CeA0a03096741dc72e51E7a4c5Ec0ACFA",
+    "LeverFactoryBeacon": "0x3857a456D80e21467cC0EAcEE1F6D05DFab3a3b5",
+    "LeverVaultFactoryImplementation": "0x2056d0Bb15bCf98CF9ddFbEEBc899eF6BAcb0F45",
+    "LeverBeacon": "0xf212DD92b89944367Ce674F638454576Cfa1B6cB",
+    "LeverVaultImplementation": "0x4F6f3D2E103A90599B994623B058BF8C984Adc4B"
   },
   "beaconOwner": "0x9e27098dcD8844bcc6287a557E0b4D09C86B8a4b",
   "beaconOwnerIs": "Flap Guardian (BNB Chain), set in LeverBeacon's constructor -- never the deployer",
   "supersedes": {
-    "factory": "0xCBf3f108A7E42B7a870f8B0729Ca88c165d9D421",
-    "reason": "Flap interaction risk report, findings 4 and 5, plus two defects found while testing them. (4) harvest now verifies the dividend contract actually took the WBNB, by balance rather than by a return value it does not declare -- stranded WBNB sits outside _nav and is unreachable. (5) deleveraging used _shrinkBy, which shrinks both legs by the same fraction and so cannot move leverage at all; where it landed was decided by how much of the tail redeem the health cap blocked. _deleverBy moves the legs by the same absolute amount instead. Also: the closing health check demanded an absolute floor after an operation that raises health, and at 3x leverage health is exactly 1.2000 -- the floor itself -- so a deleverage landing on its own target was reverted by friction, and a deep rescue that improved health greatly was reverted too."
+    "factory": "0x753c65B6a18454534Bd3B759f69E793bcf4B5F55",
+    "reason": "Second Flap interaction risk report (2026-09-03). Findings 1-3 of that report were already fixed and deployed before it was written. This deployment carries the three new ones: the build swap now has a slippage floor of its own (MAX_BUILD_SLIP_BPS = 25) because the exit path's 300 bps floor lands below the flash repayment bound and would constrain nothing; and the on-chain schema strings no longer promise a five-minute cadence when idle (it is hourly) nor a flat 70% to holders on a manual harvest (the 0.5% bounty comes out first)."
   },
   "retired": [
     "0x7444B36CdC9372588C9C6A9A21bc435F31FE761a",
@@ -40,10 +40,15 @@
     "0xb1145a8301ac72754B409aF1088cB1170500585D",
     "0xbA2F0a36EE66799e36f2bc3aD45aF8ACd5750cD2",
     "0x396D1608AdA4F59775656Ff96823283d2B23d60d",
-    "0x07785Ebb6482757739e176Ea5f761cc8B345a862"
+    "0x07785Ebb6482757739e176Ea5f761cc8B345a862",
+    "0x753c65B6a18454534Bd3B759f69E793bcf4B5F55",
+    "0x5C429A338087c89B9D3c9B444Ca2311361bb12e1",
+    "0x8b811e4bF19D603f47e04Deb0db977fbD183AB6D",
+    "0x00D634BdDbbff39CC6cfA3A4a9431ED4294a2EA9",
+    "0x2D0EA137C010731607B34a85C32bd7aB02576131"
   ],
   "retiredNote": "Every address this project has ever deployed and replaced. Registering any of them with Flap would bind a token to superseded code. tools/check-docs.py reads this list, so a redeploy updates one file rather than a constant in the checker.",
-  "registerThis": "0x753c65B6a18454534Bd3B759f69E793bcf4B5F55",
+  "registerThis": "0x62D1C54CeA0a03096741dc72e51E7a4c5Ec0ACFA",
   "upgradeAuthority": {
     "LeverBeacon": "owns the vault implementation; Flap Guardian",
     "LeverFactoryBeacon": "owns the factory implementation; Flap Guardian",

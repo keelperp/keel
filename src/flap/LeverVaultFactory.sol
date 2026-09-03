@@ -138,10 +138,13 @@ contract LeverVaultFactory is VaultFactoryBaseV2 {
 
     function vaultDataSchema() public pure override returns (VaultDataSchema memory schema) {
         schema.description = unicode"Trading tax is levered into a 3x BNB long the vault holds on Venus. "
-            unicode"Gains are settled automatically every 5 minutes: 70% to holders as WBNB dividends, "
-            unicode"30% to the project."
-            unicode" / 交易税被加杠杆建成金库持有在 Venus 上的 3 倍 BNB 多头。收益每 5 分钟自动结算:"
-            unicode"70% 以 WBNB 分红发给持有者,30% 给项目方。";
+            unicode"It is checked every 5 minutes while there is work to do and hourly once idle; "
+            unicode"each settlement splits the gain 70% to holders as WBNB dividends and 30% to the "
+            unicode"project, after the caller's 0.5% bounty on a manual harvest (the automatic path "
+            unicode"pays no bounty, so holders receive the full 70% there)."
+            unicode" / 交易税被加杠杆建成金库持有在 Venus 上的 3 倍 BNB 多头。有事可做时每 5 分钟检查一次,"
+            unicode"空闲时改为每小时一次;每次结算把收益按 70% 给持有者(WBNB 分红)、30% 给项目方分配,"
+            unicode"手动调用时先扣调用者 0.5% 赏金(自动路径不付赏金,持有者拿满 70%)。";
         FieldDescriptor[] memory f = new FieldDescriptor[](1);
         f[0].name = "project";
         f[0].fieldType = "address";

@@ -15,7 +15,10 @@ fail=0
 echo; echo "=== offline: schema, factory guards, beacon ownership ==="
 forge test --match-contract LeverVaultSchemaTest || fail=1
 
-echo; echo; echo "=== offline: everything beyond the vault is Guardian-upgradeable too ==="
+echo; echo; echo; echo "=== offline: the build swap's slippage floor ==="
+forge test --match-contract LeverVaultBuildFloorTest || fail=1
+
+echo "=== offline: everything beyond the vault is Guardian-upgradeable too ==="
 forge test --match-contract LeverVaultUpgradeableTest || fail=1
 
 echo "=== forked: authorization, guards, receive stipend ==="

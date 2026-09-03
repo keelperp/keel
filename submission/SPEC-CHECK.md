@@ -96,11 +96,11 @@ done. This submission is the handover; nothing has been registered.
 
 | | address | runtime |
 |---|---|---:|
-| `LeverVaultFactory` (proxy — register this) | `0x753c65B6a18454534Bd3B759f69E793bcf4B5F55` | 279 |
-| `LeverFactoryBeacon` | `0x5C429A338087c89B9D3c9B444Ca2311361bb12e1` | 785 |
-| `LeverVaultFactory` (implementation) | `0x8b811e4bF19D603f47e04Deb0db977fbD183AB6D` | 7,397 |
-| `LeverBeacon` | `0x00D634BdDbbff39CC6cfA3A4a9431ED4294a2EA9` | 785 |
-| `LeverVault` (implementation) | `0x2D0EA137C010731607B34a85C32bd7aB02576131` | 21,935 |
+| `LeverVaultFactory` (proxy — register this) | `0x62D1C54CeA0a03096741dc72e51E7a4c5Ec0ACFA` | 279 |
+| `LeverFactoryBeacon` | `0x3857a456D80e21467cC0EAcEE1F6D05DFab3a3b5` | 785 |
+| `LeverVaultFactory` (implementation) | `0x2056d0Bb15bCf98CF9ddFbEEBc899eF6BAcb0F45` | 7,745 |
+| `LeverBeacon` | `0xf212DD92b89944367Ce674F638454576Cfa1B6cB` | 785 |
+| `LeverVault` (implementation) | `0x4F6f3D2E103A90599B994623B058BF8C984Adc4B` | 22,216 |
 
 The runtime column is what is on chain today, and that implementation predates the Rule 003
 slippage floor. That factory is superseded; the current one
@@ -108,9 +108,9 @@ as it stands would register the pre-fix implementation. Which route closes that 
 factory deployment, or a Guardian `upgradeTo` on the existing beacon — is a decision for Flap
 alongside registration; nothing here assumes one.
 
-Deployed by `0x1544A8fCE3a3c39E0a744a13392981bEcDF014f4` in tx `0x88afc2d3bf…`, block 119,555,538.
+Deployed by `0x1544A8fCE3a3c39E0a744a13392981bEcDF014f4` in tx `0x88afc2d3bf…`, block 119,716,853.
 The same bytecode from the same deployer and nonce is at the same address on chain 97 (tx
-`0xba13570ab6…`, block 128,699,443), which is itself the evidence that the per-chain Guardian
+`0xba13570ab6…`, block 128,861,281), which is itself the evidence that the per-chain Guardian
 resolution works on a real chain: `beacon.owner()` reads back as
 `0x9e27098dcD8844bcc6287a557E0b4D09C86B8a4b` on 56 and `0x76Fa8C526f8Bc27ba6958B76DeEf92a0dbE46950`
 on 97 — the Flap Guardian on each, never the deployer. Ownership is transferred inside
@@ -125,7 +125,7 @@ now an on-chain fact rather than a claim in a document.
 **I-01 — a superseded factory is on chain and must not be cited.**
 `0xE7EC91f5a78c413cDF2F1140B29d51cAfFAfE535` exists on chain and is retired: its
 `vaultDataSchema()` still described the project share as 40%. **Status:** retired. The current and
-only factory is `0x753c65B6a18454534Bd3B759f69E793bcf4B5F55`; the live schema text is at
+only factory is `0x62D1C54CeA0a03096741dc72e51E7a4c5Ec0ACFA`; the live schema text is at
 `src/flap/LeverVaultFactory.sol:109-119` and says 70% to holders, 30% to the project.
 
 **I-02 — the trigger fee bleeds a vault whose token nobody trades.**
@@ -175,7 +175,7 @@ built-in prelude is v2.1.
 | **003** Fairness / sandwich risk | PASS on privileged-role fairness; sandwich exposure raised by Flap's pre-audit and now bounded | All three work functions are permissionless. No privileged role can change routing, timing, slippage or trigger conditions — they are all `constant`. The automatic path pays no bounty (the trigger fee already came out of the vault); the manual path pays a fixed bps. An insider has no structural advantage over a bot. **The exit swaps carried no slippage bound. Flap's pre-audit flagged it, and it is fixed.** `harvest()` and `rebalance()` deleverage through `_repayOnce`, and its two swaps now go through `_sellBnb` and `_buyBnb` (`src/flap/LeverVault.sol:707-714`), which pass `_floor()` (`:718-721`) as `amountOutMinimum`. `_floor` values the input in units of the output at the oracle, less `MAX_SWAP_SLIP_BPS` = 300 — a public `constant` (`:79`). A swap landing more than 3% below the oracle reverts inside PancakeSwap with `Too little received`. The reference is Venus's own ResilientOracle, read once per call into `Px` (`:223-229`) — the same price that decides whether this position is liquidated, not a second feed with its own failure modes. `sqrtPriceLimitX96` is still 0 (`:674`): the bound is on what comes back, not on how far the pool may be pushed. The build path still passes 0 deliberately (`:599`) and is **not** newly protected — it was already bounded by the pool itself, because its flash callback ends in `require(got >= owed)` (`:600`), which is strictly tighter: the swap must return enough to repay the flash loan or the whole build reverts. **3% bounds the loss; it does not prevent sandwiching.** The tolerance is loose on purpose — the pool legitimately drifts from the oracle between updates, and a floor tight enough to catch every sandwich would also stop the vault deleveraging in exactly the fast market where deleveraging matters most. The route is still fixed to the deepest WBNB/USDT tier, which keeps the realistic loss well inside the floor rather than at it. Exercised by the 33 live-state assertions, which run the real unwind against the real oracle and real V3 depth; proven red by demanding 20% *above* the oracle instead, which reverted the unwind and dropped those assertions from 33 to 12. Deployed — see SB-02 |
 | **004** Literal error strings, no custom errors, all languages inline | PASS | Zero `error` declarations in our own code; every revert is a `require()` with an inline bilingual `unicode` literal — e.g. `src/flap/LeverVault.sol:453`, `src/flap/LeverVaultFactory.sol:128`, `src/flap/LeverBeacon.sol:18` |
 | **005** `receive()` ≤ 1,000,000 gas | PASS | **57,433 gas cold, 9,133 hot** against the 1,000,000 ceiling — 94% headroom. The body is two SSTOREs and one event: no loop, no external call, no delegatecall (`src/flap/LeverVault.sol:192-202`). Both `WBNB.withdraw()` and `vBNB.redeemUnderlying()` return BNB with a 2,300-gas stipend (`PUSH2 0x08fc`, read off both contracts' bytecode rather than assumed), so `receive()` returns early for exactly those two senders at `:198` — otherwise the stipend is exhausted and the whole position operation reverts with empty returndata. Tests: `test_receiveUnder1M`, `test_receiveNeverReverts`, `test_receiveSurvivesA2300GasStipend`, `test_returnsFromWbnbAndVbnbAreNotCountedAsTax` |
-| **006** Integration tests | PASS, with the gap stated below | 43 forge tests + 33 live-state assertions + 8 vault-UI checks = **84, all green**. Plain `forge test` also exits 0: 36 passed, 0 failed, 5 skipped. The position-lifecycle suite is the skip — see *Checked but not exercised* |
+| **006** Integration tests | PASS, with the gap stated below | 47 forge tests + 33 live-state assertions + 8 vault-UI checks = **88, all green**. Plain `forge test` also exits 0: 36 passed, 0 failed, 5 skipped. The position-lifecycle suite is the skip — see *Checked but not exercised* |
 | **007** AI oracle | N/A | Nothing calls `IFlapAIProvider` |
 | **008** Trigger service | PASS | `trigger` (`src/flap/LeverVault.sol:450-474`) checks `msg.sender` against the single official service address `0xcf4EE25035CF883895110f367F5BA8172416a7F9`, requires the exact request id it is awaiting and consumes it before any work runs, so a replay finds nothing to replay. Every wake re-reads chain state and decides again rather than assuming the callback was punctual, and the next slot is bought *before* the work is attempted inside a `try`, so one failure does not break the chain that could retry it. Measured callback cost **1,195,717–1,237,284 gas** across runs against the 2,000,000 cap, about 40% headroom. Tests: `test_triggerRejectsEveryCallerThatIsNotTheService`, `test_triggerRejectsAnIdItIsNotAwaiting`, `test_settleSelfIsSelfOnly`, `test_kickstartRefusesWhenAlreadyScheduled`, `test_kickstartRefusesWhenTheVaultCannotPayTheFee` |
 | **009** Emergency controls | PASS | The vault runs behind a `BeaconProxy` and is therefore exempt; it deliberately ships no emergency-withdraw function, because the Guardian's upgrade path *is* the emergency mechanism (`src/flap/LeverVault.sol:48-50`). The exemption's precondition is enforced in code: `LeverBeacon`'s constructor transfers ownership to the chain's Flap Guardian (`src/flap/LeverBeacon.sol:9-31`). Tests: `test_beaconIsOwnedByTheGuardianNotTheDeployer`, `test_beaconRefusesAnUnsupportedChain` |
@@ -190,13 +190,13 @@ the deploy script itself is tested (`test_deploy`).
 
 ## Sizes
 
-Every deployable contract is inside EIP-170: `LeverVault` 21,935 (4,994 of margin),
-`LeverVaultFactory` 7,397, `LeverBeacon` 785, and the registered `BeaconProxy` 279. The
-factory's initcode is 7,444 bytes, inside EIP-3860's 49,152. It no longer carries the vault's
+Every deployable contract is inside EIP-170: `LeverVault` 22,216 (4,994 of margin),
+`LeverVaultFactory` 7,745, `LeverBeacon` 785, and the registered `BeaconProxy` 279. The
+factory's initcode is 7,792 bytes, inside EIP-3860's 49,152. It no longer carries the vault's
 creation code: the factory runs behind a proxy now, so its wiring happens in `initialize` --
 runtime code -- and a `new LeverVault()` there would have added 20,285 bytes to its runtime and
 broken EIP-170. These are the current sources, floor included; the slippage fix cost 120 bytes,
-which is why the implementation deployed in SB-02 reads 21,935. Three test-only probes
+which is why the implementation deployed in SB-02 reads 22,216. Three test-only probes
 exceeds 24,576 (`FlapProbe` 30,081); it is
 injected by `eth_call` state override and are never deployed, so the size gate passes them and
 fails any deployable contract.
