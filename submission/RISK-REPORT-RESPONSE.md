@@ -1,9 +1,9 @@
 # Flap Vault Interaction Risk Report
 
-Generated: 2026-09-03 13:17:41 UTC
+Generated: 2026-09-03 14:53:13 UTC
 
 ## Vault Security Rating
-**Medium**
+**High**
 
 ## Status Guide / 状态说明
 
@@ -21,53 +21,40 @@ Mark by replacing `[ ]` with `[x]`. If FP, By Design, or Acknowledged, please wr
 ---
 
 ## Risk Findings
-### Finding 1: rebalanceCooldown() view always returns 1 hour, contradicting its documented urgent-zero behavior
-- **Severity:** Medium
-- **Confidence:** High
-- **Detected by:** doc_review
-- **Description:** The public view `rebalanceCooldown()` is documented (its own NatSpec) as: "Seconds that must pass between rebalances. Zero when the position is close enough to liquidation that waiting is the larger risk." The README likewise describes waiving the cooldown in urgent situations. However the implementation is `function rebalanceCooldown() public pure returns (uint256) { return 1 hours; }` — it is `pure` and unconditionally returns 1 hour. The actual cooldown enforced in `_rebalance` uses the separate internal `_cooldown(p)`, which returns `0` when `_health(p) < URGENT_HEALTH_BPS`. Thus the public getter never reports the zero-cooldown urgent case it documents.
-- **Vulnerable Code:**
-  - `src/flap/LeverVault.sol: rebalanceCooldown()`
-  - `src/flap/LeverVault.sol: _cooldown()`
-> **Status:** `[x]` TP、`[ ]` FP、`[ ]` By Design、`[ ]` Acknowledged
-> **Reason (if FP / By Design / Acknowledged):** Correct. Two functions computed the same thing and only one of them was ever actually asked — `_rebalance` calls `_cooldown(p)`, and `rebalanceCooldown()` existed only for a UI or a reviewer to read, `pure`, and wrong. Fixed by making the public getter call the exact function `_rebalance` calls, `_cooldown(_px())`, so it reads live Venus state and the two can never disagree again — there is only one implementation of the rule now, not two.
-
-`test/LeverVaultCooldownAndBounty.t.sol` drives the vault's own debt below the urgent line (via `vm.store` on Venus's `accountBorrows`, not a mock) and asserts `rebalanceCooldown()` reads 0 there and 1 hour otherwise; proven red by reverting the getter to `pure`. Read it back at `0xC57c9D2ac2459e814Bc93C885C8D9F9E6d6Cd6A1`. / 属实。两个函数算的是同一件事，只有一个真正被 `_rebalance`调用。已改为公开视图直接调用 `_rebalance` 所用的同一个内部函数，两者不会再不一致。
-
-### Finding 2: Harvest and rebalance exit swaps permit up to 300 bps slippage against the oracle, allowing recurring MEV extraction from the treasury (COM-MEV-SANDWICH)
-- **Severity:** Low
-- **Confidence:** Low
+### Finding 1: pancakeV3FlashCallback lacks flash-initiation guard, letting anyone force arbitrary leverage on the vault (COM-ACCESS-CONTROL)
+- **Severity:** High
+- **Confidence:** Medium
 - **Detected by:** attacker_review
-- **Description:** The unwind path (_repayOnce -> _sellBnb/_buyBnb -> _swap) floors output at MAX_SWAP_SLIP_BPS = 300 bps below the Venus oracle price. Because harvest(), rebalance() and the automatic settlement path are permissionless and their timing is publicly observable, a searcher can sandwich the WBNB/USDT swaps and push the realized price down to the 3% floor on every settlement that involves a swap, extracting value from the vault (less USDT recovered per BNB sold, leaving the position more leveraged / freeing less value for holders).
+- **Description:** LeverVault.pancakeV3FlashCallback only checks `msg.sender == FLASH_POOL` and never verifies that the vault itself initiated the flash loan. Because PancakeSwap V3's `IV3Pool.flash(recipient, amount0, amount1, data)` lets any caller specify `recipient = vault` and arbitrary `data`, an attacker can invoke `FLASH_POOL.flash(vault, 0, amount1, attackerData)` and the pool will faithfully call `vault.pancakeV3FlashCallback(0, fee1, attackerData)`. The callback then executes the full leverage routine (`WBNB.withdraw`, `vBNB.mint`, `vUSDT.borrow`, `_swap`) using attacker-controlled `borrowed`, `pxBnb`, `pxUsdt`, with the ONLY invariant being `require(got >= owed)` for the flash repayment. Critically, the callback performs NO health check — the MIN_HEALTH_BPS (1.20) floor is enforced only by `_deploy`/`_rebalance` AFTER `_build` returns, not inside the callback. An attacker can therefore push the vault to Venus's maximum borrow (health ≈ 1.00, far below the 1.20 target) against flash-inflated and/or existing collateral, and can set `pxBnb/pxUsdt` so that the swap floor collapses to just `owed`, allowing a huge USDT borrow to be swapped with minimal slippage protection. Consequences: (1) the vault is forced into a near-liquidation leverage state that a small BNB price dip will liquidate, destroying holder value; (2) the attacker can sandwich the callback's USDT→WBNB swap (whose minOut is only `owed`) to extract the vault's swap slippage directly; (3) the vault is saddled with excess USDT debt. Attacker cost is only gas (the vault pays the flash fee out of the swapped proceeds).
 - **Vulnerable Code:**
-  - `src/flap/LeverVault.sol:_floor`
-  - `src/flap/LeverVault.sol:_repayOnce`
-  - `src/flap/LeverVault.sol:_sellBnb`
-  - `src/flap/LeverVault.sol:_buyBnb`
-> **Status:** `[ ]` TP、`[ ]` FP、`[ ]` By Design、`[x]` Acknowledged
-> **Reason (if FP / By Design / Acknowledged):** The mechanism is real, we said so first, and this is the same disclosure standing — nothing new to add mechanically. `submission/RULES.md` under rule 003: "3% is deliberately loose, and sandwiching is not prevented... an attack that stays inside the band still profits, and the floor only caps how much it can take." The floor is proven red rather than assumed: demanding 20% above the oracle instead of 3% makes the unwind revert and drops the 33 live-state assertions to 12, because a floor tight enough to catch every sandwich also stops the vault deleveraging in exactly the fast market where deleveraging matters most.
+  - `src/flap/LeverVault.sol: pancakeV3FlashCallback`
+  - `src/flap/LeverVault.sol: _build (initiates flash without setting an in-flight guard)`
 
-Tightening it is a real option and we are not closing the door on it — 300 bps was chosen to survive legitimate volatility, not calibrated against measured MEV activity on this pair. If Flap has a number in mind, or wants us to measure realised extraction on the live pool before deciding, say so and we will. Absent that, our own judgment is that a slippage floor sized correctly stops griefing (an attacker forcing settlement at an arbitrarily bad price) without being confused for a tool that removes sandwiching, which no static floor can do. / 机制属实，与我们此前的披露一致，这次没有新增内容。3% 是为了不挡住合法波动而选的，不是按实测 MEV 活动校准的——如果 Flap 有具体数字，或希望我们先实测再定，我们照做。
+> **Status:** `[ ]` TP、`[x]` FP、`[ ]` By Design、`[ ]` Acknowledged
+> **Reason (if FP / By Design / Acknowledged):** The premise does not hold, and it fails at the one step that matters: PancakeSwap V3's `flash()` sends the borrowed tokens to `recipient`, but invokes the callback on `msg.sender` of the `flash()` call — the caller — not on `recipient`. Quoting the canonical PancakeV3Pool source: `if (amount1 > 0) TransferHelper.safeTransfer(token1, recipient, amount1); ... IPancakeV3FlashCallback(msg.sender).pancakeV3FlashCallback(fee0, fee1, data);`. So `FLASH_POOL.flash(vault, 0, amount1, attackerData)` called by an attacker hands the vault free WBNB — but the pool calls the callback on the ATTACKER's own contract, not on `vault.pancakeV3FlashCallback`, which is never invoked. There is no scenario in which an external caller gets the pool to name the vault as `msg.sender` of a `flash()` call the vault itself did not make.
 
-### Finding 3: Rebalance lever-up path pays essentially no bounty, contradicting the documented "each pays a fixed bounty"
+This is not an assertion we are asking you to trust. `test/LeverVaultFlashGuard.t.sol::test_attackerCallingFlashDirectlyNeverReachesTheVaultsCallback` calls `flash()` directly against the real live pool with the vault named as `recipient`, exactly as the finding describes, and shows the call reverts on a missing function on the *calling test contract* — never on the vault, whose balance does not move. We reproduced this both with and without the change below, to separate the fact from the fix: the attack fails to reach the vault either way.
+
+We added a guard anyway, as defense in depth rather than a fix for a reachable path: a `_flashArmed` flag, set only inside `_build` immediately around the one legitimate `flash()` call it makes with vault-computed (never external) data, and checked inside `pancakeV3FlashCallback` alongside the existing `msg.sender == FLASH_POOL` check. It costs one SSTORE each way and makes the structural fact machine-checked instead of resting on an argument about a third party's source — worth doing given this is the second report to reason about flash-loan semantics, even though the conclusion here is the opposite of the last one. `test/LeverVaultFlashGuard.t.sol::test_theCallbackRefusesWhenNoFlashIsInFlight` proves the guard itself, via `vm.prank(FLASH_POOL)` with no flash in flight; proven red by removing the check, where it fails on a bare revert rather than our message, confirming the check is what makes it fail. / 前提站不住：PancakeSwap V3 的 `flash()` 把代币转给 `recipient`，但回调打给 `flash()` 的调用者本身，不是 `recipient`——攻击者直接调用只会让池子回调攻击者自己的合约，金库的 `pancakeV3FlashCallback` 根本不会被触发，已在真实主网池子上用测试复现验证。仍然加了一道防御性的门（`_flashArmed`），把这个结构性事实变成机器可验证的，而不是靠对第三方源码的论证。
+
+
+### Finding 2: rebalanceCooldown() view returns a constant hour, contradicting the documented "zero when close to liquidation" behaviour
 - **Severity:** Low
 - **Confidence:** Medium
 - **Detected by:** doc_review
-- **Description:** The README states: "The three working functions — deployPending, harvest, rebalance — are permissionless and each pays a fixed bounty to whoever calls it", and the UI schema describes rebalance as "pays 0.3% of what it frees." In `_rebalance`, when the position is UNDER-leveraged (leverage below the band), the code runs `_build(0, p)`, which borrows more USDT and mints more vBNB and frees no BNB. The bounty for the non-deleveraging branch is then `bounty = freed * REBALANCE_BOUNTY_BPS / BPS`, where `freed = address(this).balance - bnbBefore ≈ 0`. Hence a caller who performs a lever-up rebalance receives approximately zero bounty, unlike the deleverage branch which deliberately shrinks the position to fund the caller.
+- **Description:** The README (and the function's own NatSpec) states the rebalance cooldown is waived when the position is near liquidation: "URGENT_HEALTH_BPS ... Below this the vault deleverages immediately, waiving the rebalance cooldown", and rebalanceCooldown() is documented as "Seconds that must pass between rebalances. Zero when the position is close enough to liquidation that waiting is the larger risk." However the public getter `rebalanceCooldown()` is declared `pure` and unconditionally `return 1 hours;`. The cooldown that is actually enforced in `_rebalance` uses `_cooldown(p)`, which returns 0 when `_health(p) < URGENT_HEALTH_BPS`.
 - **Vulnerable Code:**
-  - `src/flap/LeverVault.sol: _rebalance()`
-  - `src/flap/LeverVault.sol: vaultUISchema() (m[5] rebalance description)`
+  - `LeverVault.rebalanceCooldown()`
+  - `LeverVault._cooldown()`
+  - `LeverVault._rebalance()`
+
 > **Status:** `[x]` TP、`[ ]` FP、`[ ]` By Design、`[ ]` Acknowledged
-> **Reason (if FP / By Design / Acknowledged):** Correct that the README overclaimed. The schema you also cite was already accurate as written — "pays 0.3% of what it frees" is literally true when what it frees is zero — but the README's "each pays a fixed bounty to whoever calls it" was not qualified, and left the reasonable impression that lever-up pays too.
+> **Reason (if FP / By Design / Acknowledged):** Correct as described, and already fixed the round before this report was generated — this report ran against a superseded build. `rebalanceCooldown()` now calls `_cooldown(_px())` directly, the exact function `_rebalance` uses, so there is one implementation of the rule rather than two that can drift. Read it back at `0x38f72bcdF1Fca500f2099b2636BbBB4fdE1c6AA1`: it returns 3600 ordinarily and 0 once `healthBps()` crosses `URGENT_HEALTH_BPS`, proven on a live fork by pushing the vault's own Venus debt past the line with `vm.store` rather than a mock. / 属实，且在这份报告生成之前的上一轮就已修复——本报告针对的是被取代的版本。链上可直接读回验证。
 
-We are not adding a bounty to the lever-up branch, because there is nothing for it to be paid out of without inventing a new source, and it is not needed: lever-up means leverage is below target, which is the safe direction, so there is no urgency requiring a paid caller to race the scheduled wake. The automatic path reaches it regardless of any bounty. So documentation changed rather than behavior — both the README and the on-chain schema now say the bounty is real only on the deleveraging half, in both languages, and `submission/RULES.md`'s rule 003 row was corrected the same way since it carried the same overclaim.
-
-`test/LeverVaultCooldownAndBounty.t.sol` asserts the new schema string discloses the lever-up case; proven red by reverting it to the old wording. / 属实，README 表述过头，schema 本身没错。没有给加杠杆分支加赏金——没有可付的资金来源，也不需要，因为加杠杆是安全方向，不急，自动路径迟早会做。已改的是文案：README、链上 schema、submission/RULES.md 三处同步更正。
 
 ---
 
-Finding 1 is fixed and deployed; findings 2 and 3 are, respectively, a standing disclosure (unchanged)
-and a documentation correction (fixed on chain, in the README, and in `submission/RULES.md`). All
-three are on both chains at identical addresses. Register `0x2559DD277E5a8E2f6d8594Deded3eD1025e6402C`; the vault implementation
-carrying these fixes is `0xC57c9D2ac2459e814Bc93C885C8D9F9E6d6Cd6A1`. Reproduce with `bash scripts/test.sh` and
-`./submission/check`.
+Finding 2 was already fixed. Finding 1 is FP for the reason above, and the `_flashArmed`
+hardening it prompted is deployed regardless, on both chains at identical addresses. Register
+`0x82d005723aF87A05cB4CffF0E5B50032DA068233`; the vault implementation is `0x38f72bcdF1Fca500f2099b2636BbBB4fdE1c6AA1`. Reproduce with
+`bash scripts/test.sh` and `./submission/check`.

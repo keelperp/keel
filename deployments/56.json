@@ -4,20 +4,20 @@
   "network": "BNB Chain mainnet",
   "note": "Flap custom-vault side only. No token has been launched; a token is created by Flap's launcher through the VaultPortal.",
   "deployer": "0x1544A8fCE3a3c39E0a744a13392981bEcDF014f4",
-  "txHash": "0xd6330a771e797a73f39f8306a6003beb20393ece822b6251d893362eb920a9e3",
-  "block": 119738718,
+  "txHash": "0x83c788bbc9b53e40bfd11555c050715bd34f57824c004ce1e3b34630fd8e5ce9",
+  "block": 119749595,
   "contracts": {
-    "LeverVaultFactory": "0x2559DD277E5a8E2f6d8594Deded3eD1025e6402C",
-    "LeverFactoryBeacon": "0x4EB9bE3Ec27673c5A7B88e1420fA349d68A69910",
-    "LeverVaultFactoryImplementation": "0x04F0AAc92361f66E0B78c8f6d03656Ab6A9a460d",
-    "LeverBeacon": "0x16Bb8430D443d120BC4bDe71d43d2A9EeA759E0B",
-    "LeverVaultImplementation": "0xC57c9D2ac2459e814Bc93C885C8D9F9E6d6Cd6A1"
+    "LeverVaultFactory": "0x82d005723aF87A05cB4CffF0E5B50032DA068233",
+    "LeverFactoryBeacon": "0xff9539e363116B906ba4956fEa2552bF0904B6e7",
+    "LeverVaultFactoryImplementation": "0xae492751b27CFeb26E47Efb5785D0E248D7C59A2",
+    "LeverBeacon": "0x8C0a552f0390B58d178dF89989F311c15b19ffde",
+    "LeverVaultImplementation": "0x38f72bcdF1Fca500f2099b2636BbBB4fdE1c6AA1"
   },
   "beaconOwner": "0x9e27098dcD8844bcc6287a557E0b4D09C86B8a4b",
   "beaconOwnerIs": "Flap Guardian (BNB Chain), set in LeverBeacon's constructor -- never the deployer",
   "supersedes": {
-    "factory": "0x1B4304227D4090E2418ADd6bdB8AA43395cBf69e",
-    "reason": "Fourth Flap interaction risk report (2026-09-03 13:17, rating Medium). rebalanceCooldown() was pure and unconditionally returned 1 hours while the internal _cooldown it duplicated returned 0 in the urgent zone -- the public getter now calls the same function _rebalance does, so the two can never disagree. And the README's 'each pays a fixed bounty' overclaimed: rebalance's lever-up branch borrows more and frees nothing, so it pays none -- documentation now says so, on chain and in the README and submission/RULES.md together."
+    "factory": "0x2559DD277E5a8E2f6d8594Deded3eD1025e6402C",
+    "reason": "Fifth Flap interaction risk report (2026-09-03 14:53, rating High). Finding 2 was already fixed last round (rebalanceCooldown() reads live state). Finding 1's attack does not reach the vault: PancakeV3Pool's flash() sends tokens to `recipient` but invokes the callback on msg.sender of the flash() call, so an attacker calling FLASH_POOL.flash(vault, ...) gets the pool to call the attacker's own contract back, never LeverVault.pancakeV3FlashCallback -- confirmed against the canonical pool source and by a live-fork test showing the attempted attack reverts on a missing function on the attacker's own contract, never touching the vault. A _flashArmed guard is added anyway as defense in depth, set only inside _build immediately around the one legitimate flash() call, so the structural fact is machine-checked rather than resting on an argument about a third party's source."
   },
   "retired": [
     "0x7444B36CdC9372588C9C6A9A21bc435F31FE761a",
@@ -55,10 +55,15 @@
     "0x237931c0B9770bdfFDbE0a77e75A9d406377361a",
     "0x4849D256A180f5Db5990fBfF25b2b2C47EC12C19",
     "0xD71A4655dd2f5C8f3ccC03582DafEAD1b1E73934",
-    "0x471f00F9D9cfAc8910a20C95770Dd7706Cb09D9f"
+    "0x471f00F9D9cfAc8910a20C95770Dd7706Cb09D9f",
+    "0x2559DD277E5a8E2f6d8594Deded3eD1025e6402C",
+    "0x4EB9bE3Ec27673c5A7B88e1420fA349d68A69910",
+    "0x04F0AAc92361f66E0B78c8f6d03656Ab6A9a460d",
+    "0x16Bb8430D443d120BC4bDe71d43d2A9EeA759E0B",
+    "0xC57c9D2ac2459e814Bc93C885C8D9F9E6d6Cd6A1"
   ],
   "retiredNote": "Every address this project has ever deployed and replaced. Registering any of them with Flap would bind a token to superseded code. tools/check-docs.py reads this list, so a redeploy updates one file rather than a constant in the checker.",
-  "registerThis": "0x2559DD277E5a8E2f6d8594Deded3eD1025e6402C",
+  "registerThis": "0x82d005723aF87A05cB4CffF0E5B50032DA068233",
   "upgradeAuthority": {
     "LeverBeacon": "owns the vault implementation; Flap Guardian",
     "LeverFactoryBeacon": "owns the factory implementation; Flap Guardian",

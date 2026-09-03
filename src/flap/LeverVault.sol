@@ -182,6 +182,7 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
     uint256 public pendingRequestId;
 
     bool private _entered;
+    bool private _flashArmed;
 
     // ------------------------------------------------------------------- events
 
@@ -738,7 +739,21 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         // WBNB is token1 in the WBNB/USDT pool (0x55d3.. < 0xbb4C..).
         // Prices ride along in the callback data: reading them again inside the callback
         // is two more ResilientOracle round trips at ~26,300 gas each.
+        //
+        // `_flashArmed` is defense in depth, not a fix for a reachable bug. PancakeSwap V3's
+        // `flash()` sends tokens to `recipient` but calls the callback on `msg.sender` of the
+        // `flash()` call itself (confirmed against the canonical PancakeV3Pool source) -- so an
+        // attacker calling `FLASH_POOL.flash(address(vault), ...)` gets the pool to hand the
+        // vault free WBNB, but the pool calls the ATTACKER's own contract back, never this
+        // vault's `pancakeV3FlashCallback`. The only way that function runs with
+        // `msg.sender == FLASH_POOL` is for the vault itself to have been the caller of
+        // `flash()`, which happens only here, with data this function computed from live state
+        // -- never from external input. The flag makes that structural fact explicit and
+        // machine-checked rather than resting on an argument about a third-party contract's
+        // source.
+        _flashArmed = true;
         IV3Pool(FLASH_POOL).flash(address(this), 0, wbnbToFlash, abi.encode(wbnbToFlash, p.bnb, p.usdt));
+        _flashArmed = false;
     }
 
     /// @notice PancakeSwap V3 flash callback. Only the one pool may call it.
@@ -747,6 +762,10 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
             msg.sender == FLASH_POOL,
             unicode"LeverVault: caller is not the flash pool / 调用方不是闪电贷池"
         );
+        // `_flashArmed` is set only inside `_build`, immediately before this exact flash loan
+        // and cleared immediately after -- so this checks that the loan being repaid is the
+        // one this vault itself initiated, not merely that the caller is the pool contract.
+        require(_flashArmed, unicode"LeverVault: flash not initiated by this vault / 闪电贷非本金库发起");
         (uint256 borrowed, uint256 pxBnb, uint256 pxUsdt) = abi.decode(data, (uint256, uint256, uint256));
         uint256 owed = borrowed + fee1;
 
