@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Verify · Keel</title>
-<meta name="description" content="Sixty-nine assertions, thirty-three of them against live Robinhood Chain state. One command, no private key, no archive node, nothing broadcast.">
+<meta name="description" content="Sixty-nine assertions, thirty-three of them against live BNB Chain state. One command, no private key, no archive node, nothing broadcast.">
 <meta name="theme-color" content="#141414">
 <meta property="og:url" content="https://www.keelperp.fun/verify/">
 <meta property="og:site_name" content="Keel">
@@ -86,7 +86,7 @@ pre.code .g { color: var(--positive); }
 
     <div class="grid g2">
       <div style="display:flex;flex-direction:column;gap:16px">
-        <p>The position takes ~50s through the lending market and Uniswap v4; Robinhood Chain prunes at ~96s, no free archive, so a fork dies mid-run on
+        <p>The position takes ~50s through Venus and PancakeSwap; BNB Chain prunes at ~96s, no free archive, so a fork dies mid-run on
           <code class="mono neg">missing trie node</code> &mdash; direct fork and anvil alike.</p>
         <p>Instead: one <code class="mono" style="color:var(--accent)">eth_call</code>, probe bytecode injected by state override.</p>
       </div>
@@ -105,7 +105,7 @@ pre.code .g { color: var(--positive); }
   <div class="wrap">
     <div class="sec-head"><span class="tag">coverage <span class="sep" aria-hidden="true">//</span> all 69</span><h2>What is asserted</h2></div>
       <figure class="fig" style="margin-bottom:22px">
-        <img src="/assets/fig/assertions.png" alt="Three cards for the groups that run live against the chain: build with 12 assertions, harvest with 10, settlement with 11. A note underneath reads that the forge suite adds 28 more and the position-lifecycle group is skipped by design because it needs an archive RPC that Robinhood Chain does not offer for free." loading="lazy" decoding="async" width="1000">
+        <img src="/assets/fig/assertions.png" alt="Three cards for the groups that run live against the chain: build with 12 assertions, harvest with 10, settlement with 11. A note underneath reads that the forge suite adds 28 more and the position-lifecycle group is skipped by design because it needs an archive RPC that BNB Chain does not offer for free." loading="lazy" decoding="async" width="1000">
         <figcaption>One <code class="mono">eth_call</code> per live group.</figcaption>
       </figure>
     <div class="scroll rise" tabindex="0" role="region" aria-label="Table, scrollable">
@@ -117,7 +117,7 @@ pre.code .g { color: var(--positive); }
           <tr><td class="name">Settlement</td><td class="num">11</td><td>Real trigger slot, impostors and replays refused, 2M callback cap.</td></tr>
           <tr><td class="name">Authorization</td><td class="num">13</td><td>Trigger sender, request id, self-only, initialize once, 2,300-gas stipend.</td></tr>
           <tr><td class="name">Factory &amp; schema</td><td class="num">13</td><td>Portal-only creation, launch validation, beacon ownership, schema names map to selectors, v2.2 baseline.</td></tr>
-          <tr><td class="name">receive() gas</td><td class="num">2</td><td>Cold and warm under Pons's 1,000,000 cap, never reverts, rule 005.</td></tr>
+          <tr><td class="name">receive() gas</td><td class="num">2</td><td>Cold and warm under Flap's 1,000,000 cap, never reverts, rule 005.</td></tr>
           <tr><td class="name">Vault UI</td><td class="num">8</td><td>ABI current, locales in sync.</td></tr>
         </tbody>
       </table>
@@ -130,9 +130,9 @@ pre.code .g { color: var(--positive); }
     <div class="sec-head"><span class="tag">once deployed <span class="sep" aria-hidden="true">//</span> read</span><h2>Three calls answer everything</h2></div>
       <figure class="fig" style="margin-bottom:22px">
         <img src="/assets/fig/three-calls.png" alt="A numbered list of three view calls: nav() for what the treasury is worth, health() for how far the position is from liquidation, pendingAction() for what the next wake will do. Underneath: all view, no key, no archive node, no indexer." loading="lazy" decoding="async" width="1000">
-        <figcaption>Reads the lending market and the trigger service.</figcaption>
+        <figcaption>Reads Venus and the trigger service.</figcaption>
       </figure>
-    <pre class="code rise">export ETH_RPC_URL=https://rpc.mainnet.chain.robinhood.com
+    <pre class="code rise">export ETH_RPC_URL=https://bsc-dataseed.bnbchain.org
 cast call $VAULT <span class="k">"nav()(uint256)"</span>
 cast call $VAULT <span class="k">"healthBps()(uint256)"</span>        <span class="c"># 10000 = liquidated</span>
 cast call $VAULT <span class="k">"pendingAction()(uint8)"</span>
@@ -144,8 +144,8 @@ cast call $VAULT <span class="k">"nextSettlementIn()(uint256)"</span></pre>
   <div class="wrap narrow" style="text-align:center">
     <h2>Not deployed yet</h2>
     <figure class="fig" style="align-items:center;margin:22px 0 26px">
-      <img src="/assets/fig/status.png" alt="A four step progress line: factory deployed, marked done; registered by Pons, marked waiting; token launched, not yet; vault live, not yet. A note reads that the factory is live on Robinhood Chain with its beacon already Guardian-owned, and nothing else has happened." loading="lazy" decoding="async" width="1000">
-      <figcaption>Factory live on Robinhood Chain, no token yet; Guardian can replace the implementation. Addresses land here.</figcaption>
+      <img src="/assets/fig/status.png" alt="A four step progress line: factory deployed, marked done; registered by Flap, marked waiting; token launched, not yet; vault live, not yet. A note reads that the factory is live on BNB Chain with its beacon already Guardian-owned, and nothing else has happened." loading="lazy" decoding="async" width="1000">
+      <figcaption>Factory live on BNB Chain, no token yet; Guardian can replace the implementation. Addresses land here.</figcaption>
     </figure>
     <a class="btn" href="/vault/">The vault</a>
   </div>
@@ -164,8 +164,8 @@ cast call $VAULT <span class="k">"nextSettlementIn()(uint256)"</span></pre>
       <span style="display:block;color:var(--fg-quaternary);padding-top:3px">No token yet &middot; submitted for review</span></div>
   </div>
   <div class="wrap" style="margin-top:30px;padding-top:18px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--fg-quaternary)">
-    A 3&times; position is liquidated by a 16.7% move against it. The lending market and Uniswap v4 are
-    dependencies. Submitted to Pons for review; no third-party security audit.
+    A 3&times; position is liquidated by a 16.7% move against it. Venus and PancakeSwap are
+    dependencies. Submitted to Flap for review; no third-party security audit.
   </div>
 </footer>
 

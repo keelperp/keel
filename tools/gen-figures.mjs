@@ -65,7 +65,7 @@ await shoot("tax-route.png", W, 420, `<body style="padding:${PAD}px">
   <div style="display:flex;align-items:stretch;gap:0;margin-top:26px;height:120px">
     <div style="flex:80;background:linear-gradient(90deg,${ACC}22,${ACC}44);border:1px solid ${ACC}66;border-right:0;border-radius:8px 0 0 8px;padding:16px 18px;display:flex;flex-direction:column;justify-content:space-between">
       <div class="lbl" style="color:${ACC}">80% → vault</div>
-      <div style="font-size:15px;line-height:1.4">becomes a 3× NVDA long<br><span class="cap">the contract holds it</span></div>
+      <div style="font-size:15px;line-height:1.4">becomes a 3× BNB long<br><span class="cap">the contract holds it</span></div>
     </div>
     <div style="flex:20;background:${POS}18;border:1px solid ${POS}55;border-radius:0 8px 8px 0;padding:16px 18px;display:flex;flex-direction:column;justify-content:space-between">
       <div class="lbl" style="color:${POS}">20% → holders</div>
@@ -81,26 +81,26 @@ await shoot("tax-route.png", W, 420, `<body style="padding:${PAD}px">
 
 /* 2 — the position itself */
 await shoot("leverage-stack.png", W, 430, `<body style="padding:${PAD}px">
-  <div class="lbl">the position · 1 NVDA of tax becomes</div>
+  <div class="lbl">the position · 1 BNB of tax becomes</div>
   <div style="margin-top:30px;display:flex;flex-direction:column;gap:12px">
     <div style="display:flex;align-items:center;gap:16px">
       <div class="cap" style="width:120px;text-align:right">supply</div>
       <div style="flex:1;height:52px;background:${ACC}33;border:1px solid ${ACC};border-radius:6px;display:flex;align-items:center;padding:0 16px">
-        <span class="val" style="font-size:19px;color:${ACC}">3.00 NVDA</span>
-        <span class="cap" style="margin-left:auto">supplied to the lending market as the collateral market</span>
+        <span class="val" style="font-size:19px;color:${ACC}">3.00 BNB</span>
+        <span class="cap" style="margin-left:auto">supplied to Venus as vBNB</span>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:16px">
       <div class="cap" style="width:120px;text-align:right">debt</div>
       <div style="width:calc(66.6% - 0px);height:52px;background:${NEG}22;border:1px solid ${NEG}88;border-radius:6px;display:flex;align-items:center;padding:0 16px">
-        <span class="val" style="font-size:19px;color:${NEG}">2.00 NVDA</span>
+        <span class="val" style="font-size:19px;color:${NEG}">2.00 BNB</span>
         <span class="cap" style="margin-left:auto">borrowed in USDT</span>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:16px">
       <div class="cap" style="width:120px;text-align:right">net</div>
       <div style="width:calc(33.3%);height:52px;background:${POS}22;border:1px solid ${POS};border-radius:6px;display:flex;align-items:center;padding:0 16px">
-        <span class="val" style="font-size:19px;color:${POS}">1.00 NVDA</span>
+        <span class="val" style="font-size:19px;color:${POS}">1.00 BNB</span>
       </div>
     </div>
   </div>
@@ -109,7 +109,7 @@ await shoot("leverage-stack.png", W, 430, `<body style="padding:${PAD}px">
 
 /* 3 — why three and not five */
 await shoot("why-three.png", W, 400, `<body style="padding:${PAD}px">
-  <div class="lbl">health = CF × L / (L − 1) · at the lending market CF 0.80</div>
+  <div class="lbl">health = CF × L / (L − 1) · at Venus CF 0.80</div>
   <div style="display:flex;gap:12px;margin-top:28px">
     ${[["2×","1.60",POS,"comfortable"],["3×","1.20",ACC,"the floor, exactly"],["4×","1.07",WARN,"below the floor"],["5×","1.00",NEG,"liquidation itself"]]
       .map(([l,h,c,note])=>`
@@ -125,7 +125,7 @@ await shoot("why-three.png", W, 400, `<body style="padding:${PAD}px">
 
 /* 4 — the distance to liquidation, stated plainly */
 await shoot("liquidation-distance.png", W, 330, `<body style="padding:${PAD}px">
-  <div class="lbl">what a 3× long costs · NVDA move against the position</div>
+  <div class="lbl">what a 3× long costs · BNB move against the position</div>
   <div style="position:relative;margin-top:34px;height:76px">
     <div style="position:absolute;inset:0;background:linear-gradient(90deg,${POS}22,${WARN}22 55%,${NEG}55);border:1px solid ${LINE2};border-radius:8px"></div>
     <div style="position:absolute;left:0;top:0;bottom:0;width:1px;background:${LINE2}"></div>
@@ -145,8 +145,8 @@ await shoot("priority-chain.png", W, 440, `<body style="padding:${PAD}px">
   <div class="lbl">every wake · the first true branch wins, then it stops</div>
   <div style="margin-top:26px;display:flex;flex-direction:column;gap:10px">
     ${[["1","health < 1.10","rescue — shrink both legs",NEG],
-       ["2","pending ≥ 0.01 ETH","deploy — build toward 3×",ACC],
-       ["3","gain ≥ 0.02 ETH","harvest — 70 / 30, paid in WETH",POS],
+       ["2","pending ≥ 0.01 BNB","deploy — build toward 3×",ACC],
+       ["3","gain ≥ 0.02 BNB","harvest — 70 / 30, paid in WBNB",POS],
        ["4","leverage outside ±5%","rebalance — back to target",WARN],
        ["—","none of the above","book the next slot and stop",MUTE]]
       .map(([n,cond,act,c])=>`
@@ -157,14 +157,14 @@ await shoot("priority-chain.png", W, 440, `<body style="padding:${PAD}px">
         <div style="width:330px;font-size:14px;color:${FG}">${act}</div>
       </div>`).join("")}
   </div>
-  <div class="cap" style="margin-top:24px">Woken every 5 minutes by Pons's trigger service · 1.20–1.24M gas against a 2,000,000 cap</div>
+  <div class="cap" style="margin-top:24px">Woken every 5 minutes by Flap's trigger service · 1.20–1.24M gas against a 2,000,000 cap</div>
 </body>`);
 
 /* 6 — the flash loan, and why it is required */
 await shoot("flash-sequence.png", W, 400, `<body style="padding:${PAD}px">
   <div class="lbl">building the position · why a flash loan is required, not preferred</div>
   <div style="display:flex;gap:0;margin-top:30px;align-items:stretch">
-    ${[["1","flash WETH","from the V3 pool"],["2","supply","to the lending market as collateral"],["3","borrow USDT","against it"],["4","swap + repay","the flash in the same tx"]]
+    ${[["1","flash WBNB","from the V3 pool"],["2","supply","to Venus as collateral"],["3","borrow USDT","against it"],["4","swap + repay","the flash in the same tx"]]
       .map(([n,t2,s2],i)=>`
       <div style="flex:1;position:relative;padding-right:${i<3?"18px":"0"}">
         <div class="box" style="padding:16px 14px;height:100%">
@@ -175,7 +175,7 @@ await shoot("flash-sequence.png", W, 400, `<body style="padding:${PAD}px">
         ${i<3?`<div style="position:absolute;right:4px;top:50%;color:${LINE2};font-size:16px">→</div>`:""}
       </div>`).join("")}
   </div>
-  <div class="cap" style="margin-top:26px">the lending market checks collateral <span style="color:${FG}">before</span> the borrowed funds become collateral.
+  <div class="cap" style="margin-top:26px">Venus checks collateral <span style="color:${FG}">before</span> the borrowed funds become collateral.
   Without the flash there is no ordering that works — the position cannot be opened at all.</div>
 </body>`);
 
@@ -185,7 +185,7 @@ await shoot("split-70-30.png", W, 330, `<body style="padding:${PAD}px">
   <div style="display:flex;margin-top:28px;height:96px;border-radius:8px;overflow:hidden;border:1px solid ${LINE2}">
     <div style="flex:70;background:${POS}22;border-right:1px solid ${LINE2};padding:18px 20px">
       <div class="val" style="font-size:30px;color:${POS}">70%</div>
-      <div class="cap" style="margin-top:6px">holders · WETH via the token's dividend contract</div>
+      <div class="cap" style="margin-top:6px">holders · WBNB via the token's dividend contract</div>
     </div>
     <div style="flex:30;background:${ACC}18;padding:18px 20px">
       <div class="val" style="font-size:30px;color:${ACC}">30%</div>
@@ -219,7 +219,7 @@ await shoot("beacon-guardian.png", W, 360, `<body style="padding:${PAD}px">
       <div class="cap" style="margin-top:8px;font-size:11.5px">every value is a constant with no setter</div>
     </div>
     <div class="box" style="flex:1;padding:18px;border-color:${WARN}66">
-      <div class="cap" style="color:${WARN}">pons guardian</div>
+      <div class="cap" style="color:${WARN}">flap guardian</div>
       <div style="font-size:17px;margin-top:12px;color:${FG}">can replace the implementation</div>
       <div class="cap" style="margin-top:8px;font-size:11.5px">the beacon it owns, transferred in the constructor</div>
     </div>
@@ -261,10 +261,10 @@ await shoot("wallet-vs-position.png", W, 340, `<body style="padding:${PAD}px">
     <div style="flex:1;padding:20px 0 20px 24px">
       <div class="lbl" style="color:${ACC}">keel</div>
       <div style="margin-top:20px;display:flex;flex-direction:column;gap:13px;font-size:14.5px;line-height:1.4">
-        <div>the tax reaches a the lending market position the contract holds</div>
+        <div>the tax reaches a Venus position the contract holds</div>
         <div>what happens next is a <span class="val" style="color:${ACC}">constant</span></div>
         <div>the treasury is a <span class="val" style="color:${ACC}">view</span> function you call</div>
-        <div style="color:${FG}">it moves whenever NVDA moves</div>
+        <div style="color:${FG}">it moves whenever BNB moves</div>
       </div>
     </div>
   </div>
@@ -289,7 +289,7 @@ await shoot("reserve-shapes.png", W, 400, `<body style="padding:${PAD}px">
         <div class="cap" style="margin-top:11px;font-size:12px">${s2}</div>
       </div>`).join("")}
   </div>
-  <div class="cap" style="margin-top:24px">the lending market holds the collateral and the contract is the borrower. There is no account in between,
+  <div class="cap" style="margin-top:24px">Venus holds the collateral and the contract is the borrower. There is no account in between,
   which is also why there is nobody to ask for it back.</div>
 </body>`);
 
@@ -305,7 +305,7 @@ await shoot("wake-schedule.png", W, 330, `<body style="padding:${PAD}px">
         <div class="cap" style="font-size:11px;margin-top:4px">${s2}</div>
       </div>`).join("")}
   </div>
-  <div class="cap" style="margin-top:26px">Pons's trigger service buys the next slot before the work runs, so one failed wake cannot
+  <div class="cap" style="margin-top:26px">Flap's trigger service buys the next slot before the work runs, so one failed wake cannot
   break the chain that would have retried it. When there is nothing to do it drops to hourly.</div>
 </body>`);
 
@@ -350,9 +350,9 @@ await shoot("bounties.png", W, 320, `<body style="padding:${PAD}px">
 await shoot("running-costs.png", W, 330, `<body style="padding:${PAD}px">
   <div class="lbl">what it costs to keep turning</div>
   <div style="margin-top:26px;display:flex;flex-direction:column;gap:10px">
-    ${[["trigger fee","0.0002 NVDA","per slot, paid to Pons's service",MUTE],
-       ["The lending market borrow APR","variable","the cost of the leverage itself",WARN],
-       ["swap fee","0.05%","the deepest WETH/USDT tier",MUTE],
+    ${[["trigger fee","0.0002 BNB","per slot, paid to Flap's service",MUTE],
+       ["Venus borrow APR","variable","the cost of the leverage itself",WARN],
+       ["swap fee","0.05%","the deepest WBNB/USDT tier",MUTE],
        ["bounties","25–50 bps","only on the manual path",MUTE]]
       .map(([k,v,d2,c])=>`
       <div style="display:flex;align-items:baseline;gap:14px;padding:12px 16px;background:${SURF};border-left:2px solid ${c}66">
@@ -365,7 +365,7 @@ await shoot("running-costs.png", W, 330, `<body style="padding:${PAD}px">
 
 /* the readings a live vault answers */
 await shoot("live-readings.png", W, 340, `<body style="padding:${PAD}px">
-  <div class="lbl">measured on live Robinhood Chain state · not a simulation</div>
+  <div class="lbl">measured on live BNB Chain state · not a simulation</div>
   <div style="display:flex;gap:12px;margin-top:26px">
     ${[["leverage","2.96×","target 3.00"],["health","1.208","floor 1.20"],["callback gas","1.20–1.24M","cap 2.00M"],["assertions","33 / 33",""]]
       .map(([k,v,n2])=>`
@@ -376,19 +376,19 @@ await shoot("live-readings.png", W, 340, `<body style="padding:${PAD}px">
       </div>`).join("")}
   </div>
   <div class="cap" style="margin-top:24px">Each assertion is one atomic <span class="val" style="color:${ACC}">eth_call</span> with the probe
-  injected by state override — the real the lending market market, the real pool depth, at the current block.</div>
+  injected by state override — the real Venus market, the real pool depth, at the current block.</div>
 </body>`);
 
 /* the five risks, as a single board */
 await shoot("risk-board.png", W, 430, `<body style="padding:${PAD}px">
   <div class="lbl">everything that can hurt you</div>
   <div style="margin-top:24px;display:flex;flex-direction:column;gap:9px">
-    ${[["liquidation","NVDA falls 16.7% against the position",NEG],
+    ${[["liquidation","BNB falls 16.7% against the position",NEG],
        ["trust moved, not removed","the Guardian can replace the implementation",WARN],
        ["settlement costs","the fee is paid whether or not anything happened",WARN],
        ["leverage decays","between rebalances it drifts from target",MUTE],
        ["dividend threshold","below 10,000 KEEL there is no share",MUTE],
-       ["no security audit","submitted to Pons for review; no third party has reviewed this code",NEG]]
+       ["no security audit","submitted to Flap for review; no third party has reviewed this code",NEG]]
       .map(([k,v,c])=>`
       <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:${SURF};border-left:3px solid ${c}">
         <span class="val" style="width:210px;font-size:13px;color:${c}">${k}</span>
@@ -412,14 +412,14 @@ await shoot("assertions.png", W, 350, `<body style="padding:${PAD}px">
       </div>`).join("")}
   </div>
   <div class="cap" style="margin-top:24px">The forge suite adds 28 more, and the position-lifecycle group is skipped by design —
-  it needs an archive RPC that Robinhood Chain does not offer for free.</div>
+  it needs an archive RPC that BSC does not offer for free.</div>
 </body>`);
 
 /* status, as a state rather than a sentence */
 await shoot("status.png", W, 300, `<body style="padding:${PAD}px">
   <div class="lbl">where this is</div>
   <div style="display:flex;gap:0;margin-top:28px;align-items:center">
-    ${[["factory deployed","done",POS],["registered by Pons","waiting",WARN],["token launched","not yet",MUTE],["vault live","not yet",MUTE]]
+    ${[["factory deployed","done",POS],["registered by Flap","waiting",WARN],["token launched","not yet",MUTE],["vault live","not yet",MUTE]]
       .map(([k,v,c],i)=>`
       <div style="flex:1;position:relative">
         <div style="height:2px;background:${c};opacity:${c===MUTE?.3:1}"></div>
@@ -428,7 +428,7 @@ await shoot("status.png", W, 300, `<body style="padding:${PAD}px">
         <div class="val" style="font-size:11.5px;margin-top:5px;color:${c}">${v}</div>
       </div>`).join("")}
   </div>
-  <div class="cap" style="margin-top:26px">The factory is live on Robinhood Chain and its beacon is already Guardian-owned. Nothing else has
+  <div class="cap" style="margin-top:26px">The factory is live on BNB Chain and its beacon is already Guardian-owned. Nothing else has
   happened, and this page says so rather than letting an address list imply otherwise.</div>
 </body>`);
 

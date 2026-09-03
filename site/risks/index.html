@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Risks · Keel</title>
-<meta name="description" content="A 3x position is liquidated by a 16.7% move. Leverage decays in a flat market. The lending market and Uniswap v4 are dependencies. The contracts are not audited by a third party.">
+<meta name="description" content="A 3x position is liquidated by a 16.7% move. Leverage decays in a flat market. Venus and PancakeSwap are dependencies. The contracts are not audited by a third party.">
 <meta name="theme-color" content="#141414">
 <meta property="og:url" content="https://www.keelperp.fun/risks/">
 <meta property="og:site_name" content="Keel">
@@ -56,7 +56,7 @@
       <div class="card" style="border-color:rgba(217,180,91,0.45);margin-top:6px">
         <p style="color:var(--warn);font-size:19px;font-weight:600;margin:0">Read these first</p>
         <p style="margin-top:10px;font-size:14.5px"><strong style="color:var(--fg)">The contracts
-          have no third-party security audit</strong>, and <strong style="color:var(--fg)">Pons's Guardian can replace
+          have no third-party security audit</strong>, and <strong style="color:var(--fg)">Flap's Guardian can replace
           the implementation</strong> through the beacon this vault runs behind &mdash; the single largest trust assumption in the design.</p>
       </div>
     </div>
@@ -71,7 +71,7 @@
       </div>
       <canvas id="liqCanvas" aria-hidden="true"></canvas>
       <figcaption>
-        How far NVDA must fall before each leverage is liquidated on the lending market, at its 80%
+        How far BNB must fall before each leverage is liquidated on Venus, at its 80%
         collateral factor. This vault hard-codes 3&times;: health 1.200, liquidated by a 16.7%
         drop. 5&times; starts at the liquidation point.
       </figcaption>
@@ -83,51 +83,51 @@
   <div class="wrap">
     <div class="sec-head"><span class="tag">the list <span class="sep" aria-hidden="true">//</span> worst first</span><h2>Everything that can hurt you</h2></div>
       <figure class="fig">
-        <img src="/assets/fig/risk-board.png" alt="Six risks ranked worst first: liquidation if NVDA falls 16.7% against the position; trust moved, not removed, because the Guardian can replace the implementation; settlement costs, the fee paid whether or not anything happened; leverage decay between rebalances; the dividend threshold, below 10,000 KEEL there is no share; and no third-party security audit, no third party has reviewed the code. The dependency list and the liveness risk are not on the board." loading="lazy" decoding="async" width="1000">
+        <img src="/assets/fig/risk-board.png" alt="Six risks ranked worst first: liquidation if BNB falls 16.7% against the position; trust moved, not removed, because the Guardian can replace the implementation; settlement costs, the fee paid whether or not anything happened; leverage decay between rebalances; the dividend threshold, below 10,000 KEEL there is no share; and no third-party security audit, no third party has reviewed the code. The dependency list and the liveness risk are not on the board." loading="lazy" decoding="async" width="1000">
       </figure>
 
     <div class="grid g2">
       <div class="card" style="border-color:rgba(217,106,106,0.4)">
         <h3 style="color:var(--negative)">A 16.7% move liquidates the position</h3>
-        <p style="margin-top:10px">the lending market sells the collateral; the treasury is permanently smaller.</p>
+        <p style="margin-top:10px">Venus sells the collateral; the treasury is permanently smaller.</p>
       </div>
       <div class="card" style="border-color:rgba(217,180,91,0.4)">
-        <h3 style="color:var(--warn)">Pons's Guardian can replace the implementation</h3>
+        <h3 style="color:var(--warn)">Flap's Guardian can replace the implementation</h3>
         <p style="margin-top:10px">That beacon upgrade <em style="font-style:normal;color:var(--fg-strong)">is</em>
           the emergency mechanism, so the vault ships no emergency-withdraw of its own.</p>
       </div>
       <div class="card">
         <h3>Trust moved, not removed</h3>
-        <p style="margin-top:10px">the lending market lends, Uniswap v4 trades, Pons's service wakes; any failure
+        <p style="margin-top:10px">Venus lends, PancakeSwap trades, Flap's service wakes; any failure
           reaches the treasury. If it stops, anyone may restart the chain &mdash; nobody is
           <em style="font-style:normal;color:var(--fg-strong)">obliged</em> to, and a failed trigger
           is recorded as failed.</p>
       </div>
       <div class="card">
         <h3>Settlement costs</h3>
-        <p style="margin-top:10px">0.0002 NVDA per wake, paid out of the treasury whether or not there was work &mdash; a token nobody trades spends its own treasury staying awake; an empty
+        <p style="margin-top:10px">0.0002 BNB per wake, paid out of the treasury whether or not there was work &mdash; a token nobody trades spends its own treasury staying awake; an empty
           wake books the next an hour out, not five minutes.</p>
       </div>
       <div class="card">
         <h3>Leverage decays</h3>
-        <p style="margin-top:10px">A choppy market bleeds a 3&times; position even if NVDA ends flat;
+        <p style="margin-top:10px">A choppy market bleeds a 3&times; position even if BNB ends flat;
           carry alone is <span class="mono neg">&minus;4.87%</span> a year.</p>
       </div>
       <div class="card">
         <h3>Dividends need 10,000 KEEL</h3>
-        <p style="margin-top:10px">Below that, no share. Pons's dividend contract sets the floor, not
+        <p style="margin-top:10px">Below that, no share. Flap's dividend contract sets the floor, not
           this vault.</p>
       </div>
       <div class="card" style="border-color:rgba(217,180,91,0.4)">
         <h3 style="color:var(--warn)">No third-party security audit</h3>
-        <p style="margin-top:10px">Submitted to Pons for review and checked rule by rule
+        <p style="margin-top:10px">Submitted to Flap for review and checked rule by rule
             against their specification. That is a compliance review, not a security audit, and no
             third party has audited this code.</p>
       </div>
     </div>
 
       <figure class="fig">
-        <img src="/assets/fig/liquidation-distance.png" alt="A track from 0% to minus 40% of NVDA moving against the position, with a red line drawn at minus 16.7% labelled liquidated here." loading="lazy" decoding="async" width="1000">
+        <img src="/assets/fig/liquidation-distance.png" alt="A track from 0% to minus 40% of BNB moving against the position, with a red line drawn at minus 16.7% labelled liquidated here." loading="lazy" decoding="async" width="1000">
         <figcaption>It deleverages itself under health 1.10, cooldown waived &mdash; a fast move
           does not wait for the five-minute wake.</figcaption>
       </figure>
@@ -138,7 +138,7 @@
   <div class="wrap">
     <div class="sec-head"><span class="tag">what is fixed <span class="sep" aria-hidden="true">//</span> and therefore unfixable</span><h2>Four things nobody can change after launch</h2></div>
       <figure class="fig">
-        <img src="/assets/fig/why-three.png" alt="Health is CF times L divided by L minus 1. Under the lending market's 0.80 collateral factor that is 1.60 at 2x, 1.20 at 3x, 1.07 at 4x, and 1.00 at 5x, which is liquidation itself rather than an aggressive setting; the floor MIN_HEALTH_BPS = 12000 is a constant, not an operating rule." loading="lazy" decoding="async" width="1000">
+        <img src="/assets/fig/why-three.png" alt="Health is CF times L divided by L minus 1. Under Venus's 0.80 collateral factor that is 1.60 at 2x, 1.20 at 3x, 1.07 at 4x, and 1.00 at 5x, which is liquidation itself rather than an aggressive setting; the floor MIN_HEALTH_BPS = 12000 is a constant, not an operating rule." loading="lazy" decoding="async" width="1000">
       <figcaption>2&times; survives a 37.5% fall in the collateral, 3&times; 16.7%, 4&times; only 6.3%.</figcaption></figure>
 
     <div class="scroll rise" tabindex="0" role="region" aria-label="Table, scrollable">
@@ -163,10 +163,10 @@
   </div>
   <div class="wrap">
       <figure class="fig">
-        <img src="/assets/fig/assertions.png" alt="Three cards for the assertion groups that run live against the chain: build with 12, harvest with 10, settlement with 11, making 33, one atomic eth_call each. A note underneath reads that the forge suite adds 28 more and the position-lifecycle group is skipped by design because it needs an archive RPC that Robinhood Chain does not offer for free." loading="lazy" decoding="async" width="1000">
+        <img src="/assets/fig/assertions.png" alt="Three cards for the assertion groups that run live against the chain: build with 12, harvest with 10, settlement with 11, making 33, one atomic eth_call each. A note underneath reads that the forge suite adds 28 more and the position-lifecycle group is skipped by design because it needs an archive RPC that BSC does not offer for free." loading="lazy" decoding="async" width="1000">
       </figure>
       <figure class="fig">
-        <img src="/assets/fig/beacon-guardian.png" alt="Who can change what: the project, deployer and holders can change nothing, because every value is a constant with no setter; the Pons Guardian owns the beacon, transferred in the constructor, and can replace the implementation. The deployer never held it." loading="lazy" decoding="async" width="1000">
+        <img src="/assets/fig/beacon-guardian.png" alt="Who can change what: the project, deployer and holders can change nothing, because every value is a constant with no setter; the Flap Guardian owns the beacon, transferred in the constructor, and can replace the implementation. The deployer never held it." loading="lazy" decoding="async" width="1000">
         <figcaption>An upgrade can change every constant quoted here, add a pause, or add a
           withdrawal.</figcaption>
       </figure>
@@ -187,8 +187,8 @@
       <span style="display:block;color:var(--fg-quaternary);padding-top:3px">No token yet &middot; submitted for review</span></div>
   </div>
   <div class="wrap" style="margin-top:30px;padding-top:18px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--fg-quaternary)">
-    A 3&times; position is liquidated by a 16.7% move against it. The lending market and Uniswap v4 are
-    dependencies. Submitted to Pons for review; no third-party security audit.
+    A 3&times; position is liquidated by a 16.7% move against it. Venus and PancakeSwap are
+    dependencies. Submitted to Flap for review; no third-party security audit.
   </div>
 </footer>
 <script type="module">
@@ -206,7 +206,7 @@ animate(cv, (t) => {
   const padL = 74, padR = 26, top = 34, rowH = 50;
   const trackW = w - padL - padR;
   ctx.font = C.monoSm; ctx.fillStyle = C.dim; ctx.textAlign = "left";
-  ctx.fillText("NVDA drop from here", padL, 20);
+  ctx.fillText("BNB drop from here", padL, 20);
   ctx.textAlign = "right";
   ctx.fillText("40%", padL + trackW, 20);
   ROWS.forEach((r, i) => {

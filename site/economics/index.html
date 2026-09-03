@@ -77,12 +77,12 @@
   <div class="wrap">
     <div class="sec-head"><span class="tag">layer one <span class="sep" aria-hidden="true">//</span> the tax</span><h2>2% per trade, split four ways</h2></div>
       <figure class="fig">
-        <img src="/assets/fig/wallet-vs-position.png" alt="A two column comparison of the same 2% tax either way: on the left, tax reaching a wallet and a treasury somebody publishes; on the right, tax reaching a the lending market position the contract holds and a treasury anyone can read." loading="lazy" decoding="async" width="1000">
+        <img src="/assets/fig/wallet-vs-position.png" alt="A two column comparison of the same 2% tax either way: on the left, tax reaching a wallet and a treasury somebody publishes; on the right, tax reaching a Venus position the contract holds and a treasury anyone can read." loading="lazy" decoding="async" width="1000">
         <figcaption>What differs is who holds it.</figcaption>
       </figure>
 
       <figure class="fig">
-        <img src="/assets/fig/split-70-30.png" alt="Every harvest splits 70% to holders as WETH dividends and 30% to the project — a fixed ratio, so the project never earns more without holders earning more first." loading="lazy" decoding="async" width="1000">
+        <img src="/assets/fig/split-70-30.png" alt="Every harvest splits 70% to holders as WBNB dividends and 30% to the project — a fixed ratio, so the project never earns more without holders earning more first." loading="lazy" decoding="async" width="1000">
         <figcaption>The gain is money the position earned in the market &mdash; it did not exist before the position did, so it comes out of nobody's pocket. Holders take 2.33&times; whatever the project takes, on every harvest, forever.</figcaption>
       </figure>
 
@@ -108,11 +108,11 @@
     <div class="sec-head"><span class="tag">layer two <span class="sep" aria-hidden="true">//</span> the gain</span><h2>70 to holders, 30 to the project</h2></div>
     <div class="grid g2">
       <div style="display:flex;flex-direction:column;gap:16px">
-        <p>Above 0.02 ETH of gain, a wake distributes it. Both shares are Solidity
+        <p>Above 0.02 BNB of gain, a wake distributes it. Both shares are Solidity
           <code class="mono" style="color:var(--fg-strong)">constant</code>s, no setter.</p>
       </div>
       <div class="card">
-        <div class="stat"><div class="k">Holders</div><div class="v pos">70%</div><div class="n">WETH through the dividend contract. Claimed, never expires.</div></div>
+        <div class="stat"><div class="k">Holders</div><div class="v pos">70%</div><div class="n">WBNB through the dividend contract. Claimed, never expires.</div></div>
         <hr style="border:0;border-top:1px solid var(--line-soft);margin:18px 0">
         <div class="stat"><div class="k">Project</div><div class="v">30%</div><div class="n">Written into the vault at creation. No setter.</div></div>
       </div>
@@ -140,7 +140,7 @@
   <div class="wrap">
     <div class="sec-head"><span class="tag">running cost <span class="sep" aria-hidden="true">//</span> measured</span><h2>What it costs to keep turning</h2></div>
     <figure class="fig" style="margin-top:0">
-      <img src="/assets/fig/running-costs.png" alt="Four cost lines: a 0.0002 NVDA trigger fee per slot paid to Pons's service, charged every five minutes when there is work and once an hour when there is not; a variable the lending market borrow APR, the cost of the leverage itself, which moves with utilisation; a 0.05% swap fee on Uniswap v4's deepest WETH/USDT tier, where the build's one flash-funded swap runs; and 25 to 50 bps of bounties charged only on the manual path. The 3x carry is three units of supply yield minus two units of borrow." loading="lazy" decoding="async" width="1000">
+      <img src="/assets/fig/running-costs.png" alt="Four cost lines: a 0.0002 BNB trigger fee per slot paid to Flap's service, charged every five minutes when there is work and once an hour when there is not; a variable Venus borrow APR, the cost of the leverage itself, which moves with utilisation; a 0.05% swap fee on PancakeSwap V3's deepest WBNB/USDT tier, where the build's one flash-funded swap runs; and 25 to 50 bps of bounties charged only on the manual path. The 3x carry is three units of supply yield minus two units of borrow." loading="lazy" decoding="async" width="1000">
       <figcaption>Borrowing isn't optional: it makes the position 3&times;. Rates below are
         measured on-chain.</figcaption>
     </figure>
@@ -148,9 +148,9 @@
       <table>
         <thead><tr><th>Cost</th><th class="num">Rate</th><th>Notes</th></tr></thead>
         <tbody>
-          <tr><td class="name">Trigger fee</td><td class="num">0.0002 NVDA</td><td>Per wake.</td></tr>
+          <tr><td class="name">Trigger fee</td><td class="num">0.0002 BNB</td><td>Per wake.</td></tr>
           <tr><td class="name">Build slippage</td><td class="num pos">0.12&ndash;0.18%</td><td>One flash-funded swap.</td></tr>
-          <tr><td class="name">the lending market borrow</td><td class="num">2.62% APR</td><td>USDT leg.</td></tr>
+          <tr><td class="name">Venus borrow</td><td class="num">2.62% APR</td><td>USDT leg.</td></tr>
           <tr><td class="name">3&times; carry</td><td class="num neg">&minus;4.87%/yr</td><td>Before any price move.</td></tr>
         </tbody>
       </table>
@@ -167,8 +167,8 @@
   </div>
   <div class="wrap">
     <figure class="fig">
-      <img src="/assets/fig/liquidation-distance.png" alt="A scale of NVDA moves against the 3x position, running from 0% to minus 40%, with a red line at minus 16.7% labelled 'liquidated here'." loading="lazy" decoding="async" width="1000">
-      <figcaption>A 16.7% move against the position liquidates it: the lending market sells the collateral, the
+      <img src="/assets/fig/liquidation-distance.png" alt="A scale of BNB moves against the 3x position, running from 0% to minus 40%, with a red line at minus 16.7% labelled 'liquidated here'." loading="lazy" decoding="async" width="1000">
+      <figcaption>A 16.7% move against the position liquidates it: Venus sells the collateral, the
         treasury permanently smaller. Everything above assumes a position that survives.</figcaption>
     </figure>
   </div>
@@ -195,8 +195,8 @@
       <span style="display:block;color:var(--fg-quaternary);padding-top:3px">No token yet &middot; submitted for review</span></div>
   </div>
   <div class="wrap" style="margin-top:30px;padding-top:18px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--fg-quaternary)">
-    A 3&times; position is liquidated by a 16.7% move against it. The lending market and Uniswap v4 are
-    dependencies. Submitted to Pons for review; no third-party security audit.
+    A 3&times; position is liquidated by a 16.7% move against it. Venus and PancakeSwap are
+    dependencies. Submitted to Flap for review; no third-party security audit.
   </div>
 </footer>
 

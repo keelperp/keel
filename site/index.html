@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Keel · Tax goes into a position, not a wallet</title>
-<meta name="description" content="A Robinhood Chain token whose trading tax is levered into a 3x NVDA long the contract holds itself. It settles every five minutes on its own, and pays 70% of every gain to holders.">
+<meta name="description" content="A BNB Chain token whose trading tax is levered into a 3x BNB long the contract holds itself. It settles every five minutes on its own, and pays 70% of every gain to holders.">
 <meta name="theme-color" content="#141414">
 <meta property="og:url" content="https://www.keelperp.fun/">
 <meta property="og:site_name" content="Keel">
 <meta property="og:locale" content="en_US">
 <meta property="og:title" content="Keel · Tax does not go to a wallet. It goes into a position.">
-<meta property="og:description" content="Trading tax becomes a leveraged NVDA position the contract holds itself. Settles every five minutes. 70% of every gain to holders.">
+<meta property="og:description" content="Trading tax becomes a leveraged BNB position the contract holds itself. Settles every five minutes. 70% of every gain to holders.">
 <meta property="og:image" content="https://www.keelperp.fun/assets/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -55,7 +55,7 @@
     <div style="display:flex;flex-direction:column;gap:26px">
       <div class="tag">keel <span class="sep" aria-hidden="true">//</span> the treasury is a position</div>
       <h1>Tax does not go to a wallet.<br>It goes into a position.</h1>
-      <p class="lede">Every buy and sell pays 2%, and it becomes a 3&times; NVDA long the contract
+      <p class="lede">Every buy and sell pays 2%, and it becomes a 3&times; BNB long the contract
           holds itself. <strong style="color:var(--fg)">So the treasury moves on days nobody
           trades.</strong> No operator account, no published NAV, no pause.</p>
       <div class="ca" id="ca" data-ca="">
@@ -89,7 +89,7 @@
       </div>
       <canvas id="heroCanvas" aria-hidden="true"></canvas>
       <figcaption>
-        Five minutes, then one job by priority. The supply leg stands at three times net value with the debt leg beneath it; health 1.208, and the lending market liquidates at 1.00.
+        Five minutes, then one job by priority. The supply leg stands at three times net value with the debt leg beneath it; health 1.208, and Venus liquidates at 1.00.
       </figcaption>
     </figure>
   </div>
@@ -100,8 +100,8 @@
     <div class="grid g4">
       <div class="stat card"><div class="k">Leverage</div><div class="v">2.96&times;</div><div class="n">Measured on chain, three sizes.</div></div>
       <div class="stat card"><div class="k">Health</div><div class="v pos">1.208</div><div class="n">16.7% against it liquidates.</div></div>
-      <div class="stat card"><div class="k">Settles every</div><div class="v">5 min</div><div class="n">Pons's trigger. Nobody presses.</div></div>
-      <div class="stat card"><div class="k">Every gain</div><div class="v">70%</div><div class="n">Paid as WETH.</div></div>
+      <div class="stat card"><div class="k">Settles every</div><div class="v">5 min</div><div class="n">Flap's trigger. Nobody presses.</div></div>
+      <div class="stat card"><div class="k">Every gain</div><div class="v">70%</div><div class="n">Paid as WBNB.</div></div>
     </div>
   </div>
 </section>
@@ -115,7 +115,7 @@
         No trades, no income.</p>
     </div>
       <figure class="fig">
-        <img src="/assets/fig/tax-route.png" alt="Where each 2% of tax goes, fixed at launch and summing to 10000 bps: 80% into the vault, where it becomes a 3x NVDA long the contract holds; 20% straight to holders, paid at once; burn 0% and liquidity 0%, which is why only two legs are drawn. Not a buyback, not stablecoins sitting still." loading="lazy" decoding="async" width="1000">
+        <img src="/assets/fig/tax-route.png" alt="Where each 2% of tax goes, fixed at launch and summing to 10000 bps: 80% into the vault, where it becomes a 3x BNB long the contract holds; 20% straight to holders, paid at once; burn 0% and liquidity 0%, which is why only two legs are drawn. Not a buyback, not stablecoins sitting still." loading="lazy" decoding="async" width="1000">
       </figure>
 
       <figure class="viz" style="margin:26px 0 0">
@@ -136,7 +136,7 @@
       <p class="lede">No keeper account.</p>
     </div>
       <figure class="fig">
-        <img src="/assets/fig/priority-chain.png" alt="Every wake, the first true branch wins and the vault stops there: health under 1.10 rescues by shrinking both legs; pending of 0.01 ETH or more deploys, building toward 3x; a gain of 0.02 ETH or more harvests, 70/30, paid in WETH; leverage outside 5% rebalances back to target; none of the above books the next slot and stops. Woken every five minutes by Pons's trigger service, spending 1.20 to 1.24M gas against a 2,000,000 cap, which is why one wake does one job." loading="lazy" decoding="async" width="1000">
+        <img src="/assets/fig/priority-chain.png" alt="Every wake, the first true branch wins and the vault stops there: health under 1.10 rescues by shrinking both legs; pending of 0.01 BNB or more deploys, building toward 3x; a gain of 0.02 BNB or more harvests, 70/30, paid in WBNB; leverage outside 5% rebalances back to target; none of the above books the next slot and stops. Woken every five minutes by Flap's trigger service, spending 1.20 to 1.24M gas against a 2,000,000 cap, which is why one wake does one job." loading="lazy" decoding="async" width="1000">
       </figure>
 
     <figure class="viz" style="margin:0">
@@ -161,12 +161,12 @@
     </div>
       <figure class="fig">
         <img src="/assets/fig/constants.png" alt="The four constants, with no setter, no role and no governance path to any of them: TARGET_LEVERAGE 3x, MIN_HEALTH_BPS 12000 for a health floor of 1.20, PROJECT_SHARE_BPS 3000 for a 30% project share, leaving holders 70% of every gain, always 2.33 times the project's share, and TRIGGER_INTERVAL five minutes, stretched to one hour after a wake that found nothing to do." loading="lazy" decoding="async" width="1000">
-        <figcaption>Declared <code class="mono">constant</code>&mdash;MIN_HEALTH_BPS 12000, PROJECT_SHARE_BPS 3000. The 1.20 floor, not the lending market's 80% collateral factor, caps what a build may borrow.</figcaption>
+        <figcaption>Declared <code class="mono">constant</code>&mdash;MIN_HEALTH_BPS 12000, PROJECT_SHARE_BPS 3000. The 1.20 floor, not Venus's 80% collateral factor, caps what a build may borrow.</figcaption>
       </figure>
 
     <div class="card" style="margin-top:16px;border-color:rgba(217,180,91,0.4)">
       <h3 style="color:var(--warn)">But the implementation can be replaced</h3>
-      <p style="margin-top:10px;font-size:14.5px">Pons's Guardian owns the beacon proxy. That
+      <p style="margin-top:10px;font-size:14.5px">Flap's Guardian owns the beacon proxy. That
         upgrade path is the emergency mechanism&mdash;why no emergency-withdraw exists&mdash;and
         it can change every constant above, add a pause, add a withdrawal. <a href="/risks/">The
         largest trust assumption</a>, not ours to remove.</p>
@@ -181,7 +181,7 @@
       <h2>The reserve is not in anyone's account</h2>
     </div>
       <figure class="fig">
-        <img src="/assets/fig/reserve-shapes.png" alt="Three places a treasury can live: a multisig somebody controls, a perp position held at a venue on an account, and this vault, where the lending market holds the collateral and the contract itself is the borrower, with no account in between and nobody to ask for it back. Here the reserve is nav(), a view over chain state, so if the operator vanishes the position stays where it is." loading="lazy" decoding="async" width="1000">
+        <img src="/assets/fig/reserve-shapes.png" alt="Three places a treasury can live: a multisig somebody controls, a perp position held at a venue on an account, and this vault, where Venus holds the collateral and the contract itself is the borrower, with no account in between and nobody to ask for it back. Here the reserve is nav(), a view over chain state, so if the operator vanishes the position stays where it is." loading="lazy" decoding="async" width="1000">
         <figcaption>A keeper-run reserve is worth what its operator publishes, and buying pauses
           when that reading goes stale. <code class="mono">nav()</code> cannot go stale.</figcaption>
       </figure>
@@ -194,7 +194,7 @@
   </div>
   <div class="wrap">
     <figure class="fig">
-      <img src="/assets/fig/three-calls.png" alt="Three view calls answer the whole page: nav() for what it is worth, health() for how far it is from liquidation, pendingAction() for what the next wake will do. All view: no key, no archive node, no indexer. The sixty-nine assertions run against these live contracts and Robinhood Chain as it stands." loading="lazy" decoding="async" width="1000">
+      <img src="/assets/fig/three-calls.png" alt="Three view calls answer the whole page: nav() for what it is worth, health() for how far it is from liquidation, pendingAction() for what the next wake will do. All view: no key, no archive node, no indexer. The sixty-nine assertions run against these live contracts and BNB Chain as it stands." loading="lazy" decoding="async" width="1000">
       <figcaption style="margin:0 auto;text-align:center">Sixty-nine assertions, one command. Nobody publishes these numbers, so nobody can stop publishing them.</figcaption>
     </figure>
   </div>
@@ -221,8 +221,8 @@
       <span style="display:block;color:var(--fg-quaternary);padding-top:3px">No token yet &middot; submitted for review</span></div>
   </div>
   <div class="wrap" style="margin-top:30px;padding-top:18px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--fg-quaternary)">
-    A 3&times; position is liquidated by a 16.7% move against it. The lending market and Uniswap v4 are
-    dependencies. Submitted to Pons for review; no third-party security audit.
+    A 3&times; position is liquidated by a 16.7% move against it. Venus and PancakeSwap are
+    dependencies. Submitted to Flap for review; no third-party security audit.
   </div>
 </footer>
 
@@ -349,7 +349,7 @@ const chain = document.getElementById("chainCanvas");
 const STEPS = [
   ["health < 1.10", "reduce leverage now", C.negative],
   ["tax waiting", "build the position", C.accent],
-  ["gain ≥ 0.02 ETH", "distribute it", C.positive],
+  ["gain ≥ 0.02 BNB", "distribute it", C.positive],
   ["leverage drifted", "rebalance", C.info],
   ["none of the above", "check back in an hour", C.faint],
 ];

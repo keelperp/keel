@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The vault · Keel</title>
-<meta name="description" content="Live treasury value, leverage, health and the next settlement, read straight from Robinhood Chain. Not deployed yet.">
+<meta name="description" content="Live treasury value, leverage, health and the next settlement, read straight from BNB Chain. Not deployed yet.">
 <meta name="theme-color" content="#141414">
 <!-- Nothing is deployed: keep this page out of the index until it has real readings. -->
 <meta name="robots" content="noindex,follow">
@@ -54,7 +54,7 @@
     <div style="display:flex;flex-direction:column;gap:20px">
       <div class="tag">the vault <span class="sep" aria-hidden="true">//</span> read it yourself</div>
       <h1>Nobody publishes this number</h1>
-      <p class="lede">Views over the lending market, read from the chain on load. One
+      <p class="lede">Views over Venus, read from the chain on load. One
         <code class="mono">cast call</code> gets the same.</p>
     </div>
   </div>
@@ -80,12 +80,12 @@
       </figure>
 
     <div class="grid g3">
-      <div class="card stat"><div class="k">nav()</div><div class="v" id="f-nav">&mdash;</div><div class="n">Treasury NVDA: supply minus debt, the lending market oracle priced.</div></div>
-      <div class="card stat"><div class="k">currentLeverage()</div><div class="v" id="f-lev">&mdash;</div><div class="n">NVDA exposure over net value.</div></div>
-      <div class="card stat"><div class="k">healthBps()</div><div class="v" id="f-health">&mdash;</div><div class="n">10000 is the the lending market liquidation point.</div></div>
+      <div class="card stat"><div class="k">nav()</div><div class="v" id="f-nav">&mdash;</div><div class="n">Treasury BNB: supply minus debt, Venus oracle priced.</div></div>
+      <div class="card stat"><div class="k">currentLeverage()</div><div class="v" id="f-lev">&mdash;</div><div class="n">BNB exposure over net value.</div></div>
+      <div class="card stat"><div class="k">healthBps()</div><div class="v" id="f-health">&mdash;</div><div class="n">10000 is the Venus liquidation point.</div></div>
       <div class="card stat"><div class="k">pendingRevenue()</div><div class="v" id="f-pending">&mdash;</div><div class="n">Tax arrived, not yet in the position.</div></div>
       <div class="card stat"><div class="k">nextSettlementIn()</div><div class="v" id="f-next">&mdash;</div><div class="n">Seconds to the next wake.</div></div>
-      <div class="card stat"><div class="k">totalHarvested()</div><div class="v" id="f-paid">&mdash;</div><div class="n">Lifetime NVDA paid to holders as WETH.</div></div>
+      <div class="card stat"><div class="k">totalHarvested()</div><div class="v" id="f-paid">&mdash;</div><div class="n">Lifetime BNB paid to holders as WBNB.</div></div>
     </div>
     <p style="margin-top:18px;font-size:13.5px;color:var(--fg-tertiary)">An em dash means not loaded,
       not zero.</p>
@@ -99,13 +99,13 @@
       <h2>What it did on live state</h2>
     </div>
       <figure class="fig">
-        <img src="/assets/fig/live-readings.png" alt="Four readings measured on live Robinhood Chain state, not a simulation: leverage 2.96x against a 3.00 target, health 1.208 against the 1.20 floor, callback gas of 1.20 to 1.24 million against the 2.00 million cap, and 33 of 33 assertions passing. The build is never allowed below the 1.20 floor. Each assertion is one atomic eth_call with the probe injected by state override, against the real the lending market market and the real pool depth at the current block." loading="lazy" decoding="async" width="1000">
-        <figcaption>Measured against Robinhood Chain's state at the current block. Nothing is deployed. People size a position against this panel, so a value that has not loaded shows a dash and never a zero.</figcaption>
+        <img src="/assets/fig/live-readings.png" alt="Four readings measured on live BNB Chain state, not a simulation: leverage 2.96x against a 3.00 target, health 1.208 against the 1.20 floor, callback gas of 1.20 to 1.24 million against the 2.00 million cap, and 33 of 33 assertions passing. The build is never allowed below the 1.20 floor. Each assertion is one atomic eth_call with the probe injected by state override, against the real Venus market and the real pool depth at the current block." loading="lazy" decoding="async" width="1000">
+        <figcaption>Measured against BNB Chain's state at the current block. Nothing is deployed. People size a position against this panel, so a value that has not loaded shows a dash and never a zero.</figcaption>
       </figure>
 
     <div class="scroll rise" tabindex="0" role="region" aria-label="Table, scrollable">
       <table>
-        <thead><tr><th class="num">Tax (NVDA)</th><th class="num">Leverage</th><th class="num">Health</th><th class="num">Liquidates on</th><th class="num">Build cost</th></tr></thead>
+        <thead><tr><th class="num">Tax (BNB)</th><th class="num">Leverage</th><th class="num">Health</th><th class="num">Liquidates on</th><th class="num">Build cost</th></tr></thead>
         <tbody>
           <tr><td class="num">1</td><td class="num">2.960&times;</td><td class="num pos">1.208</td><td class="num">&minus;17.2%</td><td class="num pos">0.12%</td></tr>
           <tr><td class="num">5</td><td class="num">2.960&times;</td><td class="num pos">1.208</td><td class="num">&minus;17.2%</td><td class="num pos">0.13%</td></tr>
@@ -113,7 +113,7 @@
         </tbody>
       </table>
     </div>
-    <p style="margin-top:16px;font-size:13.5px;color:var(--fg-tertiary)">Same position at all three sizes. The 1.20 floor guarantees the <strong style="color:var(--fg-strong)">NVDA collateral</strong> can fall <strong style="color:var(--fg-strong)">16.7%</strong> before liquidation, and the build is never allowed below it; measured 1.208 gives <strong style="color:var(--fg-strong)">17.2%</strong>.</p>
+    <p style="margin-top:16px;font-size:13.5px;color:var(--fg-tertiary)">Same position at all three sizes. The 1.20 floor guarantees the <strong style="color:var(--fg-strong)">BNB collateral</strong> can fall <strong style="color:var(--fg-strong)">16.7%</strong> before liquidation, and the build is never allowed below it; measured 1.208 gives <strong style="color:var(--fg-strong)">17.2%</strong>.</p>
   </div>
 </section>
 
@@ -121,7 +121,7 @@
   <div class="wrap">
     <div class="sec-head"><span class="tag">the position <span class="sep" aria-hidden="true">//</span> both legs</span><h2>What the vault actually holds</h2></div>
       <figure class="fig">
-        <img src="/assets/fig/leverage-stack.png" alt="Per unit of net value: one NVDA of tax becomes 3.00 NVDA supplied to the lending market as the collateral market against 2.00 NVDA borrowed in USDT, leaving 1.00 NVDA of net value at 3x exposure. Three units of NVDA collateral, two units of USDT owed against it, and the gap between them is the treasury." loading="lazy" decoding="async" width="1000">
+        <img src="/assets/fig/leverage-stack.png" alt="Per unit of net value: one BNB of tax becomes 3.00 BNB supplied to Venus as vBNB against 2.00 BNB borrowed in USDT, leaving 1.00 BNB of net value at 3x exposure. Three units of BNB collateral, two units of USDT owed against it, and the gap between them is the treasury." loading="lazy" decoding="async" width="1000">
         <figcaption>The gap is the treasury.</figcaption>
       </figure>
 
@@ -148,8 +148,8 @@
       <span style="display:block;color:var(--fg-quaternary);padding-top:3px">No token yet &middot; submitted for review</span></div>
   </div>
   <div class="wrap" style="margin-top:30px;padding-top:18px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--fg-quaternary)">
-    A 3&times; position is liquidated by a 16.7% move against it. The lending market and Uniswap v4 are
-    dependencies. Submitted to Pons for review; no third-party security audit.
+    A 3&times; position is liquidated by a 16.7% move against it. Venus and PancakeSwap are
+    dependencies. Submitted to Flap for review; no third-party security audit.
   </div>
 </footer>
 <script type="module">
@@ -176,12 +176,12 @@ animate(cv, (t) => {
   ctx.fillStyle = C.positive; ctx.fillRect(padX + debtW, y, barW - debtW, bh);
 
   ctx.font = C.monoSm; ctx.textAlign = "left"; ctx.fillStyle = C.negative;
-  ctx.fillText(`debt ${debt.toFixed(2)}x  ·  USDT on the lending market`, padX + 6, y + 19);
+  ctx.fillText(`debt ${debt.toFixed(2)}x  ·  USDT on Venus`, padX + 6, y + 19);
   ctx.textAlign = "right"; ctx.fillStyle = "#141414";
   ctx.font = '600 11px "Geist Mono", monospace';
   ctx.fillText("net value 1.00x", padX + barW - 6, y + 19);
   ctx.textAlign = "left"; ctx.font = C.monoSm; ctx.fillStyle = C.dim;
-  ctx.fillText(`supply ${supply.toFixed(2)}x  ·  NVDA collateral`, padX, y - 12);
+  ctx.fillText(`supply ${supply.toFixed(2)}x  ·  BNB collateral`, padX, y - 12);
 
   const hy = y + bh + 52;
   ctx.strokeStyle = C.lineSoft; ctx.lineWidth = 1;
