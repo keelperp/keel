@@ -518,7 +518,13 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
             // when the redeem cap binds.
             bounty = freed < owedBounty ? freed : owedBounty;
         } else {
-            bounty = freed * REBALANCE_BOUNTY_BPS / BPS;
+            // Lever-up frees nothing by design. Any nonzero `freed` here is only the flash
+            // build's 0.3% over-borrow buffer surviving fees -- not a designed incentive, and
+            // too small and pool-dependent to be a meaningful one. Paying a rate on it made the
+            // schema's "levering up pays no bounty" true only when live pool slippage happened
+            // to exceed the buffer; zero makes it true unconditionally, and leaves the whole
+            // buffer with the vault (accounted for below, basis-neutral) rather than the caller.
+            bounty = 0;
         }
         if (bounty > 0) {
             (bool ok,) = bountyTo.call{value: bounty}("");
@@ -526,19 +532,23 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         }
         uint256 rest = address(this).balance - bnbBefore;
         if (rest > 0) {
-            // Deleveraging hands back capital that is already inside costBasis, unlike
-            // `harvest`, whose freed BNB leaves the vault entirely and so leaves the basis
-            // alone. Booking it as pending revenue without taking it out of the basis counts
-            // the same BNB twice the moment `_deploy` puts it back and runs `costBasis +=
-            // work` on capital that never left. Since `_nav` already counts idle balance,
-            // `_gain = nav - (costBasis + pendingRevenue)` would then sit permanently lower
-            // by the freed amount, and `harvest` would stop paying holders until NAV had
-            // grown past a basis that no longer describes what was paid. Move it between the
-            // two rather than adding to one. What genuinely left -- the bounty -- is not
-            // moved here, so it shows up as the loss it is.
-            if (deleveraging) {
-                costBasis = costBasis > rest ? costBasis - rest : 0;
-            }
+            // `rest` is capital repositioning inside the vault, never new capital arriving from
+            // outside, on EITHER branch -- unlike `harvest`, whose freed BNB leaves the vault
+            // entirely and so correctly leaves the basis alone. Booking it as pending revenue
+            // without taking the same amount out of costBasis counts it twice the moment
+            // `_deploy` puts it back and runs `costBasis += work` on capital that was never new.
+            //
+            // On the deleveraging side that capital was already inside costBasis when it was
+            // deployed. On the lever-up side it is the flash build's own 0.3% over-borrow
+            // buffer, unwrapped to idle WBNB in `pancakeV3FlashCallback` after repaying the
+            // flash loan: real new debt was taken on to fund it, so `nav` moves by only the
+            // build's true net cost (the flash and swap fees), not by the full buffer -- adding
+            // the whole buffer to `basis` on top of that suppresses `_gain` by the buffer a
+            // second time, every lever-up rebalance, compounding over the vault's life. Either
+            // way `_nav` already counts the idle balance this created, so moving the same
+            // amount out of costBasis is what keeps a single build or unwind from moving `basis`
+            // net at all -- `_gain` then falls only by what the operation actually cost.
+            costBasis = costBasis > rest ? costBasis - rest : 0;
             pendingRevenue += rest;
         }
         // Improvement, not an absolute floor. TARGET_LEVERAGE, MIN_HEALTH_BPS and Venus's 80%
@@ -642,7 +652,15 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         // anyway. The only state this changes is the insolvent one.
         if ((_health(p) < URGENT_HEALTH_BPS || _venusShortfall())
             && needsRebalance() && bnbCash >= MIN_DEPLOY) return 1;
-        if (pendingRevenue >= MIN_DEPLOY && usdtCash > 0) return 2;
+        // `_schedule` deducts the trigger fee from `pendingRevenue` AFTER an action has been
+        // picked, so a deploy chosen against the pre-fee balance could find, by the time
+        // `settleSelf` runs, that the fee had eaten into the very band that qualified it --
+        // `_deploy` then reverts "nothing to deploy yet" on a wake that already spent the fee.
+        // Reserve it here, the same saturating way `_schedule` itself subtracts it, so the
+        // threshold this function checks is the one `_deploy` will actually see.
+        uint256 fee = IFlapTriggerService(TRIGGER_SERVICE).getFee();
+        uint256 afterFee = pendingRevenue > fee ? pendingRevenue - fee : 0;
+        if (afterFee >= MIN_DEPLOY && usdtCash > 0) return 2;
         // Ask whether the dividend contract can actually take the deposit before choosing to
         // harvest. `_harvest` requires the WBNB to leave the vault, so with no eligible holders
         // it reverts -- and since harvest outranks rebalance here, the selector would pick it on
@@ -994,9 +1012,10 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
 
         m[5].name = "rebalance";
         m[5].description = unicode"Push leverage back inside the band. Anyone may call. Deleveraging pays "
-            unicode"0.3% of what it frees; levering up frees nothing, so it pays no bounty."
-            unicode" / 把杠杆推回区间内。任何人都可调用。降杠杆时支付所释放资金的 0.3% 作为赏金;"
-            unicode"加杠杆不释放任何资金,因此不支付赏金。";
+            unicode"0.3% of the deleveraged notional, funded by an extra shrink sized to free that "
+            unicode"(capped by Venus's redeem limit); levering up pays no bounty."
+            unicode" / 把杠杆推回区间内。任何人都可调用。降杠杆时按被移出仓位的名义额支付 0.3% 赏金,"
+            unicode"另做一次专门的减仓来筹措(受 Venus 自身赎回上限约束);加杠杆不支付赏金。";
         m[5].outputs = _one("bounty", "uint256", unicode"BNB paid to the caller / 支付给调用者的 BNB");
         m[5].isWriteMethod = true;
 

@@ -69,11 +69,18 @@ contract LeverVaultCooldownAndBountyTest is Test {
 
     function test_rebalanceScheduleDescriptionMatchesTheLeverUpBehavior() public view {
         // The on-chain schema must no longer claim a flat bounty; it must disclose that
-        // levering up pays none.
+        // levering up pays none, and that the deleverage bounty's basis is the deleveraged
+        // notional rather than whatever a shrink happens to free (report six's Finding 3 --
+        // wording tightened again after the lever-up branch was found able to pay a tiny
+        // incidental bounty of its own, since fixed to always pay zero there instead).
         VaultUISchema memory s = v.vaultUISchema();
         assertTrue(
-            _contains(s.methods[5].description, "levering up frees nothing"),
+            _contains(s.methods[5].description, "levering up pays no bounty"),
             "schema must disclose the lever-up case"
+        );
+        assertTrue(
+            _contains(s.methods[5].description, "deleveraged notional"),
+            "schema must state the deleverage bounty's actual basis"
         );
     }
 

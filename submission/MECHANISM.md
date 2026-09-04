@@ -92,10 +92,13 @@ emergency withdraw and no pause.
 | the Guardian owns the beacon; the deployer never did | `LeverBeacon` constructor; `test_beaconIsOwnedByTheGuardianNotTheDeployer`, `test_beaconRefusesAnUnsupportedChain` |
 | what the UI is told matches what the contracts expose | `vaultUISchema()`, `vaultDataSchema()`; `test_vaultUISchemaDescribesEveryUserFacingMethod`, `test_everySchemaMethodNameResolvesToARealSelector`, `test_factoryDataSchemaMatchesNewVaultAbi`, `test_descriptionIsNonEmpty` |
 
-The four rows marked **(fork)** live in `test/LeverVaultPosition.t.sol` and are skipped unless an
-archive RPC is configured. That is why plain `forge test` reports **36 passed, 0 failed, 5 skipped** — the
-skip is that file, not a failure. The full run used for this submission is 54 forge tests + 33
-live-state assertions + 8 vault-UI checks = **95, all green**.
+The four rows marked **(fork)** live in `test/LeverVaultPosition.t.sol`, one of nine suites (plus
+two individual tests inside `LeverVaultAuth`) that gate a `vm.createSelectFork` behind
+`KEEL_ARCHIVE=1` and skip their whole `setUp` without it — see `submission/RULES.md` rule 006 for
+the full list and why. That is why plain `forge test` reports **40 passed, 0 failed, 11 skipped**
+(51 total tests) — every skip there is an archive-only suite declining to run, not a failure. The
+full run used for this submission is 57 forge tests + 33 live-state assertions + 8 vault-UI
+checks = **98, all green**.
 
 ## How the tax reaches the vault, and what the other 2000 does
 
@@ -364,7 +367,7 @@ testnet. The parameters above are the launch configuration recorded in `LAUNCH.m
 of anything trading. What *is* deployed is the factory, the beacon and the implementation, at
 identical addresses on chain 56 and chain 97.
 
-Those addresses are in [`FACTORY.md`](FACTORY.md) and `deployments/56.json`; the factory to register is `0x82d005723aF87A05cB4CffF0E5B50032DA068233`.
+Those addresses are in [`FACTORY.md`](FACTORY.md) and `deployments/56.json`; the factory to register is `0x9eFEd6EB5CcC8f015f908ce6760a9d713865989C`.
 
 **It does not claim the deployed implementation carries the swap floor.** `MAX_SWAP_SLIP_BPS` and
 the floored exit swaps are live: the

@@ -200,6 +200,15 @@ for rel in ["AUDIT.md", "SUBMISSION.md", "README.md", "submission/RULES.md", "su
     for h in re.findall(r"0x[0-9a-fA-F]{64}", body):
         if h not in STAMPS and h not in body[:0]:
             stale.append(f"{rel} names tx {h[:12]}…")
+    # A truncated tx hash paired with a now-correct block number is exactly how this drifted
+    # last time: the block got caught by the check above, the truncated hash sitting right next
+    # to it did not, because it is not 64 hex characters. Require every truncated fragment
+    # explicitly labelled "tx" to be an actual prefix of one of the two current hashes. Anchored
+    # on "tx `0x...…`" rather than any truncated hex-with-ellipsis, because a Guardian address is
+    # truncated the same way and is not a transaction.
+    for h in re.findall(r"tx `(0x[0-9a-fA-F]{6,16})…", body):
+        if not (dep["txHash"].lower().startswith(h.lower()) or d97["txHash"].lower().startswith(h.lower())):
+            stale.append(f"{rel} names truncated tx {h}… matching neither current hash")
 say(not stale, "every block and tx in the documents is one the manifests record"
     + (f" — {stale[:2]}" if stale else ""))
 

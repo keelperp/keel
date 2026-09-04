@@ -30,6 +30,12 @@ forge test --match-contract LeverVaultInsolventTest --fork-url "$RPC" || fail=1
 echo; echo; echo; echo; echo; echo "=== forked: the flash-initiation guard ==="
 forge test --match-contract LeverVaultFlashGuardTest --fork-url "$RPC" || fail=1
 
+echo; echo "=== forked: the trigger-fee-starves-the-picked-deploy defect ==="
+forge test --match-contract LeverVaultTriggerFeeTest --fork-url "$RPC" || fail=1
+
+echo; echo "=== forked: lever-up rebalance leaves basis invariant ==="
+forge test --match-contract LeverVaultLeverUpBasisTest --fork-url "$RPC" || fail=1
+
 echo "=== forked: rebalanceCooldown() and the lever-up bounty disclosure ==="
 forge test --match-contract LeverVaultCooldownAndBountyTest --fork-url "$RPC" || fail=1
 
