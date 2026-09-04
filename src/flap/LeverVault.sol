@@ -382,6 +382,7 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
     function _deploy(address bountyTo) internal returns (uint256 bounty) {
         uint256 amount = pendingRevenue;
         require(amount >= MIN_DEPLOY, unicode"LeverVault: nothing to deploy yet / 暂无可部署的税收");
+        uint256 bnbBefore = address(this).balance;
 
         bounty = bountyTo == address(0) ? 0 : amount * DEPLOY_BOUNTY_BPS / BPS;
         uint256 work = amount - bounty;
@@ -400,6 +401,17 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         if (bounty > 0) {
             (bool ok,) = bountyTo.call{value: bounty}("");
             require(ok, unicode"LeverVault: bounty transfer failed / 赏金转账失败");
+        }
+        // `amount` left the balance (bounty out, `work` minted as collateral); anything the
+        // build's own flash buffer handed back on top of that is untracked by either basis
+        // variable, yet `_nav` counts it -- the next harvest would read it as market gain and
+        // shrink the position by more than it actually earned. Same treatment `_rebalance`
+        // gives its own version of this: move it into pendingRevenue and the same amount out
+        // of costBasis, so `_gain` moves only by what the build's fees genuinely cost.
+        uint256 rest = address(this).balance - (bnbBefore - amount);
+        if (rest > 0) {
+            costBasis = costBasis > rest ? costBasis - rest : 0;
+            pendingRevenue += rest;
         }
         emit Deployed(bountyTo, work, bounty, _leverage(p));
     }
@@ -840,6 +852,11 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
             if (debt <= debtTarget) break;
             if (!_repayOnce(debt - debtTarget, p)) break;
         }
+        // Same reason `_shrinkBy` sweeps its own tail: a `_repayOnce` overshoot leaves WBNB
+        // dust `_nav` cannot see. `_rebalance` measures its own native-balance delta right
+        // after this call returns, so unwrapping here is enough for that delta to already
+        // include it -- no separate basis adjustment needed on top of the one already there.
+        _sweepWbnbDust();
     }
 
     function _shrinkBy(uint256 wantBnb, Px memory p) internal {
@@ -875,6 +892,15 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
                 );
             }
         }
+        _sweepWbnbDust();
+    }
+
+    /// @dev `_repayOnce`'s tail sells any USDT the repay didn't need back to WBNB and can
+    ///      overshoot by a wei-scale rounding remainder, left as an ERC20 balance `_nav` cannot
+    ///      see -- `idle` there reads `address(this).balance`, native only. `_shrinkBy` already
+    ///      called this inline; `_deleverBy` did not, so a deleverage or an urgent rescue left
+    ///      that dust permanently stranded, uncounted by any view the vault exposes.
+    function _sweepWbnbDust() internal {
         uint256 leftover = IERC20Min(WBNB).balanceOf(address(this));
         if (leftover > 0) IWNative(WBNB).withdraw(leftover);
     }

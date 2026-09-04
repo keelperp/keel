@@ -38,11 +38,11 @@ launched** — Flap's own launcher creates one through the VaultPortal at regist
 
 | Contract | Address | Runtime |
 |---|---|---:|
-| `LeverVaultFactory` (proxy — register this) | `0x9eFEd6EB5CcC8f015f908ce6760a9d713865989C` | 279 |
-| `LeverFactoryBeacon` | `0x49E508D14fc99417d09259300d8B5f1A749d324F` | 785 |
-| `LeverVaultFactory` (implementation) | `0x5D32A1d554F9EFdF8DE30fBB4340A451DFbA9946` | 7,745 |
-| `LeverBeacon` | `0x7561A61e6C900808a48CDdb86779BCB80758E8B8` | 785 |
-| `LeverVault` (implementation) | `0x759Ea1f363c4F743d2ad41B2d718d55429871e6c` | 23,092 |
+| `LeverVaultFactory` (proxy — register this) | `0x3f09f61D8460D330b7387e460FCcc3A90cCe4313` | 279 |
+| `LeverFactoryBeacon` | `0xC585Ab122A5Da00D02bf87a2FDbbA34c8305A155` | 785 |
+| `LeverVaultFactory` (implementation) | `0x69bd2D1f586A0A8974D33695DEe4Ab87cB0f36dE` | 7,745 |
+| `LeverBeacon` | `0xF37B56A19B7C419EC534f825D6119B932209B227` | 785 |
+| `LeverVault` (implementation) | `0xf750Cead8810D524d7454b6c1d246D677950bdfd` | 23,193 |
 
 Both beacons are owned by the Flap Guardian from inside their own constructors — the deployer
 never held upgrade authority for a single block. See `deployments/56.json` and
@@ -124,7 +124,7 @@ src/flap/VaultBase*.sol          Flap's own base contracts, unmodified
 src/interfaces/IVenus.sol        Venus, PancakeSwap and WBNB interfaces
 script/DeployFlapFactory.s.sol   the only deploy path: five contracts, two of them beacons
 script/LaunchKeel.s.sol          launches through Flap's official VaultPortal
-test/                            57 forge tests; see scripts/test.sh
+test/                            59 forge tests; see scripts/test.sh
 tools/verify.py                  33 live-state assertions, one atomic eth_call each
 site/                            the public site
 vault-ui/                        the custom Vault UI submitted to Flap

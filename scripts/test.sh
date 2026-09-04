@@ -36,6 +36,9 @@ forge test --match-contract LeverVaultTriggerFeeTest --fork-url "$RPC" || fail=1
 echo; echo "=== forked: lever-up rebalance leaves basis invariant ==="
 forge test --match-contract LeverVaultLeverUpBasisTest --fork-url "$RPC" || fail=1
 
+echo; echo "=== forked: untracked idle BNB, Flap's seventh report ==="
+forge test --match-contract LeverVaultUntrackedSurplusTest --fork-url "$RPC" || fail=1
+
 echo "=== forked: rebalanceCooldown() and the lever-up bounty disclosure ==="
 forge test --match-contract LeverVaultCooldownAndBountyTest --fork-url "$RPC" || fail=1
 

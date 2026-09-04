@@ -59,7 +59,13 @@ contract LeverVaultPositionTest is Test {
         assertGt(bounty, 0, "manual caller must be paid");
         assertEq(bounty, 5 ether * 25 / 10_000, "deploy bounty is 0.25%");
         assertEq(address(this).balance, before + bounty, "bounty not received");
-        assertEq(v.pendingRevenue(), 0, "revenue not fully deployed");
+        // Not exactly zero any more: the build's own flash-repay swap can realise a small
+        // windfall against the oracle, and that surplus is now captured in pendingRevenue
+        // rather than left as untracked idle balance (Flap's seventh report, Finding 1) --
+        // proven elsewhere (test/LeverVaultUntrackedSurplus.t.sol) to always equal exactly
+        // what sits idle. Bound it loosely here: a large fraction left undeployed would mean
+        // the build itself did not run.
+        assertLt(v.pendingRevenue(), 5 ether / 20, "unreasonably large amount left undeployed");
 
         assertApproxEqRel(v.currentLeverage(), 2.96e18, 0.02e18, "leverage off target");
         assertGe(v.healthBps(), 12_000, "build must clear the health floor");
@@ -112,7 +118,9 @@ contract LeverVaultPositionTest is Test {
         v.trigger(id);
 
         assertEq(address(this).balance, callerBefore, "automatic path must pay no bounty");
-        assertEq(v.pendingRevenue(), 0, "automatic path must deploy everything");
+        // Same reason as the manual path above: a small windfall from the build's own swap can
+        // remain, now correctly captured rather than lost.
+        assertLt(v.pendingRevenue(), 5 ether / 20, "unreasonably large amount left undeployed");
         assertApproxEqRel(v.currentLeverage(), 2.96e18, 0.02e18, "leverage off target");
         assertGt(v.pendingRequestId(), 0, "next slot must already be booked");
     }
@@ -122,6 +130,13 @@ contract LeverVaultPositionTest is Test {
         _tax(5 ether);
         assertEq(v.pendingAction(), 2, "should want to build");
         v.deployPending();
+        // A deploy's own flash-repay swap can leave a small windfall in pendingRevenue (Finding
+        // 1, seventh report) -- if it clears MIN_DEPLOY, the selector correctly wants one more
+        // pass rather than losing it, which is the fix working, not a new defect. Converges in
+        // a couple of passes; more than that means something did not actually shrink.
+        for (uint256 i = 0; i < 3 && v.pendingAction() == 2; i++) {
+            v.deployPending();
+        }
         assertEq(v.pendingAction(), 0, "nothing left after a build");
     }
 

@@ -120,8 +120,13 @@ vals = [x.strip() for x in dec.replace("(", "").replace(")", "").split(",")]
 g = dict(zip(["action", "pendingBefore", "navBefore", "nextId", "navAfter", "lev",
               "health", "pendingAfter", "gasUsed", "replay", "err"], vals))
 gi = lambda key: int(g[key].split()[0])
-check("callback deploys everything it was holding", gi("pendingAfter") == 0,
-      f"{gi('pendingBefore') / E:.4f} -> 0 BNB")
+# Not exactly zero any more: the build's own flash-repay swap can realise a small windfall
+# against the oracle, now correctly captured in pendingRevenue instead of left as untracked
+# idle balance (Flap's seventh report, Finding 1). Bound loosely -- a large fraction left
+# undeployed would mean the build itself did not run.
+check("callback deploys everything it was holding, aside from a small windfall",
+      gi("pendingAfter") < gi("pendingBefore") / 20,
+      f"{gi('pendingBefore') / E:.4f} -> {gi('pendingAfter') / E:.4f} BNB")
 check("callback reaches target leverage", 2.90 <= gi("lev") / E <= 3.00, f"{gi('lev') / E:.3f}x")
 check("callback holds the health floor", gi("health") / 10000 >= 1.20, f"{gi('health') / 10000:.3f}")
 check("callback fits rule 008's 2,000,000 gas cap", gi("gasUsed") <= 2_000_000,

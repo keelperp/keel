@@ -4,20 +4,20 @@
   "network": "BNB Chain testnet",
   "note": "Factory only. A vault cannot be created on this chain: the build path needs a PancakeSwap V3 pool holding WBNB to flash from, and BSC testnet has none. See AUDIT.md.",
   "deployer": "0x1544A8fCE3a3c39E0a744a13392981bEcDF014f4",
-  "txHash": "0x5637915ee125994e9c33745138dcb909f06afa28c8a089940cab28277d04a556",
-  "block": 128990344,
+  "txHash": "0xacbca55a95260c6ff4a9516ba29cc76640c09deb59e4e3fcc7606a308abbf221",
+  "block": 129066437,
   "contracts": {
-    "LeverVaultFactory": "0x9eFEd6EB5CcC8f015f908ce6760a9d713865989C",
-    "LeverFactoryBeacon": "0x49E508D14fc99417d09259300d8B5f1A749d324F",
-    "LeverVaultFactoryImplementation": "0x5D32A1d554F9EFdF8DE30fBB4340A451DFbA9946",
-    "LeverBeacon": "0x7561A61e6C900808a48CDdb86779BCB80758E8B8",
-    "LeverVaultImplementation": "0x759Ea1f363c4F743d2ad41B2d718d55429871e6c"
+    "LeverVaultFactory": "0x3f09f61D8460D330b7387e460FCcc3A90cCe4313",
+    "LeverFactoryBeacon": "0xC585Ab122A5Da00D02bf87a2FDbbA34c8305A155",
+    "LeverVaultFactoryImplementation": "0x69bd2D1f586A0A8974D33695DEe4Ab87cB0f36dE",
+    "LeverBeacon": "0xF37B56A19B7C419EC534f825D6119B932209B227",
+    "LeverVaultImplementation": "0xf750Cead8810D524d7454b6c1d246D677950bdfd"
   },
   "beaconOwner": "0x76Fa8C526f8Bc27ba6958B76DeEf92a0dbE46950",
   "beaconOwnerIs": "Flap Guardian (BNB testnet). Same bytecode as chain 56 resolves a different Guardian by chain id, which is what this deployment demonstrates.",
   "supersedes": {
-    "factory": "0x82d005723aF87A05cB4CffF0E5B50032DA068233",
-    "reason": "Sixth Flap interaction risk report (2026-09-03 15:46, rating Low). Three fixes: (1) trigger() picked an action from pre-fee pendingRevenue while _schedule deducted the fee afterward, so a deploy chosen in the band [MIN_DEPLOY, MIN_DEPLOY+fee) spent a real fee and then reverted -- _pickAction now reserves the fee before the threshold check, the same saturating way _schedule subtracts it. (2) the lever-up branch of _rebalance folded the flash build's own 0.3% over-borrow buffer leftover into pendingRevenue without the costBasis decrement the deleverage branch already had, letting a later _deploy inflate costBasis for capital that never raised nav -- now both branches move costBasis and pendingRevenue together, so basis is invariant across any rebalance regardless of direction. (3) found while fixing (2): the lever-up branch could pay a small incidental bounty from that same buffer, contradicting the vault's own 'levering up pays no bounty' documentation -- it now always pays zero there, and the deleverage bounty's basis (the deleveraged notional, not whatever a shrink happens to free) is stated precisely in both the on-chain schema and the README."
+    "factory": "0x9eFEd6EB5CcC8f015f908ce6760a9d713865989C",
+    "reason": "Seventh Flap interaction risk report (2026-09-04 05:08, rating Low). Finding 1 named the wrong mechanism (harvest does not over-redeem principal -- _shrinkBy always frees exactly what _gain says, by construction) but the underlying concern was real: two sources of untracked idle balance existed. _deploy's own flash-repay swap can realise a small windfall the same way _rebalance's already-fixed one does, and it was never captured into pendingRevenue -- now it is, basis-neutral like _rebalance. _deleverBy lacked the WBNB-dust sweep _shrinkBy already had at its tail (WBNB is invisible to _nav, which reads native balance only) -- now both call a shared sweep. Finding 2 quoted a lever-up bounty computation already fixed last round; no code change needed."
   },
   "retired": [
     "0x7444B36CdC9372588C9C6A9A21bc435F31FE761a",
@@ -65,10 +65,15 @@
     "0xff9539e363116B906ba4956fEa2552bF0904B6e7",
     "0xae492751b27CFeb26E47Efb5785D0E248D7C59A2",
     "0x8C0a552f0390B58d178dF89989F311c15b19ffde",
-    "0x38f72bcdF1Fca500f2099b2636BbBB4fdE1c6AA1"
+    "0x38f72bcdF1Fca500f2099b2636BbBB4fdE1c6AA1",
+    "0x9eFEd6EB5CcC8f015f908ce6760a9d713865989C",
+    "0x49E508D14fc99417d09259300d8B5f1A749d324F",
+    "0x5D32A1d554F9EFdF8DE30fBB4340A451DFbA9946",
+    "0x7561A61e6C900808a48CDdb86779BCB80758E8B8",
+    "0x759Ea1f363c4F743d2ad41B2d718d55429871e6c"
   ],
   "retiredNote": "Every address this project has ever deployed and replaced. Registering any of them with Flap would bind a token to superseded code. tools/check-docs.py reads this list, so a redeploy updates one file rather than a constant in the checker.",
-  "registerThis": "0x9eFEd6EB5CcC8f015f908ce6760a9d713865989C",
+  "registerThis": "0x3f09f61D8460D330b7387e460FCcc3A90cCe4313",
   "upgradeAuthority": {
     "LeverBeacon": "owns the vault implementation; Flap Guardian",
     "LeverFactoryBeacon": "owns the factory implementation; Flap Guardian",
