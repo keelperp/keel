@@ -39,7 +39,10 @@ forge test --match-contract LeverVaultLeverUpBasisTest --fork-url "$RPC" || fail
 echo; echo "=== forked: untracked idle BNB, Flap's seventh report ==="
 forge test --match-contract LeverVaultUntrackedSurplusTest --fork-url "$RPC" || fail=1
 
-echo; echo "=== forked: BNB forced in outside receive(), Flap's eleventh report ==="
+echo; echo; echo "=== forked: project cannot receive BNB, Flap's twelfth report ==="
+forge test --match-contract LeverVaultProjectPayoutFailureTest --fork-url "$RPC" || fail=1
+
+echo "=== forked: BNB forced in outside receive(), Flap's eleventh report ==="
 forge test --match-contract LeverVaultDonationImmunityTest --fork-url "$RPC" || fail=1
 
 echo "=== forked: rebalanceCooldown() and the lever-up bounty disclosure ==="

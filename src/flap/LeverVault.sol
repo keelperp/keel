@@ -189,6 +189,8 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
     event Received(address indexed from, uint256 amount);
     event Deployed(address indexed caller, uint256 amount, uint256 bounty, uint256 leverage);
     event Harvested(address indexed caller, uint256 toHolders, uint256 toProject, uint256 bounty);
+    /// @notice `project` refused its share; the amount went to holders in this harvest instead.
+    event ProjectPayoutFailed(uint256 amount);
     event Rebalanced(address indexed caller, uint256 leverageBefore, uint256 leverageAfter, uint256 bounty);
     event Scheduled(uint256 indexed requestId, uint64 executeAfter);
     event Settled(uint256 indexed requestId, uint8 action);
@@ -458,10 +460,29 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         uint256 toProject = net * PROJECT_SHARE_BPS / BPS;
         uint256 toHolders = net - toProject;
 
+        // `project` is written once at initialize() and has no setter -- if it is, or ever
+        // becomes, a contract that cannot receive BNB (no payable receive/fallback, or one
+        // that reverts), a plain require() here would revert this call AND every harvest
+        // after it, forever: the gain would stay locked inside the leveraged position,
+        // growing liquidation exposure, with no path to ever fix it. Attempt the payout
+        // first, before anything else moves, and redirect a failure to holders instead of
+        // bricking the mechanism or stranding the BNB. Reordered ahead of the dividend
+        // deposit for exactly that redirect: once `toHolders` is finalised below, one deposit
+        // call covers whichever amount it ends up being.
+        if (toProject > 0) {
+            (bool sent,) = project.call{value: toProject}("");
+            if (sent) {
+                totalToProject += toProject;
+            } else {
+                emit ProjectPayoutFailed(toProject);
+                toHolders += toProject;
+                toProject = 0;
+            }
+        }
+
         // costBasis is deliberately untouched: _shrinkBy took only the gain, so what is
         // left in the position is still exactly what was paid for it.
         totalHarvested += toHolders;
-        totalToProject += toProject;
 
         // Flap's dividend contract takes no tokens when it has no eligible holders, and its
         // `deposit` is declared without a return value here, so there is nothing to check.
@@ -478,11 +499,6 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
             IERC20Min(WBNB).balanceOf(address(this)) <= wbnbHeld,
             unicode"LeverVault: dividend did not take the WBNB / 分红合约未收取 WBNB"
         );
-
-        if (toProject > 0) {
-            (bool sent,) = project.call{value: toProject}("");
-            require(sent, unicode"LeverVault: project transfer failed / 项目方转账失败");
-        }
 
         require(
             _health(p) >= MIN_HEALTH_BPS,

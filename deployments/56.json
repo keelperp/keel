@@ -4,20 +4,20 @@
   "network": "BNB Chain mainnet",
   "note": "Flap custom-vault side only. No token has been launched; a token is created by Flap's launcher through the VaultPortal.",
   "deployer": "0x1544A8fCE3a3c39E0a744a13392981bEcDF014f4",
-  "txHash": "0xd99db9925d954084a3d00af938dcd45280a7c6020d58ca6dbe49ecc2e356cb37",
-  "block": 120046230,
+  "txHash": "0xa64cdc43356136a25f24daa606901cda975744d04a86f2e84884f34390c7e613",
+  "block": 120052827,
   "contracts": {
-    "LeverVaultFactory": "0x487Bd18860c321b6Fa01e9F95B3F9BF878c4939B",
-    "LeverFactoryBeacon": "0x01595F8AD2737a78AAAcEd9C14264c70799B418E",
-    "LeverVaultFactoryImplementation": "0xfd439F46D9D842D4a84c94a32D1BF8Ce57Dc39e9",
-    "LeverBeacon": "0x2d37B394C24aBa34b25A514817E8380b8b58E29E",
-    "LeverVaultImplementation": "0x68e4317070Cf99cC7462741191DFcCAE75c73853"
+    "LeverVaultFactory": "0xbfFcBB69574774EeE211E7AfdBF41187c3278607",
+    "LeverFactoryBeacon": "0xb36f6F95D07f137d54c4D6224063FfC5Fb789175",
+    "LeverVaultFactoryImplementation": "0x5b8a4E2295297cf39635f6A8b43Db4c9a8d0Cb22",
+    "LeverBeacon": "0x90b6Cba470Ba77CB1cb3d6455FB55D2681ea5b6D",
+    "LeverVaultImplementation": "0x4f6f9d028DFeCD11DEF6EB8e8862dae80C4A550b"
   },
   "beaconOwner": "0x9e27098dcD8844bcc6287a557E0b4D09C86B8a4b",
   "beaconOwnerIs": "Flap Guardian (BNB Chain), set in LeverBeacon's constructor -- never the deployer",
   "supersedes": {
-    "factory": "0x3f09f61D8460D330b7387e460FCcc3A90cCe4313",
-    "reason": "Eleventh Flap interaction risk report (2026-09-04 16:30, rating Medium). _gain rewritten to compare position-only equity against costBasis, decoupled from pendingRevenue and idle balance entirely -- immune to BNB forced in via selfdestruct, which bypasses receive() and every accounting hook a contract could write, unlike the internal flash-buffer sources fixed in earlier rounds."
+    "factory": "0x487Bd18860c321b6Fa01e9F95B3F9BF878c4939B",
+    "reason": "Twelfth Flap interaction risk report (2026-09-05 04:52, rating Medium). A project address that cannot receive BNB (no payable receive/fallback, or one that reverts) used to revert the whole harvest via require(sent) -- and since project has no setter, permanently. The payout is now attempted first, before the dividend deposit, and a failure redirects the amount into the holder share instead of bricking the mechanism, emitting ProjectPayoutFailed so it stays visible."
   },
   "retired": [
     "0x7444B36CdC9372588C9C6A9A21bc435F31FE761a",
@@ -75,10 +75,15 @@
     "0xC585Ab122A5Da00D02bf87a2FDbbA34c8305A155",
     "0x69bd2D1f586A0A8974D33695DEe4Ab87cB0f36dE",
     "0xF37B56A19B7C419EC534f825D6119B932209B227",
-    "0xf750Cead8810D524d7454b6c1d246D677950bdfd"
+    "0xf750Cead8810D524d7454b6c1d246D677950bdfd",
+    "0x487Bd18860c321b6Fa01e9F95B3F9BF878c4939B",
+    "0x01595F8AD2737a78AAAcEd9C14264c70799B418E",
+    "0xfd439F46D9D842D4a84c94a32D1BF8Ce57Dc39e9",
+    "0x2d37B394C24aBa34b25A514817E8380b8b58E29E",
+    "0x68e4317070Cf99cC7462741191DFcCAE75c73853"
   ],
   "retiredNote": "Every address this project has ever deployed and replaced. Registering any of them with Flap would bind a token to superseded code. tools/check-docs.py reads this list, so a redeploy updates one file rather than a constant in the checker.",
-  "registerThis": "0x487Bd18860c321b6Fa01e9F95B3F9BF878c4939B",
+  "registerThis": "0xbfFcBB69574774EeE211E7AfdBF41187c3278607",
   "upgradeAuthority": {
     "LeverBeacon": "owns the vault implementation; Flap Guardian",
     "LeverFactoryBeacon": "owns the factory implementation; Flap Guardian",

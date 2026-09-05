@@ -1,7 +1,7 @@
 # LeverVault — Flap 十条规则自审报告
 
 **被审对象**：`src/flap/LeverVault.sol`、`src/flap/LeverVaultFactory.sol`、`src/flap/LeverBeacon.sol`
-**日期**：2026-08-31 · **链**：BNB Chain (56) · **状态**：factory 已上主网 `0x487Bd18860c321b6Fa01e9F95B3F9BF878c4939B`,**未发任何代币**
+**日期**：2026-08-31 · **链**：BNB Chain (56) · **状态**：factory 已上主网 `0xbfFcBB69574774EeE211E7AfdBF41187c3278607`,**未发任何代币**
 
 > 这是一份**自审**报告,不是第三方审计。反复地自己对抗自己审查不是审计,本文也不会把它叫做审计。
 
@@ -60,7 +60,7 @@ health 地板 1.20 对应上限 **3.00x**;**5x 算出来正好 1.00,即清算点
 | **003** 公平性 / 三明治 | ✅ | 三个工作函数全部无许可。**没有任何特权角色能改滑点、路由、时机或触发条件**——它们全是 `constant`。自动路径不付赏金(触发费已从金库出),手动路径付固定 bps,内部人相对机器人无任何结构性优势。 |
 | **004** 字面量错误 / 双语 | ✅ | **零 custom error**;全部 revert 为 `require()` + `unicode` 中英内联字面量。开发期违反过此条,已全部替换。 |
 | **005** `receive()` gas | ✅ | 冷 **57,433** / 热 **9,133**,上限 1,000,000。另有测试证明 1 wei 与 0 value 均不 revert,以及在 **2,300 gas stipend** 下对已知发送方仍然成功。 |
-| **006** 集成测试 | ✅ | **61 个 forge 测试 + 33 条实测断言,全绿**。forge 覆盖 schema、factory 全部守卫、beacon 归属、初始化、trigger 授权与重放、三个工作函数的 revert 路径、stipend 守卫、gas 预算;`tools/verify.py` 覆盖仓位生命周期,以原子 `eth_call` 打在主网当前状态上。两者都有断言与退出码。见下节的形态说明。 |
+| **006** 集成测试 | ✅ | **63 个 forge 测试 + 33 条实测断言,全绿**。forge 覆盖 schema、factory 全部守卫、beacon 归属、初始化、trigger 授权与重放、三个工作函数的 revert 路径、stipend 守卫、gas 预算;`tools/verify.py` 覆盖仓位生命周期,以原子 `eth_call` 打在主网当前状态上。两者都有断言与退出码。见下节的形态说明。 |
 | **007** AI Oracle | N/A | 不使用。 |
 | **008** Trigger Service | ✅ | 校验 `msg.sender` 为唯一官方服务地址;requestId 在任何工作前被消费,重放被拒;每一次唤醒都重读链上状态再决定,不假设回调准时。**先买下一个时间片,再把工作放进 try**,所以一次失败不会断掉本可重试它的链条。实测回调 **1,206,637** gas,上限 2,000,000,余量 40%。 |
 | **009** Emergency Controls | ✅ | BeaconProxy 部署,**按规则豁免**紧急提取函数并刻意不实现。豁免的前提是升级权限归 Guardian——`LeverBeacon` 构造函数即 `_transferOwnership(guardian)`,有测试断言部署者不保留权限。 |
@@ -130,7 +130,7 @@ revert `math error`。
 
 | 合约 | runtime | 余量 |
 |---|---:|---:|
-| `LeverVault` | 23,193 | 1,383 |
+| `LeverVault` | 23,155 | 1,421 |
 | `LeverVaultFactory` | 7,745 | 16,831 |
 | `LeverBeacon` | 785 | 23,791 |
 
@@ -156,7 +156,7 @@ Venus 的 ResilientOracle 一次 `getUnderlyingPrice` 要 **26,308** gas(它要�
 | `deployPending` 端到端 | 1,420,949 | **1,134,531** |
 | 自动结算回调 | 1,510,777 | **1,206,637** |
 | 对 2,000,000 上限的余量 | 24% | **40%** |
-| `LeverVault` runtime | 20,060 | 23,193 |
+| `LeverVault` runtime | 20,060 | 23,155 |
 
 行为未变:三个规模实测仍是 2.960x / health 1.208 / 待部署归零。
 
@@ -190,15 +190,15 @@ share 已被其自审标为提交阻断,本金库的 30% 更高。
 
 `registerVaultFactory` 需要 `VAULT_ADMIN_ROLE`,只有 Flap 能调。提交流程是:
 **先把 factory 部署到 BSC 主网 → 把地址交给 Flap → 由 Flap 注册**。
-factory 已于 block 120,046,230 部署至 BNB Chain:
+factory 已于 block 120,052,827 部署至 BNB Chain:
 
 | | 地址 | runtime |
 |---|---|---:|
-| `LeverVaultFactory` (proxy — register this) | `0x487Bd18860c321b6Fa01e9F95B3F9BF878c4939B` | 279 |
-| `LeverFactoryBeacon` | `0x01595F8AD2737a78AAAcEd9C14264c70799B418E` | 785 |
-| `LeverVaultFactory` (implementation) | `0xfd439F46D9D842D4a84c94a32D1BF8Ce57Dc39e9` | 7,745 |
-| `LeverBeacon` | `0x2d37B394C24aBa34b25A514817E8380b8b58E29E` | 785 |
-| `LeverVault`(implementation) | `0x68e4317070Cf99cC7462741191DFcCAE75c73853` | 23,193 |
+| `LeverVaultFactory` (proxy — register this) | `0xbfFcBB69574774EeE211E7AfdBF41187c3278607` | 279 |
+| `LeverFactoryBeacon` | `0xb36f6F95D07f137d54c4D6224063FfC5Fb789175` | 785 |
+| `LeverVaultFactory` (implementation) | `0x5b8a4E2295297cf39635f6A8b43Db4c9a8d0Cb22` | 7,745 |
+| `LeverBeacon` | `0x90b6Cba470Ba77CB1cb3d6455FB55D2681ea5b6D` | 785 |
+| `LeverVault`(implementation) | `0x4f6f9d028DFeCD11DEF6EB8e8862dae80C4A550b` | 23,155 |
 
 链上读回的 `beacon.owner()` 是 `0x9e27098dcD8844bcc6287a557E0b4D09C86B8a4b`,即 Flap 的 BNB Chain
 Guardian——**在 `LeverBeacon` 构造函数里就转出,部署者从未持有过升级权**。这是 Rule 009 代理豁免
@@ -209,8 +209,8 @@ Guardian——**在 `LeverBeacon` 构造函数里就转出,部署者从未持有
 ### 为什么没有测试网端到端
 
 factory 也部署到了 BSC 测试网(97),同一份字节码、同一个部署者、同一个 nonce,因此
-**地址与主网相同**:`0x487Bd18860c321b6Fa01e9F95B3F9BF878c4939B`(tx `0x1e5fc449…`,block
-129,190,762)。这次部署本身证明了按链分流的逻辑在真实链上生效——同样的字节码在 97 上把
+**地址与主网相同**:`0xbfFcBB69574774EeE211E7AfdBF41187c3278607`(tx `0x45e3fc83…`,block
+129,197,362)。这次部署本身证明了按链分流的逻辑在真实链上生效——同样的字节码在 97 上把
 `beacon.owner()` 解析成 `0x76Fa8C52…`(测试网 Guardian),在 56 上解析成 `0x9e27098d…`(主网
 Guardian),都不是部署者。
 

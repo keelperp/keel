@@ -92,13 +92,13 @@ emergency withdraw and no pause.
 | the Guardian owns the beacon; the deployer never did | `LeverBeacon` constructor; `test_beaconIsOwnedByTheGuardianNotTheDeployer`, `test_beaconRefusesAnUnsupportedChain` |
 | what the UI is told matches what the contracts expose | `vaultUISchema()`, `vaultDataSchema()`; `test_vaultUISchemaDescribesEveryUserFacingMethod`, `test_everySchemaMethodNameResolvesToARealSelector`, `test_factoryDataSchemaMatchesNewVaultAbi`, `test_descriptionIsNonEmpty` |
 
-The four rows marked **(fork)** live in `test/LeverVaultPosition.t.sol`, one of eleven suites (plus
+The four rows marked **(fork)** live in `test/LeverVaultPosition.t.sol`, one of twelve suites (plus
 two individual tests inside `LeverVaultAuth`) that gate a `vm.createSelectFork` behind
 `KEEL_ARCHIVE=1` and skip their whole `setUp` without it — see `submission/RULES.md` rule 006 for
 the full list and why. That is why plain `forge test` reports **40 passed, 0 failed, 11 skipped**
 (51 total tests) — every skip there is an archive-only suite declining to run, not a failure. The
-full run used for this submission is 61 forge tests + 33 live-state assertions + 8 vault-UI
-checks = **102, all green**.
+full run used for this submission is 63 forge tests + 33 live-state assertions + 8 vault-UI
+checks = **104, all green**.
 
 ## How the tax reaches the vault, and what the other 2000 does
 
@@ -367,7 +367,7 @@ testnet. The parameters above are the launch configuration recorded in `LAUNCH.m
 of anything trading. What *is* deployed is the factory, the beacon and the implementation, at
 identical addresses on chain 56 and chain 97.
 
-Those addresses are in [`FACTORY.md`](FACTORY.md) and `deployments/56.json`; the factory to register is `0x487Bd18860c321b6Fa01e9F95B3F9BF878c4939B`.
+Those addresses are in [`FACTORY.md`](FACTORY.md) and `deployments/56.json`; the factory to register is `0xbfFcBB69574774EeE211E7AfdBF41187c3278607`.
 
 **It does not claim the deployed implementation carries the swap floor.** `MAX_SWAP_SLIP_BPS` and
 the floored exit swaps are live: the

@@ -1,6 +1,6 @@
 # Flap Vault Interaction Risk Report
 
-Generated: 2026-09-04 16:30:31 UTC
+Generated: 2026-09-05 04:52:57 UTC
 
 ## Vault Security Rating
 **Medium**
@@ -21,59 +21,56 @@ Mark by replacing `[ ]` with `[x]`. If FP, By Design, or Acknowledged, please wr
 ---
 
 ## Risk Findings
-### Finding 1: Undeployed BNB tracking (pendingRevenue) can desync from the actual idle balance, causing _gain/harvest to misclassify non-gain BNB as harvestable and prematurely de-lever the position (COM-PASSIVE-SYNC-GAP)
+### Finding 1: Harvest permanently bricked when the creator-configured `project` address cannot receive BNB (USER-RISK-DOS)
 - **Severity:** Medium
 - **Confidence:** Low
 - **Detected by:** attacker_review
-- **Description:** `_gain` computes `nav - (costBasis + pendingRevenue)`, where `nav` counts the vault's entire native balance (`address(this).balance`) but the offsetting term only subtracts `pendingRevenue`. `pendingRevenue` is updated exclusively through `receive()` accounting and the internal basis-neutral adjustments. Any native BNB that enters the vault without incrementing `pendingRevenue` (e.g. BNB force-sent via selfdestruct, or any donation that bypasses `receive()`'s accounting) increases `nav`, and therefore `_gain`, without a matching increase in the basis. A subsequent `harvest()` then treats that untracked BNB as position gain: `_shrinkBy(gain, p)` unwinds a larger fraction of the leveraged Venus position than the true unrealized gain, distributing principal/donated funds to holders/project and leaving the surplus BNB stranded as idle balance that `deployPending()` will never redeploy (it reads `pendingRevenue`, not the balance).
+- **Description:** In `_harvest`, holder dividends and the project payout are performed in a single atomic transaction. The vault deposits the 70% holder share into the dividend contract first, then executes `(bool sent,) = project.call{value: toProject}(""); require(sent, "...project transfer failed...")`. If the `project` address is a contract that cannot receive BNB (no payable receive/fallback, or one that reverts), `sent` is false and the entire `harvest()`/`_harvest()` call reverts, rolling back the holder dividend deposit as well. `project` is set once at vault creation from `vaultData` and has no setter, so a bad `project` address permanently disables all harvests: realized gain can never be distributed to holders and instead stays inside the leveraged Venus position, increasing liquidation exposure over time.
 - **Vulnerable Code:**
-  - `src/flap/LeverVault.sol:_gain`
-  - `src/flap/LeverVault.sol:_harvest`
-  - `src/flap/LeverVault.sol:receive`
+  - `src/flap/LeverVault.sol:_harvest (project.call + require(sent))`
+  - `src/flap/LeverVaultFactory.sol:newVault (project decoded from vaultData, no setter)`
 
 > **Status:** `[x]` TP、`[ ]` FP、`[ ]` By Design、`[ ]` Acknowledged
 > **Reason (if FP / By Design / Acknowledged):**
-Confirmed, and worked through to the root rather than patched at the surface. The mechanism is
-precise: `_shrinkBy(gain, p)` frees position-only equity, so the remaining position value after a
-harvest lands at `costBasis + pendingRevenue - idle` -- exactly `costBasis` only while
-`idle == pendingRevenue`. Every internal source of idle balance (the flash-repay swap's own
-buffer in both `_deploy` and `_rebalance`, and `_deleverBy`'s WBNB dust) was already made to
-maintain that invariant in earlier rounds of this review. `selfdestruct` cannot: it credits a
-balance with no call, no `receive()`, and no hook any contract can write, so no amount of
-tracking on our side could ever bring it into `pendingRevenue`. That made this the wrong place to
-keep patching -- the invariant `_gain` depended on is not something a contract can universally
-enforce against an external sender.
+Confirmed exactly as described, and severity if anything understated: `project` has no setter,
+so this was not a one-time failure but a permanent one -- every harvest after the first bad
+attempt would revert identically, forever, with gain accumulating inside the leveraged position
+and no path to ever recover it.
 
-Fixed at the root instead: `_gain(p)` is rewritten to compare position-only equity
-(`_nav(p) - address(this).balance`, the same figure `_shrinkBy` itself targets) directly against
-`costBasis`, dropping `pendingRevenue` from the comparison entirely.
+Fixed by reordering and redirecting rather than reverting. The project payout is now attempted
+FIRST, before the dividend deposit (while the full `net` amount is still native BNB, so a failure
+can be folded straight into `toHolders` without a second deposit call). If it succeeds,
+`totalToProject` is credited as before. If it fails, the amount moves into `toHolders` instead --
+so holders receive the full realised gain rather than losing the harvest to a project that cannot
+be fixed -- and `ProjectPayoutFailed(uint256 amount)` is emitted so the failure is visible on
+chain rather than silently absorbed.
 
 ```solidity
-function _gain(Px memory p) internal view returns (uint256) {
-    uint256 posEquity = _nav(p) - address(this).balance;
-    return posEquity > costBasis ? posEquity - costBasis : 0;
+if (toProject > 0) {
+    (bool sent,) = project.call{value: toProject}("");
+    if (sent) {
+        totalToProject += toProject;
+    } else {
+        emit ProjectPayoutFailed(toProject);
+        toHolders += toProject;
+        toProject = 0;
+    }
 }
 ```
 
-This makes `_gain` immune to idle-balance mismatches from any source -- present, or a fifth one
-neither report has found yet -- rather than requiring a matching fix at each new one. It changes
-nothing about the ordinary case: `pendingRevenue`-tracked tax revenue sits as idle balance either
-way, and was already excluded from the old formula's `nav - basis` by the `pendingRevenue`
-subtraction it performed; the new formula excludes it identically, by never including idle
-balance in the comparison at all. `pendingRevenue`'s own bookkeeping (accumulating tax, funding
-`_deploy`, the trigger-fee draw) is untouched -- only how `_gain` decides whether there is
-anything to harvest changed.
+Covered by `test/LeverVaultProjectPayoutFailure.t.sol`: a minimal contract with no payable
+receive or fallback stands in for a broken `project`, asserting harvest still succeeds, the
+broken address receives nothing, `totalToProject` never moves, holders receive the caller's
+bounty's complement of the FULL gain (bounty plus the dividend contract's WBNB increase account
+for the whole gain, nothing stranded), the event fires, and -- the report's own claim -- that
+harvest keeps working across repeated cycles rather than bricking after the first attempt. Proven
+red by reverting to the old `require(sent, ...)`: both tests then fail with the original revert
+message.
 
-Covered by `test/LeverVaultDonationImmunity.t.sol`: a `vm.deal` credit reproduces exactly what a
-`selfdestruct` delivers (balance rises, no call, `pendingRevenue` untouched), asserting the
-donation is not read as gain, and that a harvest triggered by real appreciation afterward leaves
-position equity at or above `costBasis` despite the donation sitting in the balance at the same
-time. Proven red by reverting `_gain` to the old formula: the donation showed up in
-`unrealisedGain()` at essentially its full value.
-
-已确认，并且从根子上解决而不是逐个补洞。`selfdestruct` 强制转账没有任何回调，合约写不出能拦截它的钩子，
-所以继续在 `pendingRevenue` 里追踪是治标不治本的方向。改为让 `_gain` 只比较仓位自身价值和 `costBasis`，
-完全脱离 `pendingRevenue`/闲置余额——这样无论未来还有第几种未追踪的余额来源，都不会再影响 gain 的判断。
+已确认，严重程度只会被低估：`project` 没有 setter，所以这不是一次性失败，是永久性的——第一次失败之后
+每一次 harvest 都会以同样的方式回滚，收益永远锁在仓位里，没有任何恢复路径。已修复：把项目方转账挪到分红
+存入之前先尝试，失败就把这笔钱并入持有者份额而不是回滚整笔交易，并发出 `ProjectPayoutFailed` 事件保持
+可见性。
 
 ---
 
@@ -83,25 +80,26 @@ On chain, on BNB Chain (56) and BSC testnet (97) at identical addresses.
 
 | Contract | Address | Runtime |
 |---|---|---:|
-| `LeverVaultFactory` (proxy — register this) | 0x487Bd18860c321b6Fa01e9F95B3F9BF878c4939B | 279 |
-| `LeverFactoryBeacon` | 0x01595F8AD2737a78AAAcEd9C14264c70799B418E | 785 |
-| `LeverVaultFactory` (implementation) | 0xfd439F46D9D842D4a84c94a32D1BF8Ce57Dc39e9 | 7,745 |
-| `LeverBeacon` | 0x2d37B394C24aBa34b25A514817E8380b8b58E29E | 785 |
-| `LeverVault` (implementation) | 0x68e4317070Cf99cC7462741191DFcCAE75c73853 | 23,193 |
+| `LeverVaultFactory` (proxy — register this) | 0xbfFcBB69574774EeE211E7AfdBF41187c3278607 | 279 |
+| `LeverFactoryBeacon` | 0xb36f6F95D07f137d54c4D6224063FfC5Fb789175 | 785 |
+| `LeverVaultFactory` (implementation) | 0x5b8a4E2295297cf39635f6A8b43Db4c9a8d0Cb22 | 7,745 |
+| `LeverBeacon` | 0x90b6Cba470Ba77CB1cb3d6455FB55D2681ea5b6D | 785 |
+| `LeverVault` (implementation) | 0x4f6f9d028DFeCD11DEF6EB8e8862dae80C4A550b | 23,155 |
 
 | Chain | Block | Transaction |
 |---|---:|---|
-| BNB Chain, 56 | 120,046,230 | 0xd99db9925d954084a3d00af938dcd45280a7c6020d58ca6dbe49ecc2e356cb37 |
-| BSC testnet, 97 | 129,190,762 | 0x1e5fc44955176283b14c95abf0a498280f9253150d9674be2b0b64d148a9fa1b |
+| BNB Chain, 56 | 120,052,827 | 0xa64cdc43356136a25f24daa606901cda975744d04a86f2e84884f34390c7e613 |
+| BSC testnet, 97 | 129,197,362 | 0x45e3fc83628f66e0cd5540ebf15289c296c2ba15f0f090537a686133b0dc5ed1 |
 
-The vault implementation's runtime is byte-identical to the local build (unchanged at 23,193
-bytes -- the rewrite removed as much as it added). Every address this replaces is listed under
-`retired` in `deployments/56.json` and must never be registered.
+The vault implementation's runtime is byte-identical to the local build, and slightly SMALLER
+than before (23,155 vs 23,193) -- the reordering removed as much as the new event and branch
+added. Every address this replaces is listed under `retired` in `deployments/56.json` and must
+never be registered.
 
 ## Verification / 复现
 
 ```bash
-bash scripts/test.sh     # 61 forge tests + 33 live-state assertions + 8 vault-UI checks
+bash scripts/test.sh     # 63 forge tests + 33 live-state assertions + 8 vault-UI checks
 ./submission/check       # deployed bytecode vs local build, both beacons' owners, wiring
 ```
 
