@@ -46,15 +46,15 @@ transactions and per-chain block numbers are in [`FACTORY.md`](FACTORY.md).
 
 | | Address | |
 |---|---|---|
-| `LeverVaultFactory` | `0x3f09f61D8460D330b7387e460FCcc3A90cCe4313` | **this is the one to register** — a 279-byte `BeaconProxy`; its logic is the 7,745-byte implementation at `0x69bd2D1f586A0A8974D33695DEe4Ab87cB0f36dE`, behind the Guardian-owned `LeverFactoryBeacon` at `0xC585Ab122A5Da00D02bf87a2FDbbA34c8305A155`. **This address does not move when the Guardian upgrades it** |
-| `LeverBeacon` | `0xF37B56A19B7C419EC534f825D6119B932209B227` | 785 bytes; owner is the Flap Guardian on each chain, transferred inside the constructor, so the deployer never held upgrade authority. The Guardian can replace the implementation behind it, which is rule 009's proxy exemption working as intended and the only way any constant in the vault changes |
-| `LeverVault` (implementation) | `0xf750Cead8810D524d7454b6c1d246D677950bdfd` | 23,193 bytes, sitting behind that beacon — the code that carries the exit-path floor. `MAX_SWAP_SLIP_BPS()` reads 300 at this address on both chains |
+| `LeverVaultFactory` | `0x487Bd18860c321b6Fa01e9F95B3F9BF878c4939B` | **this is the one to register** — a 279-byte `BeaconProxy`; its logic is the 7,745-byte implementation at `0xfd439F46D9D842D4a84c94a32D1BF8Ce57Dc39e9`, behind the Guardian-owned `LeverFactoryBeacon` at `0x01595F8AD2737a78AAAcEd9C14264c70799B418E`. **This address does not move when the Guardian upgrades it** |
+| `LeverBeacon` | `0x2d37B394C24aBa34b25A514817E8380b8b58E29E` | 785 bytes; owner is the Flap Guardian on each chain, transferred inside the constructor, so the deployer never held upgrade authority. The Guardian can replace the implementation behind it, which is rule 009's proxy exemption working as intended and the only way any constant in the vault changes |
+| `LeverVault` (implementation) | `0x68e4317070Cf99cC7462741191DFcCAE75c73853` | 23,193 bytes, sitting behind that beacon — the code that carries the exit-path floor. `MAX_SWAP_SLIP_BPS()` reads 300 at this address on both chains |
 
 Two corrections to make before you look at the chain, because the same deployer left two earlier
 factories behind on both 56 and 97 and **neither should ever be registered**. All three are 6,476
 bytes, so size does not tell them apart; `beacon()` does.
 
-`0x8666262877046df9f4B338B9D7f1a30d55688A5c` (nonce 1, block 119,921,946 on 56) is the set this
+`0x8666262877046df9f4B338B9D7f1a30d55688A5c` (nonce 1, block 120,046,230 on 56) is the set this
 one replaces. Its beacon is `0x7444B36CdC9372588C9C6A9A21bc435F31FE761a`, pointing at
 `0xAF3A1d973724ed416FEE48E5A58146893D1a9ac1` — 19,462 bytes, which unwinds at
 `amountOutMinimum: 0`, the missing floor Flap's pre-audit flagged.
@@ -95,13 +95,13 @@ bound, not immunity: 3% is deliberately loose, because the pool drifts from the 
 updates and a floor tight enough to catch every sandwich would also stop the vault deleveraging in
 exactly the fast market where deleveraging matters most. A sandwich that stays inside the band still
 profits. None of that needs taking on our word: `cast call
-0xf750Cead8810D524d7454b6c1d246D677950bdfd "MAX_SWAP_SLIP_BPS()(uint256)"` returns 300 on both
+0x68e4317070Cf99cC7462741191DFcCAE75c73853 "MAX_SWAP_SLIP_BPS()(uint256)"` returns 300 on both
 chains, and the same call against the retired `0xAF3A1d97…` reverts.
 
-What we have instead of a testnet run is 100 checks, all green: 59 forge tests, 33 assertions made
+What we have instead of a testnet run is 102 checks, all green: 61 forge tests, 33 assertions made
 against BNB Chain's current live state across seven atomic `eth_call`s, and 8 vault-UI package
 checks. Plain `forge test` also exits 0 — 40 passed, 0 failed, 11 skipped (51 total tests across
-14 suites) — the skips being ten suites (and two individual tests inside `LeverVaultAuth`) that
+14 suites) — the skips being eleven suites (and two individual tests inside `LeverVaultAuth`) that
 need an archive RPC BSC does not offer for free; see `submission/RULES.md` rule 006 for the list.
 
 ## Open items

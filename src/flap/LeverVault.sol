@@ -341,10 +341,24 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
         return _gain(_px());
     }
 
+    /// @dev Position-only appreciation against what was actually invested, deliberately blind
+    ///      to idle balance of any kind. The earlier version compared the FULL nav (position
+    ///      plus idle) against costBasis+pendingRevenue, which is only correct while idle
+    ///      balance exactly equals pendingRevenue -- an invariant every internal source now
+    ///      maintains (`_deploy` and `_rebalance` both capture their own flash-build leftovers
+    ///      basis-neutrally), but one no contract can enforce against an EXTERNAL source: BNB
+    ///      forced in via `selfdestruct` bypasses `receive()` entirely, so no hook anywhere
+    ///      could ever add it to `pendingRevenue`. Under the old formula that untracked balance
+    ///      still raised `nav`, so `_gain` read it as market profit, and `_shrinkBy(gain, p)`
+    ///      would free that much MORE from the position than it had actually earned -- the
+    ///      remaining position value would land BELOW `costBasis` by exactly the untracked
+    ///      amount, which is a genuine loss of principal, not merely mis-attributed profit.
+    ///      Reading only `_nav(p) - address(this).balance` (the same position-only figure
+    ///      `_shrinkBy` itself targets) makes `_gain` immune to idle-balance mismatches from
+    ///      ANY source, present or future, rather than requiring a matching fix at each one.
     function _gain(Px memory p) internal view returns (uint256) {
-        uint256 n = _nav(p);
-        uint256 basis = costBasis + pendingRevenue;
-        return n > basis ? n - basis : 0;
+        uint256 posEquity = _nav(p) - address(this).balance;
+        return posEquity > costBasis ? posEquity - costBasis : 0;
     }
 
     function needsRebalance() public view returns (bool) {
