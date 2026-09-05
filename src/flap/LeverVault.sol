@@ -738,7 +738,12 @@ contract LeverVault is VaultBaseV2, ITriggerReceiver {
     }
 
     /// @dev External only so `trigger()` can wrap it in a try. Self-calls only.
-    function settleSelf(uint8 action) external {
+    ///      nonReentrant here, not just on deployPending/harvest/rebalance: without it, the
+    ///      one place they run that ISN'T through those guarded entry points is exactly this
+    ///      one, and _harvest calls the creator-controlled `project` address before it has
+    ///      finished -- a reentrant project could otherwise walk straight back into
+    ///      deployPending() with `_entered` still false.
+    function settleSelf(uint8 action) external nonReentrant {
         require(msg.sender == address(this), unicode"LeverVault: self only / 仅限自调用");
         if (action == 2) {
             _deploy(address(0));

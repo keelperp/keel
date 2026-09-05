@@ -2,7 +2,7 @@
 
 ## The address
 
-Register **`0xbfFcBB69574774EeE211E7AfdBF41187c3278607`**.
+Register **`0xf68e42BB99baBD2D0e2c365B438c81E4269AaC7f`**.
 
 That address is the same on BNB Chain (56) and on BSC testnet (97) — same bytecode, same
 deployer, same nonce sequence, so CREATE lands every contract in the same place on both.
@@ -15,11 +15,11 @@ constructors** — the deployer never holds upgrade authority for a single block
 
 | Contract | Address | Runtime bytes | What it is |
 |---|---|---:|---|
-| `LeverVaultFactory` — **this is the one to register** | `0xbfFcBB69574774EeE211E7AfdBF41187c3278607` | 279 | a `BeaconProxy`. 279 bytes because it is only the proxy; the logic is at the implementation below. **This address never moves across upgrades** |
-| `LeverFactoryBeacon` | `0xb36f6F95D07f137d54c4D6224063FfC5Fb789175` | 785 | Guardian-owned. `upgradeTo` here replaces the factory's code |
-| `LeverVaultFactory` (implementation) | `0x5b8a4E2295297cf39635f6A8b43Db4c9a8d0Cb22` | 7,745 | the factory's actual logic, sitting behind that beacon |
-| `LeverBeacon` | `0x90b6Cba470Ba77CB1cb3d6455FB55D2681ea5b6D` | 785 | Guardian-owned. `upgradeTo` here replaces the code in **every** live vault at once |
-| `LeverVault` (implementation) | `0x4f6f9d028DFeCD11DEF6EB8e8862dae80C4A550b` | 23,155 | the vault logic every `BeaconProxy` vault runs |
+| `LeverVaultFactory` — **this is the one to register** | `0xf68e42BB99baBD2D0e2c365B438c81E4269AaC7f` | 279 | a `BeaconProxy`. 279 bytes because it is only the proxy; the logic is at the implementation below. **This address never moves across upgrades** |
+| `LeverFactoryBeacon` | `0xFe6747aD23A0d24998A6DF969d966AE488028DD2` | 785 | Guardian-owned. `upgradeTo` here replaces the factory's code |
+| `LeverVaultFactory` (implementation) | `0x9319f9fFC7227aA7BC4c68297c1ffF0557144124` | 7,745 | the factory's actual logic, sitting behind that beacon |
+| `LeverBeacon` | `0x38424E67241c8f8C0A2575c8EBBb1DA2778843bB` | 785 | Guardian-owned. `upgradeTo` here replaces the code in **every** live vault at once |
+| `LeverVault` (implementation) | `0x31b4037e35D356B5E09696f06b59169aB11A650F` | 23,221 | the vault logic every `BeaconProxy` vault runs |
 
 Nothing in this project has an owner, an admin, or a role of any kind. The two beacons are the
 entire authority surface, and the Guardian holds both of them on both chains.
@@ -29,8 +29,8 @@ in one script run:
 
 | Chain | First block | First transaction | both beacons' `owner()` |
 |---|---:|---|---|
-| BNB Chain, 56 | 120,052,827 | `0xa64cdc43356136a25f24daa606901cda975744d04a86f2e84884f34390c7e613` | `0x9e27098dcD8844bcc6287a557E0b4D09C86B8a4b` — Flap Guardian, BNB Chain |
-| BSC testnet, 97 | 129,197,362 | `0x45e3fc83628f66e0cd5540ebf15289c296c2ba15f0f090537a686133b0dc5ed1` | `0x76Fa8C526f8Bc27ba6958B76DeEf92a0dbE46950` — Flap Guardian, testnet |
+| BNB Chain, 56 | 120,062,943 | `0xe5b9d7d80fb0066d681fd64e8639fd084644797ae0c6bdfd3af421407d8144d0` | `0x9e27098dcD8844bcc6287a557E0b4D09C86B8a4b` — Flap Guardian, BNB Chain |
+| BSC testnet, 97 | 129,207,476 | `0x714b072360bf76277cc232a85f9d40ef0ae8d658d8d2eb2d089f94f0fadd632f` | `0x76Fa8C526f8Bc27ba6958B76DeEf92a0dbE46950` — Flap Guardian, testnet |
 
 Those two transactions are recorded in `deployments/56.json` and `deployments/97.json`. The
 runtime sizes above are what a node returns today, not what the build promised.
@@ -43,7 +43,7 @@ which we do not hold. On chain 56 the VaultPortal is
 for the chain it is standing on).
 
 ```solidity
-registerVaultFactory(0xbfFcBB69574774EeE211E7AfdBF41187c3278607, /* enabled */ true, /* official */ false, riskLevel)
+registerVaultFactory(0xf68e42BB99baBD2D0e2c365B438c81E4269AaC7f, /* enabled */ true, /* official */ false, riskLevel)
 ```
 
 We are not asking to be marked `official`, and we are not asking for a risk level below
@@ -100,7 +100,7 @@ block, and an unsupported chain id reverts rather than defaulting to anyone.
 Two consequences worth stating plainly:
 
 - **The address to register never moves.** `upgradeTo` on `LeverFactoryBeacon` replaces the
-  factory's code while `0xbfFcBB69574774EeE211E7AfdBF41187c3278607` stays exactly where it is.
+  factory's code while `0xf68e42BB99baBD2D0e2c365B438c81E4269AaC7f` stays exactly where it is.
   Flap does not re-register anything after a fix.
 - **`beacon` is storage, not `immutable`.** An `immutable` is burned into the implementation's
   bytecode, so an upgrade would hand new vaults a different beacon than the live ones use and
@@ -120,7 +120,7 @@ EIP-170. So `initialize` takes an already-deployed beacon address instead, and t
 initcode is now **7,792 bytes** against a 7,745-byte runtime.
 
 Two limits apply and both are cleared. EIP-170 caps *runtime* code at 24,576 bytes, and every
-deployable contract here is inside it — the largest is `LeverVault` at 23,155. EIP-3860 caps
+deployable contract here is inside it — the largest is `LeverVault` at 23,221. EIP-3860 caps
 *initcode* at 49,152, and 7,792 is inside that. Only a real deploy exercises the second one,
 and both of the deploys in the table above did — mainnet first, testnet immediately after.
 
@@ -232,13 +232,13 @@ Nothing below needs a key, an archive node, or our repository — only `cast` an
 ```bash
 R=https://bsc-dataseed.bnbchain.org          # chain 56
 T=https://bsc-testnet-rpc.publicnode.com     # chain 97
-F=0xbfFcBB69574774EeE211E7AfdBF41187c3278607   # the proxy — register this
-FB=0xb36f6F95D07f137d54c4D6224063FfC5Fb789175  # factory beacon, Guardian-owned
-FI=0x5b8a4E2295297cf39635f6A8b43Db4c9a8d0Cb22  # factory implementation
-B=0x90b6Cba470Ba77CB1cb3d6455FB55D2681ea5b6D   # vault beacon, Guardian-owned
-VI=0x4f6f9d028DFeCD11DEF6EB8e8862dae80C4A550b  # vault implementation
+F=0xf68e42BB99baBD2D0e2c365B438c81E4269AaC7f   # the proxy — register this
+FB=0xFe6747aD23A0d24998A6DF969d966AE488028DD2  # factory beacon, Guardian-owned
+FI=0x9319f9fFC7227aA7BC4c68297c1ffF0557144124  # factory implementation
+B=0x38424E67241c8f8C0A2575c8EBBb1DA2778843bB   # vault beacon, Guardian-owned
+VI=0x31b4037e35D356B5E09696f06b59169aB11A650F  # vault implementation
 
-# runtime sizes: 279 / 785 / 7,745 / 785 / 23,155
+# runtime sizes: 279 / 785 / 7,745 / 785 / 23,221
 cast codesize $F  --rpc-url $R
 cast codesize $FB --rpc-url $R
 cast codesize $FI --rpc-url $R
@@ -282,8 +282,8 @@ cast call 0xE7EC91f5a78c413cDF2F1140B29d51cAfFAfE535 "vaultDataSchema()((string,
 cast call 0xE7EC91f5a78c413cDF2F1140B29d51cAfFAfE535 "beacon()(address)" --rpc-url $R
 
 # the deploy transactions and their blocks
-cast tx 0xa64cdc43356136a25f24daa606901cda975744d04a86f2e84884f34390c7e613 blockNumber --rpc-url $R
-cast tx 0x45e3fc83628f66e0cd5540ebf15289c296c2ba15f0f090537a686133b0dc5ed1 blockNumber --rpc-url $T
+cast tx 0xe5b9d7d80fb0066d681fd64e8639fd084644797ae0c6bdfd3af421407d8144d0 blockNumber --rpc-url $R
+cast tx 0x714b072360bf76277cc232a85f9d40ef0ae8d658d8d2eb2d089f94f0fadd632f blockNumber --rpc-url $T
 
 # the addresses are CREATE arithmetic, not a coincidence
 cast compute-address 0x1544A8fCE3a3c39E0a744a13392981bEcDF014f4 --nonce 1   # -> the factory
@@ -296,7 +296,7 @@ To reproduce the sizes from source instead of reading them off a node:
 
 ```bash
 forge build --sizes        # runtime sizes; initcode is in out/<Name>.sol/<Name>.json
-bash scripts/test.sh       # 63 forge tests + 33 live-state assertions + 8 vault-UI checks = 69
+bash scripts/test.sh       # 65 forge tests + 33 live-state assertions + 8 vault-UI checks = 69
 ```
 
 `scripts/test.sh` runs everything named on this page. A plain `forge test` also exits 0 (29

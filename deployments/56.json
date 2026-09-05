@@ -4,20 +4,20 @@
   "network": "BNB Chain mainnet",
   "note": "Flap custom-vault side only. No token has been launched; a token is created by Flap's launcher through the VaultPortal.",
   "deployer": "0x1544A8fCE3a3c39E0a744a13392981bEcDF014f4",
-  "txHash": "0xa64cdc43356136a25f24daa606901cda975744d04a86f2e84884f34390c7e613",
-  "block": 120052827,
+  "txHash": "0xe5b9d7d80fb0066d681fd64e8639fd084644797ae0c6bdfd3af421407d8144d0",
+  "block": 120062943,
   "contracts": {
-    "LeverVaultFactory": "0xbfFcBB69574774EeE211E7AfdBF41187c3278607",
-    "LeverFactoryBeacon": "0xb36f6F95D07f137d54c4D6224063FfC5Fb789175",
-    "LeverVaultFactoryImplementation": "0x5b8a4E2295297cf39635f6A8b43Db4c9a8d0Cb22",
-    "LeverBeacon": "0x90b6Cba470Ba77CB1cb3d6455FB55D2681ea5b6D",
-    "LeverVaultImplementation": "0x4f6f9d028DFeCD11DEF6EB8e8862dae80C4A550b"
+    "LeverVaultFactory": "0xf68e42BB99baBD2D0e2c365B438c81E4269AaC7f",
+    "LeverFactoryBeacon": "0xFe6747aD23A0d24998A6DF969d966AE488028DD2",
+    "LeverVaultFactoryImplementation": "0x9319f9fFC7227aA7BC4c68297c1ffF0557144124",
+    "LeverBeacon": "0x38424E67241c8f8C0A2575c8EBBb1DA2778843bB",
+    "LeverVaultImplementation": "0x31b4037e35D356B5E09696f06b59169aB11A650F"
   },
   "beaconOwner": "0x9e27098dcD8844bcc6287a557E0b4D09C86B8a4b",
   "beaconOwnerIs": "Flap Guardian (BNB Chain), set in LeverBeacon's constructor -- never the deployer",
   "supersedes": {
-    "factory": "0x487Bd18860c321b6Fa01e9F95B3F9BF878c4939B",
-    "reason": "Twelfth Flap interaction risk report (2026-09-05 04:52, rating Medium). A project address that cannot receive BNB (no payable receive/fallback, or one that reverts) used to revert the whole harvest via require(sent) -- and since project has no setter, permanently. The payout is now attempted first, before the dividend deposit, and a failure redirects the amount into the holder share instead of bricking the mechanism, emitting ProjectPayoutFailed so it stays visible."
+    "factory": "0xbfFcBB69574774EeE211E7AfdBF41187c3278607",
+    "reason": "Thirteenth Flap interaction risk report (2026-09-05 05:51, rating High). The automatic settlement path -- trigger() -> settleSelf() -> _deploy/_harvest/_rebalance -- never set the reentrancy guard, because neither trigger() nor settleSelf() carried nonReentrant. _harvest calls the creator-controlled project address before finishing (before the WBNB wrap, dividend deposit, health check, and bounty), so a hostile project reentering during an automatic harvest could walk straight back into deployPending() -- letting it front-run every other caller for the deploy bounty, or grief the automatic harvest into reverting and forcing holders onto the paid manual path. settleSelf() now carries nonReentrant, the same guard deployPending()/harvest()/rebalance() already gave their own manual callers, closing the window for all three actions at once."
   },
   "retired": [
     "0x7444B36CdC9372588C9C6A9A21bc435F31FE761a",
@@ -80,10 +80,15 @@
     "0x01595F8AD2737a78AAAcEd9C14264c70799B418E",
     "0xfd439F46D9D842D4a84c94a32D1BF8Ce57Dc39e9",
     "0x2d37B394C24aBa34b25A514817E8380b8b58E29E",
-    "0x68e4317070Cf99cC7462741191DFcCAE75c73853"
+    "0x68e4317070Cf99cC7462741191DFcCAE75c73853",
+    "0xbfFcBB69574774EeE211E7AfdBF41187c3278607",
+    "0xb36f6F95D07f137d54c4D6224063FfC5Fb789175",
+    "0x5b8a4E2295297cf39635f6A8b43Db4c9a8d0Cb22",
+    "0x90b6Cba470Ba77CB1cb3d6455FB55D2681ea5b6D",
+    "0x4f6f9d028DFeCD11DEF6EB8e8862dae80C4A550b"
   ],
   "retiredNote": "Every address this project has ever deployed and replaced. Registering any of them with Flap would bind a token to superseded code. tools/check-docs.py reads this list, so a redeploy updates one file rather than a constant in the checker.",
-  "registerThis": "0xbfFcBB69574774EeE211E7AfdBF41187c3278607",
+  "registerThis": "0xf68e42BB99baBD2D0e2c365B438c81E4269AaC7f",
   "upgradeAuthority": {
     "LeverBeacon": "owns the vault implementation; Flap Guardian",
     "LeverFactoryBeacon": "owns the factory implementation; Flap Guardian",

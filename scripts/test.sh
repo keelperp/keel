@@ -42,6 +42,9 @@ forge test --match-contract LeverVaultUntrackedSurplusTest --fork-url "$RPC" || 
 echo; echo; echo "=== forked: project cannot receive BNB, Flap's twelfth report ==="
 forge test --match-contract LeverVaultProjectPayoutFailureTest --fork-url "$RPC" || fail=1
 
+echo; echo "=== forked: reentrant project during automatic settlement, Flap's thirteenth report ==="
+forge test --match-contract LeverVaultAutomaticHarvestReentrancyTest --fork-url "$RPC" || fail=1
+
 echo "=== forked: BNB forced in outside receive(), Flap's eleventh report ==="
 forge test --match-contract LeverVaultDonationImmunityTest --fork-url "$RPC" || fail=1
 
