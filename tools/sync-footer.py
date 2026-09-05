@@ -18,7 +18,7 @@ FOOTER = '''<footer>
     <div><p class="foot-h">Diligence</p>
       <a href="/risks/">Risks</a><a href="/verify/">Verify</a></div>
     <div><p class="foot-h">Follow</p>
-      <a href="https://x.com/keel_perp" target="_blank" rel="noopener noreferrer">X &middot; @keel_perp</a></div>
+      <a href="https://x.com/keel_vault" target="_blank" rel="noopener noreferrer">X &middot; @keel_vault</a></div>
     <div><p class="foot-h">Status</p>
       <span style="color:var(--positive)">Factory live</span>
       <span style="display:block;color:var(--fg-quaternary);padding-top:3px">No token yet &middot; submitted for review</span></div>
@@ -38,7 +38,7 @@ for rel in PAGES:
     new, n = re.subn(r"<footer>.*?</footer>", lambda _: FOOTER, html, flags=re.S)
     if n != 1:
         fails.append(f"{rel}: matched {n} footer blocks, want exactly 1"); continue
-    if "x.com/keel_perp" not in new:
+    if "x.com/keel_vault" not in new:
         fails.append(f"{rel}: link did not land")
     if new != orig:
         p.write_text(new); changed += 1

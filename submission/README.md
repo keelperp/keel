@@ -10,7 +10,7 @@ Everything needed to register `LeverVaultFactory` on the VaultPortal, in one dir
 | Compiler | solc 0.8.26, Cancun, optimizer 200, no viaIR |
 | Source | https://github.com/keelperp/keel |
 | Site | https://www.keelperp.fun |
-| X | https://x.com/keel_perp |
+| X | https://x.com/keel_vault |
 
 Gains are settled by Flap's own trigger service every 5 minutes, and 70% of each gain goes to
 holders as WBNB through the token's dividend contract, 30% to the project. There is no keeper
